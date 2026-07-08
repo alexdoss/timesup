@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="theme-color" content="#6c5ce7">
+  <title>Time's Up!</title>
+  <link rel="manifest" href="manifest.json">
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
+  <link rel="icon" href="icons/icon-192.png">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div id="app">
+
+    <!-- ÉCRAN ACCUEIL -->
+    <div id="screen-home" class="screen active">
+      <div class="home-content">
+        <h1 class="title">⏱️ Time's Up!</h1>
+        <p class="subtitle">Le jeu de devinettes</p>
+        <div class="rules-summary">
+          <p><strong>3 manches :</strong></p>
+          <p>1️⃣ Décrivez avec des phrases</p>
+          <p>2️⃣ Un seul mot</p>
+          <p>3️⃣ Mimez !</p>
+        </div>
+        <button id="btn-start" class="btn btn-primary">Nouvelle partie 🎮</button>
+      </div>
+    </div>
+
+    <!-- ÉCRAN CONFIG -->
+    <div id="screen-config" class="screen">
+      <button class="btn-close" onclick="showScreen('screen-home')">✕</button>
+      <h2>Configuration</h2>
+      <div class="config-form">
+        <label>
+          Nom équipe 1
+          <input type="text" id="team1-name" value="Équipe 1" maxlength="15">
+        </label>
+        <label>
+          Nom équipe 2
+          <input type="text" id="team2-name" value="Équipe 2" maxlength="15">
+        </label>
+        <label>
+          Temps par tour (secondes)
+          <div class="timer-selector">
+            <button class="btn-timer" data-time="30">30s</button>
+            <button class="btn-timer active" data-time="40">40s</button>
+            <button class="btn-timer" data-time="60">60s</button>
+          </div>
+        </label>
+        <label>
+          Nombre de cartes
+          <div class="timer-selector">
+            <button class="btn-cards" data-cards="20">20</button>
+            <button class="btn-cards active" data-cards="30">30</button>
+            <button class="btn-cards" data-cards="40">40</button>
+          </div>
+        </label>
+        <button id="btn-play" class="btn btn-primary">C'est parti ! 🚀</button>
+      </div>
+    </div>
+
+    <!-- ÉCRAN DÉBUT DE MANCHE -->
+    <div id="screen-round" class="screen">
+      <button class="btn-close" onclick="confirmQuit()">✕</button>
+      <div class="round-content">
+        <h2 id="round-title">Manche 1</h2>
+        <div id="round-icon" class="round-icon">🗣️</div>
+        <p id="round-description" class="round-desc"></p>
+        <div class="score-board">
+          <div class="score-team">
+            <span id="round-team1-name">Équipe 1</span>
+            <span id="round-team1-score" class="score">0</span>
+          </div>
+          <div class="score-team">
+            <span id="round-team2-name">Équipe 2</span>
+            <span id="round-team2-score" class="score">0</span>
+          </div>
+        </div>
+        <p id="current-team-turn" class="turn-info"></p>
+        <button id="btn-start-turn" class="btn btn-primary">Lancer le tour ▶️</button>
+      </div>
+    </div>
+
+    <!-- ÉCRAN DE JEU -->
+    <div id="screen-game" class="screen">
+      <button class="btn-close" onclick="confirmQuit()">✕</button>
+      <div class="game-header">
+        <span id="game-round-label" class="round-label">Manche 1</span>
+        <span id="game-team-label" class="team-label">Équipe 1</span>
+      </div>
+      <div id="timer" class="timer">40</div>
+      <div id="card" class="card">
+        <span id="card-word">Mot</span>
+      </div>
+      <div class="cards-remaining">
+        Cartes restantes : <span id="cards-left">0</span>
+      </div>
+      <div class="game-actions">
+        <button id="btn-pass" class="btn btn-skip">Passer ✗</button>
+        <button id="btn-found" class="btn btn-found">Trouvé ✓</button>
+      </div>
+    </div>
+
+    <!-- ÉCRAN FIN DE TOUR -->
+    <div id="screen-turn-end" class="screen">
+      <button class="btn-close" onclick="confirmQuit()">✕</button>
+      <div class="turn-end-content">
+        <h2>⏰ Temps écoulé !</h2>
+        <p id="turn-result"></p>
+        <button id="btn-next-turn" class="btn btn-primary">Tour suivant ▶️</button>
+      </div>
+    </div>
+
+    <!-- ÉCRAN FIN DE MANCHE -->
+    <div id="screen-round-end" class="screen">
+      <button class="btn-close" onclick="confirmQuit()">✕</button>
+      <div class="round-end-content">
+        <h2 id="round-end-title">Fin de la manche 1</h2>
+        <div class="score-board big">
+          <div class="score-team">
+            <span id="end-team1-name">Équipe 1</span>
+            <span id="end-team1-score" class="score">0</span>
+          </div>
+          <div class="score-team">
+            <span id="end-team2-name">Équipe 2</span>
+            <span id="end-team2-score" class="score">0</span>
+          </div>
+        </div>
+        <button id="btn-next-round" class="btn btn-primary">Manche suivante ▶️</button>
+      </div>
+    </div>
+
+    <!-- ÉCRAN FIN DE PARTIE -->
+    <div id="screen-final" class="screen">
+      <div class="final-content">
+        <h2>🏆 Fin de la partie !</h2>
+        <div id="winner" class="winner"></div>
+        <div class="score-board big">
+          <div class="score-team">
+            <span id="final-team1-name">Équipe 1</span>
+            <span id="final-team1-score" class="score">0</span>
+          </div>
+          <div class="score-team">
+            <span id="final-team2-name">Équipe 2</span>
+            <span id="final-team2-score" class="score">0</span>
+          </div>
+        </div>
+        <button id="btn-restart" class="btn btn-primary">Rejouer 🔄</button>
+      </div>
+    </div>
+
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>

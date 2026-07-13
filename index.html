@@ -30,10 +30,27 @@
       </div>
     </div>
 
-    <!-- ÉCRAN CONFIG -->
-    <div id="screen-config" class="screen">
+    <!-- ÉCRAN CONFIG — ÉTAPE 1 : THÈMES -->
+    <div id="screen-themes" class="screen">
       <button class="btn-close" onclick="showScreen('screen-home')">✕</button>
-      <h2>Configuration</h2>
+      <div class="wizard-header">
+        <span class="wizard-step">Étape 1/2</span>
+        <h2>Choisissez vos thèmes</h2>
+        <p class="wizard-hint">Sélectionnez un ou plusieurs thèmes</p>
+      </div>
+      <div class="config-form">
+        <div id="theme-selector" class="theme-selector"></div>
+        <button id="btn-next-step" class="btn btn-primary">Suivant ▶️</button>
+      </div>
+    </div>
+
+    <!-- ÉCRAN CONFIG — ÉTAPE 2 : ÉQUIPES & PARAMÈTRES -->
+    <div id="screen-config" class="screen">
+      <button class="btn-close" onclick="showScreen('screen-themes')">✕</button>
+      <div class="wizard-header">
+        <span class="wizard-step">Étape 2/2</span>
+        <h2>Paramètres de la partie</h2>
+      </div>
       <div class="config-form">
         <label>
           Nom équipe 1
@@ -155,6 +172,6 @@
 
   </div>
 
-  <script src="app.js"></script>
+  <script type="module" src="js/app.js"></script>
 </body>
 </html>

@@ -1,9 +1,17 @@
-const CACHE_NAME = 'timesup-v2';
+const CACHE_NAME = 'timesup-v10';
 const ASSETS = [
   '/',
   '/index.html',
   '/style.css',
-  '/app.js',
+  '/js/app.js',
+  '/js/game.js',
+  '/js/ui.js',
+  '/js/themes.js',
+  '/themes/personnalites.json',
+  '/themes/monde-fantastique.json',
+  '/themes/animaux-insectes.json',
+  '/themes/histoire.json',
+  '/themes/films-series.json',
   '/manifest.json',
   '/icons/icon-192.png',
   '/icons/icon-512.png'

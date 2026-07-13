@@ -125,6 +125,29 @@ body {
   font-size: 1.3rem;
 }
 
+/* ===== WIZARD ===== */
+.wizard-header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.wizard-step {
+  background: rgba(108, 92, 231, 0.3);
+  padding: 4px 12px;
+  border-radius: 12px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #a29bfe;
+}
+
+.wizard-hint {
+  font-size: 0.95rem;
+  color: #636e72;
+}
+
 /* ===== CONFIG ===== */
 .config-form {
   display: flex;
@@ -180,6 +203,31 @@ body {
 .btn-timer.active, .btn-cards.active {
   border-color: #6c5ce7;
   background: rgba(108, 92, 231, 0.2);
+  color: #fff;
+}
+
+/* ===== THEME SELECTOR ===== */
+.theme-selector {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.btn-theme {
+  padding: 10px 14px;
+  border: 2px solid rgba(255, 255, 255, 0.15);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.05);
+  color: #b2bec3;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-theme.active {
+  border-color: #00b894;
+  background: rgba(0, 184, 148, 0.2);
   color: #fff;
 }
 

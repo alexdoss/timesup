@@ -394,3 +394,163 @@ body {
 h2 {
   font-size: 1.8rem;
 }
+
+/* ===== PLAYER INPUT ===== */
+.player-input-row {
+  display: flex;
+  gap: 8px;
+}
+
+.player-input-row input {
+  flex: 1;
+  background: rgba(255, 255, 255, 0.1);
+  border: 2px solid rgba(255, 255, 255, 0.15);
+  border-radius: 12px;
+  padding: 12px 16px;
+  color: #fff;
+  font-size: 1rem;
+  outline: none;
+}
+
+.player-input-row input:focus {
+  border-color: #6c5ce7;
+}
+
+.btn-add {
+  background: #00b894;
+  color: #fff;
+  width: 48px;
+  border-radius: 12px;
+  font-size: 1.5rem;
+  padding: 8px;
+}
+
+.player-list {
+  list-style: none;
+  width: 100%;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.player-list li {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 14px;
+  background: rgba(255, 255, 255, 0.06);
+  border-radius: 10px;
+  margin-bottom: 6px;
+  font-size: 0.95rem;
+}
+
+.player-list li .btn-remove {
+  background: none;
+  border: none;
+  color: #e17055;
+  font-size: 1.2rem;
+  cursor: pointer;
+  padding: 0 4px;
+}
+
+.player-count {
+  font-size: 0.85rem;
+  color: #636e72;
+  text-align: center;
+}
+
+/* ===== TEAMS PREVIEW ===== */
+.teams-preview {
+  display: flex;
+  gap: 16px;
+  width: 100%;
+}
+
+.team-preview-col {
+  flex: 1;
+  background: rgba(255, 255, 255, 0.06);
+  border-radius: 12px;
+  padding: 12px;
+}
+
+.team-preview-col h4 {
+  font-size: 0.85rem;
+  color: #a29bfe;
+  margin-bottom: 8px;
+  text-align: center;
+}
+
+.team-preview-col ul {
+  list-style: none;
+  text-align: center;
+}
+
+.team-preview-col li {
+  padding: 4px 0;
+  font-size: 0.9rem;
+  color: #dfe6e9;
+}
+
+.btn-secondary {
+  background: rgba(255, 255, 255, 0.1);
+  color: #b2bec3;
+  border: none;
+  border-radius: 12px;
+  padding: 10px 20px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  width: 100%;
+  max-width: 320px;
+}
+
+.btn-secondary:active {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+/* ===== PLAYER INFO ===== */
+.player-info {
+  font-size: 1.3rem;
+  font-weight: 800;
+  color: #6c5ce7;
+  margin-top: 4px;
+}
+
+/* ===== PLAYER STATS ===== */
+.player-stats {
+  width: 100%;
+  max-width: 350px;
+  margin-top: 8px;
+}
+
+.player-stats h3 {
+  font-size: 1rem;
+  color: #b2bec3;
+  margin-bottom: 8px;
+  text-align: center;
+}
+
+.player-stats table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.player-stats th, .player-stats td {
+  padding: 6px 10px;
+  text-align: left;
+  font-size: 0.85rem;
+}
+
+.player-stats th {
+  color: #636e72;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.player-stats td {
+  color: #dfe6e9;
+}
+
+.player-stats td:last-child {
+  text-align: right;
+  font-weight: 700;
+  color: #fdcb6e;
+}

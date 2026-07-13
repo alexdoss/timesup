@@ -2,8 +2,8 @@
 // Orchestre les modules et gère les événements
 
 import { loadThemes } from './themes.js';
-import { game, ROUNDS, resetGame, buildDeck, startNewRound, getCurrentCard, cardFound, cardPassed, switchTeam, isRoundOver, isGameOver, nextRound, getCardsRemaining } from './game.js';
-import { showScreen, updateTimer, showCard, updateRoundScreen, updateTurnInfo, updateGameHeader, showTurnResult, showRoundEnd, showFinalScreen, renderThemeButtons } from './ui.js';
+import { game, ROUNDS, resetGame, buildDeck, startNewRound, getCurrentCard, cardFound, cardPassed, switchTeam, isRoundOver, isGameOver, nextRound, getCardsRemaining, addPlayer, removePlayer, shuffleTeams, getCurrentPlayer, advancePlayer } from './game.js';
+import { showScreen, updateTimer, showCard, updateRoundScreen, updateTurnInfo, updateGameHeader, showTurnResult, showRoundEnd, showFinalScreen, renderThemeButtons, renderPlayerList, renderTeamsPreview, updateCurrentPlayer, renderPlayerStats } from './ui.js';
 
 let THEMES = {};
 
@@ -12,25 +12,65 @@ async function init() {
   THEMES = await loadThemes();
   game.selectedThemes = new Set(Object.keys(THEMES));
 
-  // Render theme buttons
   const container = document.getElementById('theme-selector');
   renderThemeButtons(THEMES, game.selectedThemes, container);
 
-  // Setup event listeners
   setupListeners();
+}
+
+function refreshPlayerList() {
+  renderPlayerList(game.players, (name) => {
+    removePlayer(name);
+    refreshPlayerList();
+  });
 }
 
 function setupListeners() {
   // Home → Themes (step 1)
   document.getElementById('btn-start').addEventListener('click', () => showScreen('screen-themes'));
 
-  // Themes → Config (step 2)
+  // Themes → Players (step 2)
   document.getElementById('btn-next-step').addEventListener('click', () => {
     if (game.selectedThemes.size === 0) {
       alert("Sélectionne au moins un thème !");
       return;
     }
+    showScreen('screen-players');
+  });
+
+  // Add player
+  const playerInput = document.getElementById('player-name-input');
+  document.getElementById('btn-add-player').addEventListener('click', () => {
+    const name = playerInput.value.trim();
+    if (addPlayer(name)) {
+      playerInput.value = '';
+      refreshPlayerList();
+    }
+    playerInput.focus();
+  });
+
+  // Add player on Enter
+  playerInput.addEventListener('keypress', (e) => {
+    if (e.key === 'Enter') {
+      document.getElementById('btn-add-player').click();
+    }
+  });
+
+  // Players → Config (step 3)
+  document.getElementById('btn-next-players').addEventListener('click', () => {
+    if (game.players.length < 4) {
+      alert("Il faut au moins 4 joueurs !");
+      return;
+    }
+    shuffleTeams();
+    renderTeamsPreview(game.teams);
     showScreen('screen-config');
+  });
+
+  // Shuffle teams button
+  document.getElementById('btn-shuffle-teams').addEventListener('click', () => {
+    shuffleTeams();
+    renderTeamsPreview(game.teams);
   });
 
   // Timer selector
@@ -82,6 +122,7 @@ function beginRound() {
   const round = ROUNDS[game.currentRound];
   updateRoundScreen(round, game.teams);
   updateTurnInfo(game.teams[game.currentTeam].name);
+  updateCurrentPlayer(getCurrentPlayer());
   showScreen('screen-round');
 }
 
@@ -125,7 +166,12 @@ function onPass() {
 
 function endTurn() {
   clearInterval(game.timerInterval);
-  showTurnResult(game.teams[game.currentTeam].name, game.turnScore);
+  const player = getCurrentPlayer();
+  showTurnResult(
+    `${player} (${game.teams[game.currentTeam].name})`,
+    game.turnScore
+  );
+  advancePlayer();
   switchTeam();
   showScreen('screen-turn-end');
 }
@@ -135,6 +181,7 @@ function onNextTurn() {
     endRound();
   } else {
     updateTurnInfo(game.teams[game.currentTeam].name);
+    updateCurrentPlayer(getCurrentPlayer());
     showScreen('screen-round');
   }
 }
@@ -148,6 +195,7 @@ function endRound() {
     btnNext.textContent = "Voir les résultats 🏆";
     btnNext.onclick = () => {
       showFinalScreen(game.teams);
+      renderPlayerStats(game.playerStats, game.teams);
       showScreen('screen-final');
     };
   } else {

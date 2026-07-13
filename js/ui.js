@@ -86,3 +86,50 @@ export function renderThemeButtons(themes, selectedThemes, container) {
     container.appendChild(btn);
   });
 }
+
+export function renderPlayerList(players, onRemove) {
+  const list = document.getElementById('player-list');
+  list.innerHTML = '';
+  players.forEach(name => {
+    const li = document.createElement('li');
+    li.innerHTML = `<span>${name}</span><button class="btn-remove" data-player="${name}">✕</button>`;
+    li.querySelector('.btn-remove').addEventListener('click', () => onRemove(name));
+    list.appendChild(li);
+  });
+  document.getElementById('player-count').textContent = `${players.length} joueur(s)`;
+}
+
+export function renderTeamsPreview(teams) {
+  const container = document.getElementById('teams-preview');
+  container.innerHTML = teams.map(team => `
+    <div class="team-preview-col">
+      <h4>${team.name}</h4>
+      <ul>${team.players.map(p => `<li>${p}</li>`).join('')}</ul>
+    </div>
+  `).join('');
+}
+
+export function updateCurrentPlayer(playerName) {
+  document.getElementById('current-player').textContent =
+    playerName ? `🎤 ${playerName} fait deviner` : '';
+}
+
+export function renderPlayerStats(playerStats, teams) {
+  const container = document.getElementById('player-stats');
+  // Sort players by score descending
+  const allPlayers = [];
+  teams.forEach(team => {
+    team.players.forEach(p => {
+      allPlayers.push({ name: p, team: team.name, found: playerStats[p]?.found || 0 });
+    });
+  });
+  allPlayers.sort((a, b) => b.found - a.found);
+
+  container.innerHTML = `
+    <h3>📊 Statistiques joueurs</h3>
+    <table>
+      <tr><th>Joueur</th><th>Équipe</th><th>Trouvés</th></tr>
+      ${allPlayers.map(p => `<tr><td>${p.name}</td><td>${p.team}</td><td>${p.found}</td></tr>`).join('')}
+    </table>
+  `;
+}

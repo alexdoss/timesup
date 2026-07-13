@@ -9,9 +9,11 @@ export const ROUNDS = [
 
 export const game = {
   teams: [
-    { name: "Équipe 1", score: 0 },
-    { name: "Équipe 2", score: 0 }
+    { name: "Équipe 1", score: 0, players: [], currentPlayerIndex: 0 },
+    { name: "Équipe 2", score: 0, players: [], currentPlayerIndex: 0 }
   ],
+  players: [],             // liste de tous les joueurs
+  playerStats: {},         // { playerName: { found: 0 } }
   selectedThemes: new Set(),
   currentTeam: 0,
   currentRound: 0,
@@ -37,8 +39,47 @@ export function shuffle(arr) {
 export function resetGame() {
   game.teams[0].score = 0;
   game.teams[1].score = 0;
+  game.teams[0].currentPlayerIndex = 0;
+  game.teams[1].currentPlayerIndex = 0;
   game.currentRound = 0;
   game.currentTeam = 0;
+  // Reset player stats
+  game.playerStats = {};
+  game.players.forEach(p => {
+    game.playerStats[p] = { found: 0 };
+  });
+}
+
+export function addPlayer(name) {
+  if (name && !game.players.includes(name)) {
+    game.players.push(name);
+    return true;
+  }
+  return false;
+}
+
+export function removePlayer(name) {
+  game.players = game.players.filter(p => p !== name);
+}
+
+export function shuffleTeams() {
+  const shuffled = shuffle([...game.players]);
+  const mid = Math.ceil(shuffled.length / 2);
+  game.teams[0].players = shuffled.slice(0, mid);
+  game.teams[1].players = shuffled.slice(mid);
+  game.teams[0].currentPlayerIndex = 0;
+  game.teams[1].currentPlayerIndex = 0;
+}
+
+export function getCurrentPlayer() {
+  const team = game.teams[game.currentTeam];
+  if (team.players.length === 0) return null;
+  return team.players[team.currentPlayerIndex % team.players.length];
+}
+
+export function advancePlayer() {
+  const team = game.teams[game.currentTeam];
+  team.currentPlayerIndex = (team.currentPlayerIndex + 1) % team.players.length;
 }
 
 export function buildDeck(themes) {
@@ -65,6 +106,11 @@ export function getCurrentCard() {
 export function cardFound() {
   game.teams[game.currentTeam].score++;
   game.turnScore++;
+  // Track player stats
+  const player = getCurrentPlayer();
+  if (player && game.playerStats[player]) {
+    game.playerStats[player].found++;
+  }
   game.currentCardIndex++;
 }
 

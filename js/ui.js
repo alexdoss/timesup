@@ -104,7 +104,7 @@ export function renderTeamsPreview(teams, interactive = false) {
   container.innerHTML = teams.map((team, teamIndex) => `
     <div class="team-preview-col">
       <h4>${team.name}</h4>
-      <ul>${team.players.map(p => `<li class="${interactive ? 'player-swappable' : ''}" data-player="${p}" data-team="${teamIndex}">${p} ${interactive ? '<span class="swap-arrow">→</span>' : ''}</li>`).join('')}</ul>
+      <ul>${team.players.map(p => `<li class="${interactive ? 'player-swappable' : ''}" data-player="${p}" data-team="${teamIndex}">${p}</li>`).join('')}</ul>
     </div>
   `).join('');
 

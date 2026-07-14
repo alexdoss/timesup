@@ -99,14 +99,31 @@ export function renderPlayerList(players, onRemove) {
   document.getElementById('player-count').textContent = `${players.length} joueur(s)`;
 }
 
-export function renderTeamsPreview(teams) {
+export function renderTeamsPreview(teams, interactive = false) {
   const container = document.getElementById('teams-preview');
-  container.innerHTML = teams.map(team => `
+  container.innerHTML = teams.map((team, teamIndex) => `
     <div class="team-preview-col">
       <h4>${team.name}</h4>
-      <ul>${team.players.map(p => `<li>${p}</li>`).join('')}</ul>
+      <ul>${team.players.map(p => `<li class="${interactive ? 'player-swappable' : ''}" data-player="${p}" data-team="${teamIndex}">${p} ${interactive ? '<span class="swap-arrow">→</span>' : ''}</li>`).join('')}</ul>
     </div>
   `).join('');
+
+  if (interactive) {
+    container.querySelectorAll('.player-swappable').forEach(li => {
+      li.addEventListener('click', () => {
+        const playerName = li.dataset.player;
+        const fromTeam = parseInt(li.dataset.team);
+        const toTeam = fromTeam === 0 ? 1 : 0;
+
+        // Move player
+        teams[fromTeam].players = teams[fromTeam].players.filter(p => p !== playerName);
+        teams[toTeam].players.push(playerName);
+
+        // Re-render
+        renderTeamsPreview(teams, true);
+      });
+    });
+  }
 }
 
 export function updateCurrentPlayer(playerName) {

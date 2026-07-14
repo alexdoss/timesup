@@ -498,6 +498,25 @@ h2 {
   color: #dfe6e9;
 }
 
+.player-swappable {
+  cursor: pointer;
+  padding: 8px 10px !important;
+  border-radius: 8px;
+  transition: background 0.2s;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.player-swappable:active {
+  background: rgba(108, 92, 231, 0.3);
+}
+
+.swap-arrow {
+  color: #636e72;
+  font-size: 0.8rem;
+}
+
 .btn-secondary {
   background: rgba(255, 255, 255, 0.1);
   color: #b2bec3;

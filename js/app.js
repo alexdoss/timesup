@@ -64,8 +64,9 @@ function setupListeners() {
     }
     game.nominativeMode = true;
     shuffleTeams();
-    renderTeamsPreview(game.teams);
+    renderTeamsPreview(game.teams, true);
     document.getElementById('btn-shuffle-teams').style.display = '';
+    document.getElementById('teams-hint').style.display = '';
     showScreen('screen-config');
   });
 
@@ -77,13 +78,14 @@ function setupListeners() {
     game.teams[1].players = [];
     document.getElementById('teams-preview').innerHTML = '';
     document.getElementById('btn-shuffle-teams').style.display = 'none';
+    document.getElementById('teams-hint').style.display = 'none';
     showScreen('screen-config');
   });
 
   // Shuffle teams button
   document.getElementById('btn-shuffle-teams').addEventListener('click', () => {
     shuffleTeams();
-    renderTeamsPreview(game.teams);
+    renderTeamsPreview(game.teams, true);
   });
 
   // Timer selector

@@ -62,8 +62,21 @@ function setupListeners() {
       alert("Il faut au moins 4 joueurs !");
       return;
     }
+    game.nominativeMode = true;
     shuffleTeams();
     renderTeamsPreview(game.teams);
+    document.getElementById('btn-shuffle-teams').style.display = '';
+    showScreen('screen-config');
+  });
+
+  // Skip players (mode rapide)
+  document.getElementById('btn-skip-players').addEventListener('click', () => {
+    game.nominativeMode = false;
+    game.players = [];
+    game.teams[0].players = [];
+    game.teams[1].players = [];
+    document.getElementById('teams-preview').innerHTML = '';
+    document.getElementById('btn-shuffle-teams').style.display = 'none';
     showScreen('screen-config');
   });
 
@@ -122,7 +135,7 @@ function beginRound() {
   const round = ROUNDS[game.currentRound];
   updateRoundScreen(round, game.teams);
   updateTurnInfo(game.teams[game.currentTeam].name);
-  updateCurrentPlayer(getCurrentPlayer());
+  updateCurrentPlayer(game.nominativeMode ? getCurrentPlayer() : null);
   showScreen('screen-round');
 }
 
@@ -166,12 +179,13 @@ function onPass() {
 
 function endTurn() {
   clearInterval(game.timerInterval);
-  const player = getCurrentPlayer();
-  showTurnResult(
-    `${player} (${game.teams[game.currentTeam].name})`,
-    game.turnScore
-  );
-  advancePlayer();
+  if (game.nominativeMode) {
+    const player = getCurrentPlayer();
+    showTurnResult(`${player} (${game.teams[game.currentTeam].name})`, game.turnScore);
+    advancePlayer();
+  } else {
+    showTurnResult(game.teams[game.currentTeam].name, game.turnScore);
+  }
   switchTeam();
   showScreen('screen-turn-end');
 }
@@ -181,7 +195,7 @@ function onNextTurn() {
     endRound();
   } else {
     updateTurnInfo(game.teams[game.currentTeam].name);
-    updateCurrentPlayer(getCurrentPlayer());
+    updateCurrentPlayer(game.nominativeMode ? getCurrentPlayer() : null);
     showScreen('screen-round');
   }
 }
@@ -195,7 +209,11 @@ function endRound() {
     btnNext.textContent = "Voir les résultats 🏆";
     btnNext.onclick = () => {
       showFinalScreen(game.teams);
-      renderPlayerStats(game.playerStats, game.teams);
+      if (game.nominativeMode) {
+        renderPlayerStats(game.playerStats, game.teams);
+      } else {
+        document.getElementById('player-stats').innerHTML = '';
+      }
       showScreen('screen-final');
     };
   } else {

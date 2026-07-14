@@ -14,6 +14,7 @@ export const game = {
   ],
   players: [],             // liste de tous les joueurs
   playerStats: {},         // { playerName: { found: 0 } }
+  nominativeMode: false,   // true = avec noms de joueurs
   selectedThemes: new Set(),
   currentTeam: 0,
   currentRound: 0,

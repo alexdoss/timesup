@@ -10,7 +10,7 @@ body {
   background: #1a1a2e;
   color: #fff;
   min-height: 100dvh;
-  overflow: hidden;
+  overflow-x: hidden;
   -webkit-tap-highlight-color: transparent;
   user-select: none;
 }
@@ -42,15 +42,23 @@ body {
   display: none;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
+  justify-content: flex-start;
   min-height: 100dvh;
   padding: 24px;
+  padding-top: 60px;
+  padding-bottom: 40px;
   text-align: center;
   animation: fadeIn 0.3s ease;
+  overflow-y: auto;
 }
 
 .screen.active {
   display: flex;
+}
+
+#screen-home, #screen-game, #screen-round, #screen-turn-end {
+  justify-content: center;
+  padding-top: 24px;
 }
 
 @keyframes fadeIn {
@@ -505,6 +513,22 @@ h2 {
 
 .btn-secondary:active {
   background: rgba(255, 255, 255, 0.2);
+}
+
+.btn-link {
+  background: none;
+  border: none;
+  color: #636e72;
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+  padding: 10px;
+  text-decoration: underline;
+  width: auto;
+}
+
+.btn-link:active {
+  color: #b2bec3;
 }
 
 /* ===== PLAYER INFO ===== */

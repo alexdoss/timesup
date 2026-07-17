@@ -27,6 +27,51 @@
           <p>3️⃣ Mimez !</p>
         </div>
         <button id="btn-start" class="btn btn-primary">Nouvelle partie 🎮</button>
+        <button id="btn-library" class="btn btn-secondary">📚 Bibliothèque de cartes</button>
+      </div>
+    </div>
+
+    <!-- ÉCRAN BIBLIOTHÈQUE -->
+    <div id="screen-library" class="screen">
+      <button class="btn-close" onclick="showScreen('screen-home')">✕</button>
+      <div class="wizard-header">
+        <h2>📚 Bibliothèque</h2>
+        <p class="wizard-hint">Créez vos propres thèmes avec l'IA</p>
+      </div>
+      <div class="config-form">
+        <div id="custom-themes-list" class="custom-themes-list"></div>
+        <button id="btn-create-theme" class="btn btn-primary">✨ Créer un thème avec l'IA</button>
+      </div>
+    </div>
+
+    <!-- ÉCRAN CRÉATION THÈME IA -->
+    <div id="screen-ai-create" class="screen">
+      <button class="btn-close" onclick="showScreen('screen-library')">✕</button>
+      <div class="wizard-header">
+        <h2>✨ Création assistée</h2>
+        <p class="wizard-hint">Décrivez votre thème, l'IA génère les cartes</p>
+      </div>
+      <div class="config-form">
+        <label>
+          Nom du thème
+          <input type="text" id="ai-theme-name" placeholder="Ex: Sport français" maxlength="30">
+        </label>
+        <label>
+          Description / consigne pour l'IA
+          <textarea id="ai-prompt" rows="3" placeholder="Ex: Génère des noms de sportifs français célèbres, tous sports confondus"></textarea>
+        </label>
+        <label>
+          Nombre de cartes à générer
+          <div class="timer-selector">
+            <button class="btn-ai-count" data-count="20">20</button>
+            <button class="btn-ai-count active" data-count="40">40</button>
+            <button class="btn-ai-count" data-count="60">60</button>
+          </div>
+        </label>
+        <button id="btn-generate" class="btn btn-primary">🚀 Générer</button>
+        <div id="ai-status" class="ai-status"></div>
+        <div id="ai-preview" class="ai-preview"></div>
+        <button id="btn-save-theme" class="btn btn-primary" style="display:none">💾 Sauvegarder ce thème</button>
       </div>
     </div>
 

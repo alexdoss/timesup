@@ -4,12 +4,19 @@
 import { loadThemes } from './themes.js';
 import { game, ROUNDS, resetGame, buildDeck, startNewRound, getCurrentCard, cardFound, cardPassed, switchTeam, isRoundOver, isGameOver, nextRound, getCardsRemaining, addPlayer, removePlayer, shuffleTeams, getCurrentPlayer, advancePlayer } from './game.js';
 import { showScreen, updateTimer, showCard, updateRoundScreen, updateTurnInfo, updateGameHeader, showTurnResult, showRoundEnd, showFinalScreen, renderThemeButtons, renderPlayerList, renderTeamsPreview, updateCurrentPlayer, renderPlayerStats } from './ui.js';
+import { getCustomThemes, saveCustomTheme, deleteCustomTheme, generateWithAI } from './library.js';
 
 let THEMES = {};
+let aiGeneratedWords = [];
 
 // ===== INIT =====
 async function init() {
   THEMES = await loadThemes();
+
+  // Merge custom themes from localStorage
+  const customThemes = getCustomThemes();
+  Object.assign(THEMES, customThemes);
+
   game.selectedThemes = new Set(Object.keys(THEMES));
 
   const container = document.getElementById('theme-selector');
@@ -121,6 +128,37 @@ function setupListeners() {
 
   // Restart
   document.getElementById('btn-restart').addEventListener('click', () => showScreen('screen-home'));
+
+  // ===== LIBRARY =====
+  document.getElementById('btn-library').addEventListener('click', () => {
+    renderCustomThemesList();
+    showScreen('screen-library');
+  });
+
+  document.getElementById('btn-create-theme').addEventListener('click', () => {
+    aiGeneratedWords = [];
+    document.getElementById('ai-theme-name').value = '';
+    document.getElementById('ai-prompt').value = '';
+    document.getElementById('ai-status').textContent = '';
+    document.getElementById('ai-preview').innerHTML = '';
+    document.getElementById('ai-preview').classList.remove('visible');
+    document.getElementById('btn-save-theme').style.display = 'none';
+    showScreen('screen-ai-create');
+  });
+
+  // AI card count selector
+  document.querySelectorAll('.btn-ai-count').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.btn-ai-count').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+    });
+  });
+
+  // Generate with AI
+  document.getElementById('btn-generate').addEventListener('click', handleGenerate);
+
+  // Save generated theme
+  document.getElementById('btn-save-theme').addEventListener('click', handleSaveTheme);
 }
 
 // ===== GAME FLOW =====
@@ -227,6 +265,91 @@ function endRound() {
   }
 
   showScreen('screen-round-end');
+}
+
+// ===== LIBRARY FUNCTIONS =====
+function renderCustomThemesList() {
+  const container = document.getElementById('custom-themes-list');
+  const customThemes = getCustomThemes();
+  const keys = Object.keys(customThemes);
+
+  if (keys.length === 0) {
+    container.innerHTML = '<p class="wizard-hint">Aucun thème personnalisé. Créez-en un !</p>';
+    return;
+  }
+
+  container.innerHTML = keys.map(key => {
+    const theme = customThemes[key];
+    return `<div class="custom-theme-item">
+      <span>✨ ${theme.name} <span class="theme-count">(${theme.words.length} cartes)</span></span>
+      <button class="btn-delete-theme" data-id="${key}">🗑️</button>
+    </div>`;
+  }).join('');
+
+  container.querySelectorAll('.btn-delete-theme').forEach(btn => {
+    btn.addEventListener('click', () => {
+      if (confirm(`Supprimer le thème "${customThemes[btn.dataset.id].name}" ?`)) {
+        deleteCustomTheme(btn.dataset.id);
+        delete THEMES[btn.dataset.id];
+        renderCustomThemesList();
+      }
+    });
+  });
+}
+
+async function handleGenerate() {
+  const themeName = document.getElementById('ai-theme-name').value.trim();
+  const description = document.getElementById('ai-prompt').value.trim();
+  const count = parseInt(document.querySelector('.btn-ai-count.active').dataset.count);
+
+  if (!themeName) { alert("Donne un nom au thème"); return; }
+  if (!description) { alert("Décris ce que tu veux comme cartes"); return; }
+
+  const statusEl = document.getElementById('ai-status');
+  const previewEl = document.getElementById('ai-preview');
+  const btnSave = document.getElementById('btn-save-theme');
+  const btnGenerate = document.getElementById('btn-generate');
+
+  statusEl.textContent = "⏳ Génération en cours...";
+  btnGenerate.disabled = true;
+  previewEl.classList.remove('visible');
+  btnSave.style.display = 'none';
+
+  try {
+    aiGeneratedWords = await generateWithAI(themeName, description, count);
+    statusEl.textContent = `✅ ${aiGeneratedWords.length} cartes générées !`;
+    previewEl.innerHTML = aiGeneratedWords.map(w => `<span>${w}</span>`).join(' • ');
+    previewEl.classList.add('visible');
+    btnSave.style.display = '';
+  } catch (err) {
+    statusEl.textContent = `❌ Erreur : ${err.message}`;
+  } finally {
+    btnGenerate.disabled = false;
+  }
+}
+
+function handleSaveTheme() {
+  const themeName = document.getElementById('ai-theme-name').value.trim();
+  const id = 'custom_' + Date.now();
+
+  const newTheme = {
+    id,
+    name: themeName,
+    icon: '✨',
+    words: aiGeneratedWords
+  };
+
+  saveCustomTheme(id, newTheme);
+  THEMES[id] = newTheme;
+
+  // Refresh theme buttons in config
+  game.selectedThemes = new Set(Object.keys(THEMES));
+  const container = document.getElementById('theme-selector');
+  renderThemeButtons(THEMES, game.selectedThemes, container);
+
+  alert(`Thème "${themeName}" sauvegardé ! Il apparaîtra dans la sélection de thèmes.`);
+  showScreen('screen-library');
+  renderCustomThemesList();
 }
 
 // ===== QUIT (global for HTML onclick) =====

@@ -49,8 +49,9 @@ Exemple de format : ["élément 1", "élément 2", "élément 3"]`;
     );
 
     if (!response.ok) {
-      const error = await response.json().catch(() => ({}));
-      return res.status(502).json({ error: error?.error?.message || `Gemini error ${response.status}` });
+      const errorText = await response.text();
+      console.error('Gemini API error:', response.status, errorText);
+      return res.status(502).json({ error: `Gemini ${response.status}: ${errorText}` });
     }
 
     const data = await response.json();

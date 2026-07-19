@@ -1,14 +1,11 @@
-import { GoogleGenerativeAI } from '@google/generative-ai';
-
 export default async function handler(req, res) {
-  // Only allow POST
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  const apiKey = process.env.GEMINI_API_KEY;
+  const apiKey = process.env.GROQ_API_KEY;
   if (!apiKey) {
-    console.error('GEMINI_API_KEY is missing');
+    console.error('GROQ_API_KEY is missing');
     return res.status(500).json({ error: 'API key not configured' });
   }
 
@@ -18,7 +15,6 @@ export default async function handler(req, res) {
     return res.status(400).json({ error: 'Missing parameters' });
   }
 
-  // Prompt structuré avec thème + commentaire optionnel
   let prompt = `Tu es un assistant pour le jeu Time's Up. Génère exactement ${count} éléments sur le thème "${themeName}".`;
 
   if (comment) {
@@ -34,18 +30,28 @@ export default async function handler(req, res) {
 Exemple de format : ["élément 1", "élément 2", "élément 3"]`;
 
   try {
-    const genAI = new GoogleGenerativeAI(apiKey);
-    const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' });
-
-    const result = await model.generateContent({
-      contents: [{ role: 'user', parts: [{ text: prompt }] }],
-      generationConfig: {
+    const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${apiKey}`
+      },
+      body: JSON.stringify({
+        model: 'llama-3.3-70b-versatile',
+        messages: [{ role: 'user', content: prompt }],
         temperature: 0.9,
-        maxOutputTokens: 2048
-      }
+        max_tokens: 2048
+      })
     });
 
-    const text = result.response.text();
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('Groq API error:', response.status, errorText);
+      return res.status(502).json({ error: `Groq ${response.status}: ${errorText}` });
+    }
+
+    const data = await response.json();
+    const text = data.choices?.[0]?.message?.content || '';
 
     const jsonMatch = text.match(/\[[\s\S]*\]/);
     if (!jsonMatch) {
@@ -56,7 +62,7 @@ Exemple de format : ["élément 1", "élément 2", "élément 3"]`;
     return res.status(200).json({ words: words.map(w => String(w).trim()).filter(w => w.length > 0) });
 
   } catch (err) {
-    console.error('Gemini error:', err.message);
+    console.error('Groq error:', err.message);
     return res.status(502).json({ error: err.message });
   }
 }

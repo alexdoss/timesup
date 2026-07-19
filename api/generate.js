@@ -9,20 +9,26 @@ export default async function handler(req, res) {
     return res.status(500).json({ error: 'API key not configured' });
   }
 
-  const { themeName, description, count } = req.body;
+  const { themeName, comment, count } = req.body;
 
-  if (!themeName || !description || !count) {
+  if (!themeName || !count) {
     return res.status(400).json({ error: 'Missing parameters' });
   }
 
-  const prompt = `Génère exactement ${count} éléments pour un jeu de Time's Up sur le thème "${themeName}".
-Instructions : ${description}
-Règles :
-- Chaque élément doit être un nom propre, un personnage, un concept ou un objet facilement identifiable
-- Adapté pour être deviné par description, en un mot, puis en mime
+  // Prompt structuré avec thème + commentaire optionnel
+  let prompt = `Tu es un assistant pour le jeu Time's Up. Génère exactement ${count} éléments sur le thème "${themeName}".`;
+
+  if (comment) {
+    prompt += `\nConsigne supplémentaire de l'utilisateur : ${comment}`;
+  }
+
+  prompt += `\n\nRègles à respecter :
+- Chaque élément doit être un nom propre, un personnage, un concept ou un objet facilement identifiable en lien avec le thème
+- Les éléments doivent pouvoir être devinés par description (phrases), par un seul mot indice, puis par mime
 - Pas de doublons
-- Réponds UNIQUEMENT avec une liste JSON (tableau de strings), sans explication ni formatage markdown.
-Exemple de format attendu : ["élément 1", "élément 2", "élément 3"]`;
+- Variés en difficulté (du facile au difficile)
+- Réponds UNIQUEMENT avec une liste JSON (tableau de strings), sans explication ni formatage markdown
+Exemple de format : ["élément 1", "élément 2", "élément 3"]`;
 
   try {
     const response = await fetch(

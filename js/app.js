@@ -17,7 +17,7 @@ async function init() {
   const customThemes = getCustomThemes();
   Object.assign(THEMES, customThemes);
 
-  game.selectedThemes = new Set(Object.keys(THEMES));
+  game.selectedThemes = new Set();
 
   const container = document.getElementById('theme-selector');
   renderThemeButtons(THEMES, game.selectedThemes, container);
@@ -138,7 +138,7 @@ function setupListeners() {
   document.getElementById('btn-create-theme').addEventListener('click', () => {
     aiGeneratedWords = [];
     document.getElementById('ai-theme-name').value = '';
-    document.getElementById('ai-prompt').value = '';
+    document.getElementById('ai-comment').value = '';
     document.getElementById('ai-status').textContent = '';
     document.getElementById('ai-preview').innerHTML = '';
     document.getElementById('ai-preview').classList.remove('visible');
@@ -299,11 +299,10 @@ function renderCustomThemesList() {
 
 async function handleGenerate() {
   const themeName = document.getElementById('ai-theme-name').value.trim();
-  const description = document.getElementById('ai-prompt').value.trim();
+  const comment = document.getElementById('ai-comment').value.trim();
   const count = parseInt(document.querySelector('.btn-ai-count.active').dataset.count);
 
   if (!themeName) { alert("Donne un nom au thème"); return; }
-  if (!description) { alert("Décris ce que tu veux comme cartes"); return; }
 
   const statusEl = document.getElementById('ai-status');
   const previewEl = document.getElementById('ai-preview');
@@ -316,7 +315,7 @@ async function handleGenerate() {
   btnSave.style.display = 'none';
 
   try {
-    aiGeneratedWords = await generateWithAI(themeName, description, count);
+    aiGeneratedWords = await generateWithAI(themeName, comment, count);
     statusEl.textContent = `✅ ${aiGeneratedWords.length} cartes générées !`;
     previewEl.innerHTML = aiGeneratedWords.map(w => `<span>${w}</span>`).join(' • ');
     previewEl.classList.add('visible');
@@ -342,8 +341,8 @@ function handleSaveTheme() {
   saveCustomTheme(id, newTheme);
   THEMES[id] = newTheme;
 
-  // Refresh theme buttons in config
-  game.selectedThemes = new Set(Object.keys(THEMES));
+  // Refresh theme buttons in config (keep current selection + add new theme)
+  game.selectedThemes.add(id);
   const container = document.getElementById('theme-selector');
   renderThemeButtons(THEMES, game.selectedThemes, container);
 

@@ -72,7 +72,7 @@ export function renderThemeButtons(themes, selectedThemes, container) {
   Object.entries(themes).forEach(([key, theme]) => {
     const btn = document.createElement('button');
     btn.type = 'button';
-    btn.className = 'btn-theme active';
+    btn.className = selectedThemes.has(key) ? 'btn-theme active' : 'btn-theme';
     btn.dataset.theme = key;
     btn.textContent = `${theme.icon} ${theme.name} (${theme.words.length})`;
     btn.addEventListener('click', () => {

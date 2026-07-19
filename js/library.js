@@ -23,11 +23,11 @@ export function deleteCustomTheme(id) {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(themes));
 }
 
-export async function generateWithAI(themeName, description, count) {
+export async function generateWithAI(themeName, comment, count) {
   const response = await fetch('/api/generate', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ themeName, description, count })
+    body: JSON.stringify({ themeName, comment, count })
   });
 
   const data = await response.json();

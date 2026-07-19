@@ -1,3 +1,5 @@
+import { GoogleGenerativeAI } from '@google/generative-ai';
+
 export default async function handler(req, res) {
   // Only allow POST
   if (req.method !== 'POST') {
@@ -6,8 +8,7 @@ export default async function handler(req, res) {
 
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) {
-    // Log pour debug (visible dans Vercel → Logs)
-    console.error('GEMINI_API_KEY is missing. Available env vars:', Object.keys(process.env).filter(k => k.startsWith('GEMINI')));
+    console.error('GEMINI_API_KEY is missing');
     return res.status(500).json({ error: 'API key not configured' });
   }
 
@@ -33,32 +34,18 @@ export default async function handler(req, res) {
 Exemple de format : ["élément 1", "élément 2", "élément 3"]`;
 
   try {
-    const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent`,
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-goog-api-key': apiKey
-        },
-        body: JSON.stringify({
-          contents: [{ parts: [{ text: prompt }] }],
-          generationConfig: {
-            temperature: 0.9,
-            maxOutputTokens: 2048
-          }
-        })
+    const genAI = new GoogleGenerativeAI(apiKey);
+    const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' });
+
+    const result = await model.generateContent({
+      contents: [{ role: 'user', parts: [{ text: prompt }] }],
+      generationConfig: {
+        temperature: 0.9,
+        maxOutputTokens: 2048
       }
-    );
+    });
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error('Gemini API error:', response.status, errorText);
-      return res.status(502).json({ error: `Gemini ${response.status}: ${errorText}` });
-    }
-
-    const data = await response.json();
-    const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+    const text = result.response.text();
 
     const jsonMatch = text.match(/\[[\s\S]*\]/);
     if (!jsonMatch) {
@@ -69,6 +56,7 @@ Exemple de format : ["élément 1", "élément 2", "élément 3"]`;
     return res.status(200).json({ words: words.map(w => String(w).trim()).filter(w => w.length > 0) });
 
   } catch (err) {
-    return res.status(500).json({ error: err.message });
+    console.error('Gemini error:', err.message);
+    return res.status(502).json({ error: err.message });
   }
 }

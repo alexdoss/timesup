@@ -4,8 +4,8 @@
   "description": "Le jeu de devinettes en 3 manches",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#1a1a2e",
-  "theme_color": "#6c5ce7",
+  "background_color": "#111016",
+  "theme_color": "#d6336c",
   "orientation": "portrait",
   "icons": [
     {

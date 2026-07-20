@@ -1,0 +1,1240 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<title>RUSH — Application complète</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --app-bg:#111016;
+    --panel:#121016;
+    --ink:#ffffff;
+    --muted:#9a97ac;
+    --muted-2:#6d6a82;
+    --line:rgba(255,255,255,.09);
+    --brand:#d6336c;
+    --good:#33c26a;
+    --bad:#ff5470;
+    --r-lg:22px;
+    --r-md:16px;
+    --r-sm:10px;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    min-height:100vh; background:#0a0a0e; font-family:'Poppins',sans-serif; color:var(--ink);
+    display:flex; align-items:center; justify-content:center; padding:20px 12px;
+  }
+  .phone{
+    width:100%; max-width:400px; height:min(830px, 90vh); border-radius:34px; overflow:hidden; position:relative;
+    box-shadow:0 40px 80px -30px rgba(20,20,40,.35);
+  }
+  .screen{ display:none; flex-direction:column; height:100%; background:var(--panel); }
+  .screen.active{ display:flex; }
+  .content{ padding:26px 22px 20px; flex:1; min-height:0; display:flex; flex-direction:column; }
+  .scroll{ overflow-y:auto; }
+  ::-webkit-scrollbar{ width:0; }
+
+  /* the setup/creation screen is the one screen allowed to grow taller than the phone frame and scroll internally */
+  #screen-setup{ height:100%; }
+
+  h1,h2,h3{ margin:0; font-weight:800; }
+  p{ margin:0; }
+  .muted{ color:var(--muted); font-size:13.5px; line-height:1.5; }
+  .eyebrow{ font-size:11px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:var(--brand); margin-bottom:6px; }
+
+  /* topbar shared */
+  .topbar{ display:flex; align-items:center; justify-content:space-between; padding:22px 22px 0; }
+  .icon-btn{ font-size:18px; color:var(--muted); background:none; border:none; cursor:pointer; width:34px; height:34px; border-radius:50%; display:flex; align-items:center; justify-content:center; }
+  .icon-btn:hover{ background:rgba(255,255,255,.08); }
+  .topbar .title{ font-size:11.5px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:var(--muted); }
+
+  /* buttons */
+  .btn{ appearance:none; border:none; cursor:pointer; font-family:'Poppins',sans-serif; font-weight:700; font-size:14.5px; border-radius:100px; padding:15px 18px; display:flex; align-items:center; justify-content:center; gap:8px; transition:transform .1s ease, filter .1s ease;}
+  .btn:active{ transform:scale(.97); }
+  .btn-primary{ background:var(--brand); color:#fff; }
+  .btn-ghost{ background:#1c1a24; color:var(--ink); }
+  .btn-outline{ background:transparent; color:var(--ink); border:1.5px solid var(--line); }
+  .btn-block{ width:100%; }
+  .btn-lg{ padding:17px 20px; font-size:15.5px; }
+  .btn:disabled{ opacity:.4; cursor:not-allowed; }
+  .btn-good{ background:var(--good); color:#fff; }
+
+  .stack{ display:flex; flex-direction:column; gap:12px; }
+  .row{ display:flex; align-items:center; gap:10px; }
+  .between{ justify-content:space-between; }
+  .card-panel{ background:#1a1820; border:1px solid var(--line); border-radius:var(--r-md); padding:16px; }
+  label.field-label{ font-size:11.5px; text-transform:uppercase; letter-spacing:.06em; color:var(--muted); font-weight:700; display:block; margin-bottom:8px; }
+  input[type=text], input[type=number], select{
+    width:100%; background:#1a1820; border:1px solid var(--line); color:var(--ink);
+    padding:11px 12px; border-radius:var(--r-sm); font-family:'Poppins',sans-serif; font-size:14px;
+  }
+  input::placeholder{ color:var(--muted-2); }
+  .ce-field{ width:100%; height:46px; background:#1a1820; border:1px solid var(--line); color:var(--ink);
+    padding:0 14px; border-radius:var(--r-sm); font-family:'Poppins',sans-serif; font-size:14px; box-sizing:border-box; }
+  .ce-field-row{ display:flex; gap:8px; align-items:center; }
+  .ce-field-row .ce-field{ flex:1; }
+  .ce-auto-btn{ flex:none; height:46px; padding:0 14px; border-radius:var(--r-sm); border:1px solid var(--line);
+    background:#1a1820; color:var(--muted); font-family:'Poppins',sans-serif; font-size:12.5px; font-weight:600; cursor:pointer; white-space:nowrap; }
+  .ce-auto-btn:hover{ color:var(--brand); border-color:var(--brand); }
+  .ce-check{ display:flex; align-items:center; gap:6px; padding:6px 12px; border-radius:100px; font-size:12px; font-weight:600; background:#1a1820; border:1px solid var(--line); color:var(--muted); }
+  .ce-check.done{ color:var(--good); border-color:rgba(51,194,106,.4); background:rgba(51,194,106,.08); }
+  .ce-check.current{ color:var(--brand); border-color:var(--brand); }
+  .pillgroup{ display:flex; gap:6px; background:#1a1820; padding:4px; border-radius:100px; }
+  .pill{ flex:1; text-align:center; padding:9px 10px; border-radius:100px; font-size:13px; font-weight:700; cursor:pointer; color:var(--muted); }
+  .pill.active{ background:var(--brand); color:#fff; }
+  .stepper{ display:flex; align-items:center; gap:14px; }
+  .stepper button{ width:32px; height:32px; border-radius:50%; border:1px solid var(--line); background:#1a1820; color:var(--ink); font-size:16px; cursor:pointer; }
+  .stepper .val{ font-weight:800; font-size:18px; min-width:22px; text-align:center; }
+  .chk{ display:flex; align-items:center; gap:10px; padding:10px 12px; border:1px solid var(--line); border-radius:var(--r-sm); background:#1a1820; }
+  .chk input{ width:16px; height:16px; accent-color:var(--brand); }
+  .badge{ font-size:10.5px; color:var(--muted); margin-left:auto; }
+  .section-title{ font-size:11px; text-transform:uppercase; letter-spacing:.08em; color:var(--muted); font-weight:700; margin:20px 0 10px; }
+  .section-title:first-child{ margin-top:0; }
+  .team-row{ display:flex; align-items:center; gap:10px; }
+  .swatch{ width:13px; height:13px; border-radius:4px; flex:none; }
+  .player-tag{ display:flex; align-items:center; gap:8px; background:#1a1820; padding:7px 10px; border-radius:100px; font-size:13px; border:1px solid var(--line); }
+  .player-tag.wide{ border-radius:var(--r-sm); padding:8px 10px; }
+  .player-tag button{ background:none; border:none; color:var(--muted); cursor:pointer; font-size:13px; padding:0; }
+  .total-line{ font-size:12px; color:var(--brand); font-weight:700; margin-top:6px; }
+
+  /* pill round badge shared */
+  .round-pill{ display:block; margin:0 auto; width:fit-content; padding:7px 16px; border-radius:100px; font-size:11px; font-weight:700; letter-spacing:.05em; text-transform:uppercase; background:#1c1a24; color:var(--muted); }
+
+  /* home */
+  .home-hero{ text-align:center; margin:30px 0 6px; }
+  .home-hero h1{ font-size:40px; letter-spacing:.01em; }
+  .home-hero h1 span{ color:var(--brand); }
+  .home-tag{ text-align:center; color:var(--muted); font-size:13.5px; margin-bottom:32px; }
+  .home-actions{ display:flex; flex-direction:column; gap:12px; margin-top:auto; }
+
+  /* round intro */
+  .round-hero{ margin:auto 0; text-align:center; }
+  .round-num{ color:var(--muted); font-size:12.5px; letter-spacing:.1em; text-transform:uppercase; font-weight:700; }
+  .round-emoji{ font-size:50px; margin:18px 0; }
+  .round-name{ font-size:28px; color:var(--brand); margin-bottom:10px; }
+  .round-rule{ color:#1b1b26; font-size:14.5px; line-height:1.6; max-width:270px; margin:0 auto; opacity:.85; }
+
+  /* team-themed screens (turn-start / gameplay / turn-end) */
+  .team-screen{ transition:background .15s ease; }
+  .team-screen.theme-light{ background:#ffffff; color:#1b1b26; }
+  .team-screen.theme-dark{ background:#121218; color:#ffffff; }
+
+  .team-head{ text-align:center; }
+  .team-head .name{ font-weight:800; font-size:16px; letter-spacing:.02em; text-transform:uppercase; color:var(--accent); }
+  .team-head .player{ font-weight:700; font-size:13.5px; margin-top:2px; color:var(--accent); }
+
+  .theme-dark .round-pill{ background:#1e1e28; color:#9a9db2; }
+  .theme-light .round-pill{ background:#f2f2f6; color:#8b8fa3; }
+
+  .theme-dark .icon-btn{ color:#8f92a8; }
+
+  /* turn start banner */
+  .turn-banner{ text-align:center; margin:auto 0; padding:26px 10px; border-radius:var(--r-lg); }
+  .theme-dark .turn-banner{ background:rgba(255,255,255,.04); }
+  .theme-light .turn-banner{ background:#f7f8fb; }
+  .turn-banner .who{ font-size:11.5px; letter-spacing:.08em; text-transform:uppercase; opacity:.65; }
+  .turn-banner h2{ font-size:30px; margin:8px 0 4px; color:var(--accent); }
+  .turn-banner .player{ font-size:15px; font-weight:700; opacity:.9; }
+  .meta-grid{ display:flex; justify-content:center; gap:26px; margin-top:20px; }
+  .meta-item{ text-align:center; }
+  .meta-item .n{ font-weight:800; font-size:20px; }
+  .meta-item .l{ font-size:9.5px; text-transform:uppercase; letter-spacing:.06em; opacity:.65; }
+
+  /* gameplay stat row */
+  .gp-top-row{ display:flex; align-items:center; gap:36px; margin:16px 0 4px; }
+  .gp-stats-col{ display:flex; flex-direction:column; gap:12px; }
+  .gp-stat-item{ display:flex; align-items:baseline; gap:6px; }
+  .gp-stat-item .v{ font-size:22px; font-weight:800; color:var(--accent); }
+  .gp-stat-item .l{ font-size:13px; font-weight:600; opacity:.7; }
+
+  .timerwrap{ position:relative; width:84px; height:84px; flex:none; }
+  .timerwrap svg{ transform:rotate(-90deg); width:84px; height:84px; }
+  .timerwrap .tt{ position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font-weight:800; font-size:22px; }
+  .timerwrap.low .tt{ color:var(--bad); }
+
+  .word-card{ margin-top:20px; border-radius:22px; padding:52px 16px; text-align:center; font-weight:800; font-size:32px; flex:1; display:flex; align-items:center; justify-content:center; min-height:120px; }
+  .theme-dark .word-card{ background:#121218; border:2px solid var(--accent); color:#fff; }
+  .theme-light .word-card{ background:#fff; border:1.5px solid #eceef3; color:#1b1b26; box-shadow:0 6px 18px -12px rgba(0,0,0,.15); }
+  .word-card .cat{ font-size:10.5px; text-transform:uppercase; letter-spacing:.08em; opacity:.55; margin-bottom:8px; font-weight:700; }
+
+  .score-strip{ display:flex; gap:8px; flex-wrap:wrap; }
+  .score-chip{ flex:1; min-width:70px; border-radius:var(--r-sm); padding:8px 10px; text-align:center; border:1px solid; }
+  .score-chip .nm{ font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.03em; }
+  .score-chip .sc{ font-size:18px; font-weight:800; margin-top:2px; }
+
+  .score-line{ text-align:center; font-size:15px; font-weight:600; }
+  .score-line b{ font-size:17px; font-weight:800; margin:0 3px; }
+
+  .duration-bottom{ font-size:22px; font-weight:800; color:var(--accent); white-space:nowrap; }
+
+  .duration-disc{ width:78px; height:78px; border-radius:50%; background:var(--accent); color:#fff;
+    display:flex; align-items:center; justify-content:center; font-weight:800; font-size:19px; }
+
+  .progress-head{ display:flex; justify-content:space-between; align-items:baseline; margin:18px 4px 8px; }
+  .progress-head .l{ font-size:10px; font-weight:700; letter-spacing:.05em; text-transform:uppercase; opacity:.6; }
+  .progress-head .v{ font-size:12px; font-weight:800; color:var(--accent); }
+  .progress-bar{ display:flex; gap:5px; }
+  .seg{ flex:1; height:7px; border-radius:6px; background:var(--accent); }
+  .theme-dark .seg.off{ background:#26262f; }
+  .theme-light .seg.off{ background:#eceef2; }
+
+  .action-row{ display:flex; gap:10px; margin-top:20px; }
+  .action-row .btn{ flex:1; padding:17px; font-size:14.5px; }
+  .theme-dark .btn-pass{ background:#26262f; color:#fff; }
+  .theme-light .btn-pass{ background:var(--accent); color:#fff; }
+  .theme-dark .btn-pass:disabled, .theme-light .btn-pass:disabled{ opacity:.3; }
+
+  /* recap screens (neutral dark) */
+  .recap-card{ background:#1a1820; border:1px solid var(--line); border-radius:var(--r-md); padding:16px; }
+  .recap-grid{ display:grid; grid-template-columns:1fr 1fr; gap:12px; margin:14px 0; }
+  .recap-stat{ text-align:center; background:#211f2a; border:1px solid var(--line); border-radius:var(--r-sm); padding:14px 8px; }
+  .recap-stat .n{ font-weight:800; font-size:24px; }
+  .recap-stat .l{ font-size:10px; text-transform:uppercase; color:var(--muted); font-weight:700; }
+  table.score-table{ width:100%; border-collapse:collapse; font-size:13.5px; }
+  table.score-table th, table.score-table td{ text-align:left; padding:9px 6px; border-bottom:1px solid var(--line); }
+  table.score-table th{ font-size:10.5px; text-transform:uppercase; color:var(--muted); font-weight:700; }
+  .rank-row{ display:flex; align-items:center; gap:10px; padding:10px 4px; border-bottom:1px solid var(--line); }
+  .rank-num{ font-weight:800; font-size:15px; color:var(--muted); width:20px; }
+
+  .winner-hero{ text-align:center; padding:16px 0 10px; }
+  .trophy{ font-size:50px; }
+  .winner-hero h2{ font-size:26px; margin-top:10px; }
+  .winner-hero .sc{ font-weight:800; font-size:40px; margin-top:6px; color:var(--brand); }
+
+  .footer-cta{ padding:14px 22px 24px; display:flex; flex-direction:column; gap:10px; background:var(--panel); }
+  .note{ font-size:12px; color:var(--muted); line-height:1.5; margin-top:6px; }
+  .lib-item{ display:flex; justify-content:space-between; align-items:center; padding:14px; border:1px solid var(--line); border-radius:var(--r-sm); background:#1a1820;}
+  .soon-tag{ font-size:10px; font-weight:700; background:rgba(255,61,148,.15); color:var(--brand); padding:4px 8px; border-radius:100px; letter-spacing:.04em;}
+</style>
+</head>
+<body>
+<div class="phone">
+
+  <!-- ===================== HOME ===================== -->
+  <section class="screen active" id="screen-home">
+    <div class="topbar"><span></span><span class="title">Accueil</span><button class="icon-btn" onclick="goTo('screen-settings')">⚙</button></div>
+    <div class="content scroll">
+      <div class="home-hero"><h1><span>RUSH</span></h1></div>
+      <p class="home-tag">Le jeu d'ambiance qui carbure à l'adrénaline.</p>
+      <div class="home-actions">
+        <button class="btn btn-primary btn-block btn-lg" onclick="goTo('screen-setup'); initSetupScreen();">🎬 Nouvelle partie</button>
+        <button class="btn btn-ghost btn-block" id="btn-resume" onclick="resumeGame()" disabled>↺ Reprendre la partie</button>
+        <button class="btn btn-ghost btn-block" onclick="goTo('screen-library')">🗂 Bibliothèque de cartes</button>
+        <button class="btn btn-ghost btn-block" onclick="goTo('screen-settings')">⚙ Paramètres</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== SETUP ===================== -->
+  <section class="screen" id="screen-setup">
+    <div class="topbar"><button class="icon-btn" onclick="goTo('screen-home')">←</button><span class="title">Nouvelle partie</span><span></span></div>
+    <div class="content scroll">
+
+      <div class="section-title">Mode de jeu</div>
+      <div class="pillgroup">
+        <div class="pill active" data-mode="simple" onclick="setMode('simple')">Simple</div>
+        <div class="pill" data-mode="nominatif" onclick="setMode('nominatif')">Nominatif</div>
+      </div>
+      <p class="note" id="mode-note">Mode simple : les équipes jouent sans suivi individuel des joueurs.</p>
+
+      <div class="card-panel stack" id="team-players-panel">
+        <div class="row between">
+          <span class="muted">Nombre d'équipes</span>
+          <div class="stepper">
+            <button onclick="changeTeamCount(-1)">–</button>
+            <span class="val" id="team-count-val">2</span>
+            <button onclick="changeTeamCount(1)">+</button>
+          </div>
+        </div>
+
+        <div class="row between" id="simple-playercount-row" style="display:none;">
+          <span class="muted">Nombre de joueurs</span>
+          <div class="stepper">
+            <button onclick="changeSimplePlayerCount(-1)">–</button>
+            <span class="val" id="simple-playercount-val">6</span>
+            <button onclick="changeSimplePlayerCount(1)">+</button>
+          </div>
+        </div>
+
+        <div id="team-name-list" class="stack"></div>
+
+        <div id="nominatif-players-subsection" class="stack" style="display:none; border-top:1px solid var(--line); padding-top:14px; margin-top:2px;">
+          <div>
+            <label class="field-label">Attribution des équipes</label>
+            <div class="pillgroup">
+              <div class="pill active" data-assign="random" onclick="setAssignMode('random')">Aléatoire</div>
+              <div class="pill" data-assign="chosen" onclick="setAssignMode('chosen')">Choisie</div>
+            </div>
+          </div>
+          <div class="row">
+            <input type="text" id="player-input" placeholder="Prénom du joueur">
+            <button class="btn btn-ghost" onclick="addPlayer()">Ajouter</button>
+          </div>
+          <div class="stack" id="player-list"></div>
+          <p class="note" id="assign-note">Les joueurs sont répartis automatiquement, équipe par équipe, dans l'ordre d'ajout.</p>
+        </div>
+      </div>
+
+      <div class="section-title">Manches</div>
+      <div class="card-panel stack" id="rounds-list"></div>
+
+      <div class="section-title">Déroulement</div>
+      <div class="card-panel stack">
+        <div>
+          <label class="field-label">Durée d'un tour</label>
+          <select id="turn-duration">
+            <option value="30">30 secondes</option>
+            <option value="45" selected>45 secondes</option>
+            <option value="60">60 secondes</option>
+            <option value="90">90 secondes</option>
+          </select>
+        </div>
+        <div>
+          <label class="field-label">Passer une carte</label>
+          <select id="pass-mode" onchange="togglePassOptions()">
+            <option value="illimite">Autorisé — illimité</option>
+            <option value="limite">Autorisé — limité</option>
+            <option value="interdit">Interdit</option>
+          </select>
+        </div>
+        <div id="pass-limit-block">
+          <label class="field-label">Nombre de passages max. par tour</label>
+          <input type="number" id="pass-limit" min="1" max="10" value="3">
+        </div>
+        <div id="pass-replace-block">
+          <label class="field-label">Carte passée</label>
+          <select id="pass-replace">
+            <option value="bottom">Replacée sous le paquet</option>
+            <option value="random">Replacée aléatoirement</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="section-title">Cartes</div>
+      <div class="card-panel stack">
+        <div style="display:flex; justify-content:center;">
+          <div class="pillgroup" style="flex:none;">
+            <div class="pill active" data-src="app" onclick="setCardSource('app')" style="flex:none; padding:9px 22px;">Automatique</div>
+            <div class="pill" data-src="custom" onclick="setCardSource('custom')" style="flex:none; padding:9px 22px;">Créées par les joueurs</div>
+          </div>
+        </div>
+
+        <div>
+          <label class="field-label">Nombre de cartes</label>
+          <input type="number" id="card-count" min="30" step="1" value="30" oninput="updateCardTotal()">
+          <div class="total-line" id="card-total-line">→ 30 cartes dans le paquet</div>
+        </div>
+
+        <div id="app-cards-block" class="stack">
+          <div>
+            <label class="field-label">Catégories</label>
+            <div class="stack" id="category-list"></div>
+          </div>
+          <div>
+            <label class="field-label">Difficulté</label>
+            <select id="difficulty-select">
+              <option value="facile">Facile</option>
+              <option value="moyen" selected>Moyen</option>
+              <option value="difficile">Difficile</option>
+            </select>
+          </div>
+        </div>
+
+        <div id="custom-cards-block" class="stack" style="display:none;">
+          <p class="note">Chaque joueur saisit ses propres cartes en privé. Cliquez sur son nom pour ouvrir sa saisie — les autres joueurs ne verront jamais ses mots.</p>
+          <div class="stack" id="custom-player-list"></div>
+        </div>
+      </div>
+
+      <p class="note" id="validation-note" style="color:var(--bad); display:none;"></p>
+    </div>
+    <div class="footer-cta">
+      <button class="btn btn-primary btn-block btn-lg" onclick="launchGame()">▶ Lancer la partie</button>
+    </div>
+  </section>
+
+  <!-- ===================== CARD ENTRY (private, per player) ===================== -->
+  <section class="screen" id="screen-card-entry">
+    <div class="topbar"><button class="icon-btn" onclick="goTo('screen-setup')">←</button><span class="title">Saisie des cartes</span><span></span></div>
+    <div class="content scroll">
+      <p class="muted" style="text-align:center;">🔒 Les autres joueurs ne doivent pas regarder l'écran</p>
+
+      <div class="turn-banner" style="margin:18px 0 0;">
+        <div class="who">C'est à</div>
+        <h2 id="ce-player" style="color:var(--brand);">Marina</h2>
+      </div>
+
+      <div class="progress-head" style="margin-top:18px;"><span class="l" style="color:var(--muted);">Cartes à saisir</span><span class="v" id="ce-progress-label" style="color:var(--brand);">0 / 6</span></div>
+      <div class="progress-bar" id="ce-progressbar"></div>
+
+      <div class="stack" id="ce-fields" style="margin-top:16px;"></div>
+    </div>
+    <div class="footer-cta">
+      <button class="btn btn-primary btn-block btn-lg" onclick="nextCustomPlayer()">OK</button>
+    </div>
+  </section>
+
+  <!-- ===================== LIBRARY ===================== -->
+  <section class="screen" id="screen-library">
+    <div class="topbar"><button class="icon-btn" onclick="goTo('screen-home')">←</button><span class="title">Bibliothèque</span><span></span></div>
+    <div class="content scroll">
+      <span class="soon-tag">Disponible en V2</span>
+      <p class="muted" style="margin-top:12px;">Retrouvez, modifiez et réutilisez vos paquets de cartes créés lors de vos parties précédentes.</p>
+      <div class="section-title">Vos listes (exemple)</div>
+      <div class="stack">
+        <div class="lib-item"><span>Soirée entre amis — 32 cartes</span><span class="muted">›</span></div>
+        <div class="lib-item"><span>Spécial cinéma — 20 cartes</span><span class="muted">›</span></div>
+        <div class="lib-item"><span>Repas de famille — 28 cartes</span><span class="muted">›</span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== SETTINGS ===================== -->
+  <section class="screen" id="screen-settings">
+    <div class="topbar"><button class="icon-btn" onclick="goTo('screen-home')">←</button><span class="title">Paramètres</span><span></span></div>
+    <div class="content scroll">
+      <div class="section-title">Application</div>
+      <div class="stack">
+        <div class="row between card-panel"><span>Sons</span><input type="checkbox" checked></div>
+        <div class="row between card-panel"><span>Vibrations</span><input type="checkbox" checked></div>
+        <div class="row between card-panel"><span>Décompte sonore (5 dernières secondes)</span><input type="checkbox" checked></div>
+      </div>
+      <div class="section-title">À propos</div>
+      <p class="muted">RUSH — v1.0 (maquette). Jeu d'ambiance jouable à plusieurs, hors connexion.</p>
+    </div>
+  </section>
+
+  <!-- ===================== TURN START (themed, merged with round intro) ===================== -->
+  <section class="screen team-screen theme-light" id="screen-turn-start">
+    <div class="topbar"><span class="icon-btn">☰</span><span class="round-pill" id="ts-roundnum">Manche 1 / 3</span><button class="icon-btn">⚙</button></div>
+    <div class="content">
+      <div class="progress-head" style="margin-top:4px;"><span class="l">Progression manche</span><span class="v" id="ts-progress-label">24 cartes</span></div>
+      <div class="progress-bar" id="ts-progressbar"></div>
+
+      <div class="score-line" id="ts-scoreline" style="margin-top:16px;">Équipe Rose 3 – 2 Équipe Bleue</div>
+
+      <div class="round-hero" style="margin:16px 0 0;">
+        <div class="round-name" id="ts-roundname" style="color:var(--accent); font-size:20px;">Description libre</div>
+        <p class="round-rule" id="ts-roundrule">Le joueur parle librement, sans prononcer le mot inscrit sur la carte.</p>
+      </div>
+
+      <div class="turn-banner" style="margin-top:16px;">
+        <div class="who">C'est au tour de</div>
+        <h2 id="ts-team">Équipe Rose</h2>
+        <div class="player" id="ts-player">Marina</div>
+      </div>
+    </div>
+    <div class="footer-cta" style="background:transparent; flex-direction:row; align-items:center; gap:14px;">
+      <div class="duration-bottom" id="ts-duration">45s</div>
+      <button class="btn btn-primary btn-lg" style="flex:1;" onclick="startTurn()">Prêt</button>
+    </div>
+  </section>
+
+  <!-- ===================== GAMEPLAY (themed) ===================== -->
+  <section class="screen team-screen theme-light" id="screen-gameplay">
+    <div class="topbar"><span class="icon-btn">☰</span><span class="round-pill" id="gp-roundpill">Manche 1 · Description libre</span><button class="icon-btn">⚙</button></div>
+    <div class="content scroll" style="padding-top:14px;">
+      <div class="team-head">
+        <div class="name" id="gp-name">Marina</div>
+      </div>
+
+      <div class="gp-top-row">
+        <div class="timerwrap" id="timer-wrap">
+          <svg viewBox="0 0 84 84">
+            <circle cx="42" cy="42" r="36" stroke-width="5" fill="none" id="timer-track"/>
+            <circle cx="42" cy="42" r="36" stroke-width="5" fill="none" stroke-linecap="round" id="timer-circle" stroke-dasharray="226.2" stroke-dashoffset="0"/>
+          </svg>
+          <div class="tt" id="timer-text">45</div>
+        </div>
+        <div class="gp-stats-col">
+          <div class="gp-stat-item"><div class="v" id="gp-turnfound">0</div><div class="l">trouvées</div></div>
+          <div class="gp-stat-item"><div class="v" id="gp-turnpassed">0</div><div class="l">passées</div></div>
+        </div>
+      </div>
+
+      <div class="word-card">
+        <div id="gp-word">TIRE-BOUCHON</div>
+      </div>
+
+      <div class="progress-head"><span class="l">Progression manche</span><span class="v" id="gp-remaining">24 cartes</span></div>
+      <div class="progress-bar" id="gp-progressbar"></div>
+
+      <div class="action-row">
+        <button class="btn btn-outline btn-pass" id="btn-pass" onclick="passCard()">Passer ▶▶</button>
+        <button class="btn btn-good" onclick="foundCard()">✓ Trouvé</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== TURN END RECAP (neutral) ===================== -->
+  <section class="screen" id="screen-turn-end">
+    <div class="topbar"><span></span><span class="round-pill">Fin du tour</span><span></span></div>
+    <div class="content scroll">
+      <h2 style="font-size:24px;" id="te-team">Équipe Rose</h2>
+      <div class="recap-grid">
+        <div class="recap-stat"><div class="n" id="te-found">5</div><div class="l">Trouvées</div></div>
+        <div class="recap-stat"><div class="n" id="te-passed">2</div><div class="l">Passées</div></div>
+      </div>
+      <div class="recap-card">
+        <div class="section-title" style="margin-top:0;">Classement provisoire</div>
+        <div id="te-ranking"></div>
+      </div>
+      <p class="muted" style="margin-top:16px;">Équipe suivante : <strong id="te-next" style="color:inherit">Équipe Bleue</strong></p>
+    </div>
+    <div class="footer-cta" style="background:transparent;">
+      <button class="btn btn-primary btn-block btn-lg" onclick="continueAfterTurn()">Continuer</button>
+    </div>
+  </section>
+
+  <!-- ===================== ROUND END RECAP (neutral) ===================== -->
+  <section class="screen" id="screen-round-end">
+    <div class="topbar"><span></span><span class="title">Manche terminée</span><span></span></div>
+    <div class="content scroll">
+      <h2 style="font-size:24px;" id="re-title">Description libre</h2>
+      <div class="recap-card" style="margin-top:14px;">
+        <div class="section-title" style="margin-top:0;">Scores de la manche</div>
+        <table class="score-table" id="re-round-table"></table>
+      </div>
+      <div class="recap-card" style="margin-top:14px;">
+        <div class="section-title" style="margin-top:0;">Score total</div>
+        <div id="re-total-ranking"></div>
+      </div>
+      <div class="recap-card" style="margin-top:14px;" id="re-next-block">
+        <div class="section-title" style="margin-top:0;">Prochaine manche</div>
+        <p id="re-next-name" style="font-size:19px; font-weight:800; color:var(--brand);">Un mot</p>
+        <p class="muted" id="re-next-rule">Le joueur ne peut utiliser qu'un seul mot pour faire deviner la carte.</p>
+      </div>
+    </div>
+    <div class="footer-cta">
+      <button class="btn btn-primary btn-block btn-lg" onclick="continueAfterRound()">Manche suivante</button>
+    </div>
+  </section>
+
+  <!-- ===================== FINAL RESULTS (neutral) ===================== -->
+  <section class="screen" id="screen-final">
+    <div class="topbar"><span></span><span class="title">Résultats</span><span></span></div>
+    <div class="content scroll">
+      <div class="winner-hero">
+        <div class="trophy">🏆</div>
+        <div class="eyebrow" style="margin-top:10px;">Vainqueur</div>
+        <h2 id="fi-winner">Équipe Rose</h2>
+        <div class="sc" id="fi-score">26</div>
+      </div>
+
+      <div class="recap-card">
+        <div class="section-title" style="margin-top:0;">Classement final</div>
+        <div id="fi-ranking"></div>
+      </div>
+
+      <div class="recap-card" style="margin-top:14px;">
+        <div class="section-title" style="margin-top:0;">Détail des manches</div>
+        <table class="score-table" id="fi-detail-table"></table>
+      </div>
+
+      <div class="recap-grid">
+        <div class="recap-stat"><div class="n" id="fi-duration">6:12</div><div class="l">Durée</div></div>
+        <div class="recap-stat"><div class="n" id="fi-cards">72</div><div class="l">Cartes jouées</div></div>
+      </div>
+
+      <div class="recap-card" id="fi-stats-block" style="margin-top:14px; display:none;">
+        <div class="section-title" style="margin-top:0;">Statistiques joueurs</div>
+        <div id="fi-player-stats"></div>
+        <p class="muted" style="margin-top:10px;">🌟 Meilleur joueur : <strong id="fi-mvp" style="color:var(--ink);">—</strong></p>
+      </div>
+    </div>
+    <div class="footer-cta">
+      <button class="btn btn-primary btn-block btn-lg" onclick="rematchSameSettings()">↺ Rejouer (mêmes paramètres)</button>
+      <button class="btn btn-ghost btn-block" onclick="goTo('screen-setup'); initSetupScreen();">🎬 Nouvelle partie</button>
+      <button class="btn btn-outline btn-block" onclick="goTo('screen-home')">Accueil</button>
+    </div>
+  </section>
+
+</div>
+
+<script>
+/* ============================================================
+   DATA
+   ============================================================ */
+const CATEGORIES = {
+  "Personnalités": ["Albert Einstein","Marilyn Monroe","Napoléon Bonaparte","Cléopâtre","Léonard de Vinci","Charlie Chaplin","Frida Kahlo","Mozart","Coco Chanel","Marie Curie"],
+  "Cinéma": ["Titanic","Star Wars","Le Roi Lion","Jurassic Park","Retour vers le futur","Matrix","Amélie Poulain","Le Parrain","Inception","La Vie est belle"],
+  "Séries": ["Friends","Game of Thrones","Breaking Bad","Stranger Things","La Casa de Papel","Doctor Who","The Office","Peaky Blinders","Dix pour cent","Le Bureau des Légendes"],
+  "Objets": ["Parapluie","Tire-bouchon","Aspirateur","Boussole","Réveil","Ventilateur","Balançoire","Cerf-volant","Tondeuse à gazon","Thermomètre"],
+  "Expressions": ["Avoir le cafard","Tomber dans les pommes","Poser un lapin","Filer à l'anglaise","Chercher midi à quatorze heures","Avoir un coup de foudre","Casser les pieds","Donner sa langue au chat","Avoir la pêche","Mettre les pieds dans le plat"]
+};
+const CUSTOM_POOL = ["Le sac oublié de Karim","Le fou rire de Léa au mariage","Notre chat qui déteste le lundi","La chanson qu'on ne se sort pas de la tête","Le road-trip de l'été dernier","La blague préférée de papi","Le plat raté du réveillon","Notre GIF de groupe fétiche"];
+
+// team accent colors, alternating theme: even index -> light theme, odd index -> dark theme
+const TEAM_COLORS = ["#d6336c","#0f6e76","#22c3d4","#8b5cf6"];
+const DEFAULT_TEAM_NAMES = ["Équipe Rose","Équipe Canard","Équipe Cyan","Équipe Violette"];
+function teamTheme(i){ return "light"; }
+
+const ROUNDS_DEF = [
+  {id:1, name:"Description libre", emoji:"💬", rule:"Le joueur parle librement, sans prononcer le mot inscrit sur la carte.", optional:false},
+  {id:2, name:"Un mot", emoji:"🔤", rule:"Le joueur ne peut utiliser qu'un seul mot pour faire deviner la carte.", optional:false},
+  {id:3, name:"Mime", emoji:"🎭", rule:"Le joueur fait deviner la carte uniquement par des gestes, sans parler.", optional:false},
+  {id:4, name:"Pose figée", emoji:"🗿", rule:"Le joueur prend une pose immobile pour faire deviner la carte.", optional:true},
+  {id:5, name:"Faire bouger un partenaire", emoji:"🕺", rule:"Le joueur fait bouger un de ses partenaires sans lui parler.", optional:true},
+];
+
+/* ============================================================
+   SETUP STATE
+   ============================================================ */
+let setup = {
+  mode:"simple", teamCount:2, teamNames:[...DEFAULT_TEAM_NAMES], players:[],
+  playerAssignMode:"random", playerCardsCollected:{}, simplePlayerCount:6,
+  cardSource:"app", categories:new Set(["Personnalités","Cinéma"]), difficulty:"moyen",
+  cardCount:30, roundsEnabled:[1,2,3], turnDuration:45,
+  passMode:"illimite", passLimit:3, passReplace:"bottom",
+};
+let hasSavedGame = false;
+let savedScreen = null;
+
+function goTo(id){
+  document.querySelectorAll(".screen").forEach(s=>s.classList.remove("active"));
+  const el = document.getElementById(id);
+  el.classList.add("active");
+  el.scrollTop = 0;
+  window.scrollTo(0,0);
+}
+
+/* ============================================================
+   SETUP SCREEN
+   ============================================================ */
+function initSetupScreen(){
+  renderTeamNameInputs(); renderPlayerList(); renderCategoryList(); renderRoundsList();
+  updateCardTotal(); togglePassOptions(); updatePlayersBlockVisibility(); renderCustomPlayerList();
+  document.getElementById("card-count").value = setup.cardCount;
+}
+function setMode(mode){
+  setup.mode = mode;
+  document.querySelectorAll("[data-mode]").forEach(p=>p.classList.toggle("active", p.dataset.mode===mode));
+  if(mode==="simple"){ syncSimplePlayers(); }
+  else { setup.players = []; renderPlayerList(); resetCustomCollection(); updateCardTotal(); }
+  updatePlayersBlockVisibility();
+  document.getElementById("mode-note").textContent = mode==="simple"
+    ? "Mode simple : les équipes jouent sans suivi individuel des joueurs."
+    : "Mode nominatif : chaque joueur est identifié, la rotation et les statistiques individuelles sont gérées automatiquement.";
+}
+function updatePlayersBlockVisibility(){
+  document.getElementById("nominatif-players-subsection").style.display = setup.mode==="nominatif" ? "flex" : "none";
+  document.getElementById("simple-playercount-row").style.display = setup.mode==="simple" ? "flex" : "none";
+}
+function changeSimplePlayerCount(delta){
+  setup.simplePlayerCount = Math.max(1, Math.min(20, setup.simplePlayerCount + delta));
+  document.getElementById("simple-playercount-val").textContent = setup.simplePlayerCount;
+  syncSimplePlayers();
+}
+function syncSimplePlayers(){
+  setup.players = [];
+  for(let i=0;i<setup.simplePlayerCount;i++) setup.players.push({name:`Joueur ${i+1}`});
+  resetCustomCollection();
+  updateCardTotal();
+}
+function setAssignMode(mode){
+  setup.playerAssignMode = mode;
+  document.querySelectorAll("[data-assign]").forEach(p=>p.classList.toggle("active", p.dataset.assign===mode));
+  document.getElementById("assign-note").textContent = mode==="random"
+    ? "Les joueurs sont répartis automatiquement, équipe par équipe, dans l'ordre d'ajout."
+    : "Choisissez l'équipe de chaque joueur ci-dessous.";
+  renderPlayerList();
+}
+setMode("simple");
+
+function changeTeamCount(delta){
+  setup.teamCount = Math.min(4, Math.max(2, setup.teamCount + delta));
+  document.getElementById("team-count-val").textContent = setup.teamCount;
+  renderTeamNameInputs();
+  renderPlayerList();
+}
+function renderTeamNameInputs(){
+  const wrap = document.getElementById("team-name-list");
+  wrap.innerHTML = "";
+  for(let i=0;i<setup.teamCount;i++){
+    if(!setup.teamNames[i]) setup.teamNames[i] = DEFAULT_TEAM_NAMES[i];
+    const row = document.createElement("div");
+    row.className = "team-row";
+    row.innerHTML = `<span class="swatch" style="background:${TEAM_COLORS[i]}"></span>
+      <input type="text" value="${setup.teamNames[i]}" oninput="setup.teamNames[${i}]=this.value">`;
+    wrap.appendChild(row);
+  }
+}
+function addPlayer(){
+  const input = document.getElementById("player-input");
+  const name = input.value.trim();
+  if(!name) return;
+  setup.players.push({name, team:0}); input.value="";
+  renderPlayerList(); resetCustomCollection(); updateCardTotal();
+}
+function removePlayer(i){ setup.players.splice(i,1); renderPlayerList(); resetCustomCollection(); updateCardTotal(); }
+function setPlayerTeam(i, teamIdx){ setup.players[i].team = parseInt(teamIdx,10); renderPlayerList(); }
+function renderPlayerList(){
+  const wrap = document.getElementById("player-list");
+  wrap.innerHTML = "";
+  if(setup.mode!=="nominatif") return;
+  setup.players.forEach((p,i)=>{
+    const teamIdx = setup.playerAssignMode==="chosen" ? (p.team||0) : (i % setup.teamCount);
+    const tag = document.createElement("div");
+    tag.className = "player-tag wide";
+    tag.style.justifyContent = "space-between";
+    if(setup.playerAssignMode==="chosen"){
+      let options = "";
+      for(let t=0;t<setup.teamCount;t++){ options += `<option value="${t}" ${t===teamIdx?"selected":""}>${setup.teamNames[t]||DEFAULT_TEAM_NAMES[t]}</option>`; }
+      tag.innerHTML = `<span class="swatch" style="background:${TEAM_COLORS[teamIdx]}"></span><span style="flex:1">${p.name}</span>
+        <select style="width:auto; padding:4px 8px; font-size:12px;" onchange="setPlayerTeam(${i}, this.value)">${options}</select>
+        <button onclick="removePlayer(${i})">✕</button>`;
+    } else {
+      tag.innerHTML = `<span class="swatch" style="background:${TEAM_COLORS[teamIdx]}"></span><span style="flex:1">${p.name}</span><button onclick="removePlayer(${i})">✕</button>`;
+    }
+    wrap.appendChild(tag);
+  });
+}
+function setCardSource(src){
+  setup.cardSource = src;
+  document.querySelectorAll("[data-src]").forEach(p=>p.classList.toggle("active", p.dataset.src===src));
+  document.getElementById("app-cards-block").style.display = src==="app" ? "flex" : "none";
+  document.getElementById("custom-cards-block").style.display = src==="custom" ? "flex" : "none";
+  updatePlayersBlockVisibility();
+  updateCardTotal();
+}
+function resetCustomCollection(){ setup.playerCardsCollected = {}; renderCustomPlayerList(); }
+function cardsPerPlayer(){ return setup.players.length>0 ? Math.max(1, Math.round(setup.cardCount/setup.players.length)) : 0; }
+function renderCustomPlayerList(){
+  const wrap = document.getElementById("custom-player-list");
+  if(!wrap) return;
+  wrap.innerHTML = "";
+  const per = cardsPerPlayer();
+  if(setup.players.length===0){
+    wrap.innerHTML = `<p class="note">Ajoutez des joueurs dans la section ci-dessus pour pouvoir saisir leurs cartes.</p>`;
+    return;
+  }
+  setup.players.forEach((p,i)=>{
+    const collected = setup.playerCardsCollected[i];
+    const done = collected && collected.length >= per;
+    const tag = document.createElement("div");
+    tag.className = "player-tag wide";
+    tag.style.justifyContent = "space-between";
+    tag.style.cursor = "pointer";
+    tag.onclick = () => openCardEntryFor(i);
+    tag.innerHTML = `<span style="flex:1">${p.name}</span>` + (done
+      ? `<span style="color:var(--good); font-weight:700; font-size:12px;">✓ Validé</span>`
+      : `<span class="muted" style="font-size:11px;">${per} cartes à saisir</span>`);
+    wrap.appendChild(tag);
+  });
+}
+function renderCategoryList(){
+  const wrap = document.getElementById("category-list");
+  wrap.innerHTML = "";
+  Object.keys(CATEGORIES).forEach(cat=>{
+    const checked = setup.categories.has(cat) ? "checked" : "";
+    const row = document.createElement("label");
+    row.className = "chk";
+    row.innerHTML = `<input type="checkbox" ${checked} onchange="toggleCategory('${cat}', this.checked)">
+      <span>${cat}</span><span class="badge">${CATEGORIES[cat].length} cartes</span>`;
+    wrap.appendChild(row);
+  });
+}
+function toggleCategory(cat, on){ if(on) setup.categories.add(cat); else setup.categories.delete(cat); }
+function renderRoundsList(){
+  const wrap = document.getElementById("rounds-list");
+  wrap.innerHTML = "";
+  ROUNDS_DEF.forEach(r=>{
+    if(r.optional){
+      const enabled = setup.roundsEnabled.includes(r.id);
+      const label = document.createElement("label");
+      label.className = "chk";
+      label.innerHTML = `<input type="checkbox" ${enabled?"checked":""} onchange="toggleRound(${r.id}, this.checked)">
+        <span>${r.emoji} ${r.name}</span>`;
+      wrap.appendChild(label);
+    } else {
+      const div = document.createElement("div");
+      div.className = "chk";
+      div.innerHTML = `<span>${r.emoji} ${r.name}</span>`;
+      wrap.appendChild(div);
+    }
+  });
+}
+function toggleRound(id, on){
+  if(on && !setup.roundsEnabled.includes(id)) setup.roundsEnabled.push(id);
+  if(!on) setup.roundsEnabled = setup.roundsEnabled.filter(x=>x!==id);
+  setup.roundsEnabled.sort((a,b)=>a-b);
+}
+function updateCardTotal(){
+  let n = parseInt(document.getElementById("card-count").value || "30", 10);
+  n = Math.max(30, n);
+  if(setup.cardSource === "custom" && setup.players.length > 0){
+    const per = setup.players.length;
+    n = Math.ceil(n/per) * per;
+  }
+  setup.cardCount = n;
+  document.getElementById("card-count").value = n;
+  document.getElementById("card-total-line").textContent = `→ ${n} cartes dans le paquet`;
+  renderCustomPlayerList();
+}
+function togglePassOptions(){
+  setup.passMode = document.getElementById("pass-mode").value;
+  document.getElementById("pass-limit-block").style.display = setup.passMode==="limite" ? "block" : "none";
+  document.getElementById("pass-replace-block").style.display = setup.passMode==="interdit" ? "none" : "block";
+}
+
+/* ============================================================
+   GAME STATE + LAUNCH
+   ============================================================ */
+let game = null;
+
+function buildDeck(){
+  let pool = [];
+  setup.categories.forEach(cat => pool.push(...CATEGORIES[cat].map(w=>({word:w, cat:cat}))));
+  if(pool.length===0) pool.push(...CATEGORIES["Personnalités"].map(w=>({word:w, cat:"Personnalités"})));
+  pool = shuffle(pool.slice());
+  const total = setup.cardCount;
+  const deck = [];
+  for(let i=0;i<total;i++){ deck.push(pool[i % pool.length]); }
+  return deck;
+}
+function shuffle(arr){
+  for(let i=arr.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [arr[i],arr[j]]=[arr[j],arr[i]]; }
+  return arr;
+}
+
+function launchGame(){
+  setup.turnDuration = parseInt(document.getElementById("turn-duration").value,10);
+  setup.passLimit = parseInt(document.getElementById("pass-limit").value || "3", 10);
+  setup.passReplace = document.getElementById("pass-replace").value;
+  setup.difficulty = document.getElementById("difficulty-select").value;
+
+  const note = document.getElementById("validation-note");
+  if(setup.roundsEnabled.length===0){ note.style.display="block"; note.textContent="Sélectionnez au moins une manche."; return; }
+  if(setup.mode==="nominatif" && setup.players.length < setup.teamCount){ note.style.display="block"; note.textContent="Ajoutez au moins un joueur par équipe."; return; }
+  if(setup.cardSource==="custom"){
+    if(setup.players.length===0){ note.style.display="block"; note.textContent="Ajoutez au moins un joueur pour saisir les cartes."; return; }
+    const per = cardsPerPlayer();
+    const allDone = setup.players.every((p,i)=> setup.playerCardsCollected[i] && setup.playerCardsCollected[i].length >= per);
+    if(!allDone){ note.style.display="block"; note.textContent="Chaque joueur doit valider la saisie de ses cartes avant de lancer la partie."; return; }
+  }
+  note.style.display="none";
+
+  buildTeamsIntoGame();
+
+  if(setup.cardSource === "custom"){
+    let all = [];
+    setup.players.forEach((p,i)=>{ all = all.concat(setup.playerCardsCollected[i]); });
+    game.fullSet = shuffle(all);
+  } else {
+    game.fullSet = buildDeck();
+  }
+  hasSavedGame = true;
+  document.getElementById("btn-resume").disabled = false;
+  startRound(true);
+}
+
+function buildTeamsIntoGame(){
+  const teams = [];
+  for(let i=0;i<setup.teamCount;i++){
+    teams.push({name:setup.teamNames[i] || DEFAULT_TEAM_NAMES[i], color:TEAM_COLORS[i], theme:teamTheme(i), score:0, playerIdx:0, players:[]});
+  }
+  if(setup.mode==="nominatif"){
+    if(setup.playerAssignMode==="chosen"){
+      setup.players.forEach(p => teams[p.team||0].players.push(p.name));
+    } else {
+      setup.players.forEach((p,i)=> teams[i % setup.teamCount].players.push(p.name));
+    }
+  }
+
+  game = {
+    teams, roundsEnabled:[...setup.roundsEnabled], roundIndex:0, currentTeam:0,
+    deck:[], fullSet:[], roundScores:{},
+    turnFound:0, turnPassed:0, passesLeft:0, timeLeft:0, timerId:null,
+    totalCardsPlayed:0, playerStats:{}, startTime:Date.now(),
+  };
+  if(setup.mode==="nominatif"){ setup.players.forEach(p => game.playerStats[p.name] = {found:0, turns:0}); }
+}
+
+function currentRoundDef(){ return ROUNDS_DEF.find(r=>r.id===game.roundsEnabled[game.roundIndex]); }
+
+/* apply a team's light/dark theme + accent color to the three team screens */
+function applyTeamTheme(team){
+  document.querySelectorAll(".team-screen").forEach(s=>{
+    s.classList.remove("theme-dark","theme-light");
+    s.classList.add("theme-"+team.theme);
+    s.style.setProperty("--accent", team.color);
+  });
+  const track = document.getElementById("timer-track");
+  track.setAttribute("stroke", team.theme==="dark" ? "#26262f" : "#eceef2");
+  document.getElementById("timer-circle").setAttribute("stroke", team.color);
+}
+
+/* ============================================================
+   PRIVATE CUSTOM CARD ENTRY (opened per-player by clicking their name on the setup page)
+   ============================================================ */
+let customEntry = null;
+
+function openCardEntryFor(i){
+  const per = cardsPerPlayer();
+  const existing = setup.playerCardsCollected[i] || [];
+  customEntry = { playerIndex:i, perPlayer:per, existing };
+  renderCustomEntryScreen();
+  goTo("screen-card-entry");
+}
+function renderCustomEntryScreen(){
+  const player = setup.players[customEntry.playerIndex];
+  document.getElementById("ce-player").textContent = player.name;
+
+  const fieldsWrap = document.getElementById("ce-fields");
+  fieldsWrap.innerHTML = "";
+  for(let i=0;i<customEntry.perPlayer;i++){
+    const row = document.createElement("div");
+    row.className = "ce-field-row";
+    const input = document.createElement("input");
+    input.type = "text";
+    input.className = "ce-field";
+    input.placeholder = `Carte ${i+1}`;
+    input.id = `ce-field-${i}`;
+    if(customEntry.existing[i]) input.value = customEntry.existing[i].word;
+    input.oninput = updateCustomEntryProgress;
+    const autoBtn = document.createElement("button");
+    autoBtn.type = "button";
+    autoBtn.className = "ce-auto-btn";
+    autoBtn.textContent = "🎲 Auto";
+    autoBtn.onclick = () => fillFieldAuto(i);
+    row.appendChild(input);
+    row.appendChild(autoBtn);
+    fieldsWrap.appendChild(row);
+  }
+  updateCustomEntryProgress();
+  const first = document.getElementById("ce-field-0");
+  if(first) first.focus();
+}
+function fillFieldAuto(i){
+  const usedWords = new Set();
+  for(let k=0;k<customEntry.perPlayer;k++){
+    const el = document.getElementById(`ce-field-${k}`);
+    if(el && el.value.trim()) usedWords.add(el.value.trim().toLowerCase());
+  }
+  let allWords = [];
+  Object.values(CATEGORIES).forEach(list => allWords = allWords.concat(list));
+  const available = allWords.filter(w => !usedWords.has(w.toLowerCase()));
+  const pool = available.length ? available : allWords;
+  const word = pool[Math.floor(Math.random()*pool.length)];
+  const el = document.getElementById(`ce-field-${i}`);
+  el.value = word;
+  updateCustomEntryProgress();
+}
+function updateCustomEntryProgress(){
+  let filled = 0;
+  for(let i=0;i<customEntry.perPlayer;i++){
+    const el = document.getElementById(`ce-field-${i}`);
+    if(el && el.value.trim()) filled++;
+  }
+  document.getElementById("ce-progress-label").textContent = `${filled} / ${customEntry.perPlayer}`;
+  const bar = document.getElementById("ce-progressbar");
+  bar.innerHTML = "";
+  for(let i=0;i<customEntry.perPlayer;i++){
+    const seg = document.createElement("div");
+    seg.className = "seg " + (i < filled ? "on" : "off");
+    seg.style.background = i < filled ? "var(--brand)" : "#26262f";
+    bar.appendChild(seg);
+  }
+}
+function nextCustomPlayer(){
+  const collected = [];
+  for(let i=0;i<customEntry.perPlayer;i++){
+    const el = document.getElementById(`ce-field-${i}`);
+    const word = el ? el.value.trim() : "";
+    if(word) collected.push({word, cat:"Carte des joueurs"});
+  }
+  setup.playerCardsCollected[customEntry.playerIndex] = collected;
+  customEntry = null;
+  goTo("screen-setup");
+  renderCustomPlayerList();
+}
+
+/* ============================================================
+   TURN START (round description + team/player + ready button, merged)
+   ============================================================ */
+function startRound(isNewRound){
+  if(isNewRound){
+    game.deck = shuffle(game.fullSet.map(c=>({...c})));
+    const r = currentRoundDef();
+    game.roundScores[r.id] = game.teams.map(()=>0);
+  }
+  renderTurnStart();
+}
+function renderTurnStart(){
+  game.turnFound = 0; game.turnPassed = 0;
+  game.passesLeft = setup.passMode==="limite" ? setup.passLimit : Infinity;
+
+  const team = game.teams[game.currentTeam];
+  applyTeamTheme(team);
+  const r = currentRoundDef();
+  document.getElementById("ts-roundnum").textContent = `Manche ${game.roundIndex+1} / ${game.roundsEnabled.length}`;
+  document.getElementById("ts-roundname").textContent = r.name;
+  document.getElementById("ts-roundrule").textContent = r.rule;
+  document.getElementById("ts-team").textContent = team.name;
+  let playerLine = "";
+  if(setup.mode==="nominatif" && team.players.length) playerLine = team.players[team.playerIdx % team.players.length];
+  document.getElementById("ts-player").textContent = playerLine;
+  document.getElementById("ts-player").style.display = playerLine ? "block" : "none";
+  document.getElementById("ts-duration").textContent = setup.turnDuration + "s";
+  document.getElementById("ts-progress-label").textContent = `${game.deck.length} cartes`;
+
+  const scoreLine = document.getElementById("ts-scoreline");
+  if(game.teams.length === 2){
+    const a = game.teams[0], b = game.teams[1];
+    scoreLine.innerHTML = `<span style="color:${a.color};">${a.name}</span> <b>${a.score}</b> – <b>${b.score}</b> <span style="color:${b.color};">${b.name}</span>`;
+  } else {
+    scoreLine.innerHTML = game.teams.map(t=>`<span style="color:${t.color};">${t.name}</span> <b>${t.score}</b>`).join(' <span class="muted">·</span> ');
+  }
+
+  const total = game.fullSet.length;
+  const doneRatio = total>0 ? 1-(game.deck.length/total) : 0;
+  const segCount = 5;
+  const filled = Math.round(doneRatio*segCount);
+  const bar = document.getElementById("ts-progressbar");
+  bar.innerHTML = "";
+  for(let i=0;i<segCount;i++){
+    const seg = document.createElement("div");
+    seg.className = "seg " + (i < filled ? "on" : "off");
+    bar.appendChild(seg);
+  }
+
+  savedScreen = "screen-turn-start";
+  goTo("screen-turn-start");
+}
+
+/* ============================================================
+   GAMEPLAY
+   ============================================================ */
+let currentCard = null;
+
+function startTurn(){
+  game.timeLeft = setup.turnDuration;
+  const team = game.teams[game.currentTeam];
+  let displayName = team.name;
+  if(setup.mode==="nominatif" && team.players.length) displayName = team.players[team.playerIdx % team.players.length];
+  document.getElementById("gp-name").textContent = displayName;
+  const r = currentRoundDef();
+  document.getElementById("gp-roundpill").textContent = `Manche ${game.roundIndex+1} · ${r.name}`;
+
+  drawNextCard();
+  savedScreen = "screen-gameplay";
+  goTo("screen-gameplay");
+  runTimer();
+}
+
+function updateHud(){
+  document.getElementById("gp-turnfound").textContent = game.turnFound;
+  document.getElementById("gp-turnpassed").textContent = game.turnPassed;
+  document.getElementById("gp-remaining").textContent = `${game.deck.length} cartes`;
+  document.getElementById("btn-pass").style.display = setup.passMode==="interdit" ? "none" : "flex";
+  document.getElementById("btn-pass").disabled = setup.passMode==="limite" && game.passesLeft<=0;
+
+  // segmented progress bar (5 segments proportional to remaining/total)
+  const total = game.fullSet.length;
+  const remaining = game.deck.length;
+  const doneRatio = 1 - (remaining/total);
+  const segCount = 5;
+  const filled = Math.round(doneRatio*segCount);
+  const bar = document.getElementById("gp-progressbar");
+  bar.innerHTML = "";
+  for(let i=0;i<segCount;i++){
+    const seg = document.createElement("div");
+    seg.className = "seg " + (i < filled ? "on" : "off");
+    bar.appendChild(seg);
+  }
+}
+
+function drawNextCard(){
+  currentCard = game.deck[0];
+  document.getElementById("gp-word").textContent = currentCard.word.toUpperCase();
+  updateHud();
+}
+
+function foundCard(){
+  if(!currentCard) return;
+  game.deck.shift();
+  const team = game.teams[game.currentTeam];
+  team.score += 1;
+  const r = currentRoundDef();
+  game.roundScores[r.id][game.currentTeam] += 1;
+  game.turnFound += 1;
+  game.totalCardsPlayed += 1;
+  if(setup.mode==="nominatif" && team.players.length){
+    const pname = team.players[team.playerIdx % team.players.length];
+    if(game.playerStats[pname]) game.playerStats[pname].found += 1;
+  }
+  if(game.deck.length === 0){ stopTimer(); endRound(); return; }
+  drawNextCard();
+}
+
+function passCard(){
+  if(!currentCard || setup.passMode==="interdit") return;
+  if(setup.passMode==="limite"){
+    if(game.passesLeft<=0) return;
+    game.passesLeft -= 1;
+  }
+  const card = game.deck.shift();
+  game.turnPassed += 1;
+  if(setup.passReplace==="random"){
+    const idx = Math.floor(Math.random()* (game.deck.length+1));
+    game.deck.splice(idx,0,card);
+  } else { game.deck.push(card); }
+  drawNextCard();
+}
+
+function runTimer(){
+  const total = setup.turnDuration;
+  const circle = document.getElementById("timer-circle");
+  const circumference = 226.2;
+  circle.setAttribute("stroke-dasharray", circumference);
+
+  function tick(){
+    document.getElementById("timer-text").textContent = game.timeLeft;
+    const ratio = game.timeLeft/total;
+    circle.setAttribute("stroke-dashoffset", circumference*(1-ratio));
+    document.getElementById("timer-wrap").classList.toggle("low", game.timeLeft<=5);
+  }
+  tick();
+  game.timerId = setInterval(()=>{
+    game.timeLeft -= 1;
+    if(game.timeLeft <= 0){ tick(); stopTimer(); endTurn(); return; }
+    tick();
+  }, 1000);
+}
+function stopTimer(){ if(game.timerId){ clearInterval(game.timerId); game.timerId=null; } }
+
+/* ============================================================
+   TURN END
+   ============================================================ */
+function endTurn(){
+  const team = game.teams[game.currentTeam];
+  document.getElementById("te-team").textContent = team.name;
+  document.getElementById("te-team").style.color = team.color;
+  document.getElementById("te-found").textContent = game.turnFound;
+  document.getElementById("te-passed").textContent = game.turnPassed;
+
+  const ranking = [...game.teams].sort((a,b)=>b.score-a.score);
+  document.getElementById("te-ranking").innerHTML = ranking.map((t,i)=>`
+    <div class="rank-row"><span class="rank-num">${i+1}</span><span class="swatch" style="background:${t.color}"></span>
+    <span style="flex:1">${t.name}</span><strong>${t.score}</strong></div>`).join("");
+
+  if(setup.mode==="nominatif" && team.players.length){
+    const pname = team.players[team.playerIdx % team.players.length];
+    if(game.playerStats[pname]) game.playerStats[pname].turns += 1;
+    team.playerIdx += 1;
+  }
+  const nextTeamIdx = (game.currentTeam+1) % game.teams.length;
+  document.getElementById("te-next").textContent = game.teams[nextTeamIdx].name;
+  document.getElementById("te-next").style.color = game.teams[nextTeamIdx].color;
+
+  savedScreen = "screen-turn-end";
+  goTo("screen-turn-end");
+}
+function continueAfterTurn(){
+  game.currentTeam = (game.currentTeam+1) % game.teams.length;
+  startRound(false);
+}
+
+/* ============================================================
+   ROUND END
+   ============================================================ */
+function endRound(){
+  const team = game.teams[game.currentTeam];
+  if(setup.mode==="nominatif" && team.players.length){
+    const pname = team.players[team.playerIdx % team.players.length];
+    if(game.playerStats[pname]) game.playerStats[pname].turns += 1;
+    team.playerIdx += 1;
+  }
+
+  const r = currentRoundDef();
+  document.getElementById("re-title").textContent = `${r.emoji} ${r.name}`;
+
+  let tableHtml = "<tr><th>Équipe</th><th>Points cette manche</th></tr>";
+  game.teams.forEach((t,i)=>{
+    tableHtml += `<tr><td><span class="swatch" style="background:${t.color}; display:inline-block; margin-right:6px;"></span>${t.name}</td><td>${game.roundScores[r.id][i]}</td></tr>`;
+  });
+  document.getElementById("re-round-table").innerHTML = tableHtml;
+
+  const ranking = [...game.teams].sort((a,b)=>b.score-a.score);
+  document.getElementById("re-total-ranking").innerHTML = ranking.map((t,i)=>`
+    <div class="rank-row"><span class="rank-num">${i+1}</span><span class="swatch" style="background:${t.color}"></span>
+    <span style="flex:1">${t.name}</span><strong>${t.score}</strong></div>`).join("");
+
+  const isLast = game.roundIndex >= game.roundsEnabled.length - 1;
+  document.getElementById("re-next-block").style.display = isLast ? "none" : "block";
+  if(!isLast){
+    const nr = ROUNDS_DEF.find(x=>x.id===game.roundsEnabled[game.roundIndex+1]);
+    document.getElementById("re-next-name").textContent = `${nr.emoji} ${nr.name}`;
+    document.getElementById("re-next-rule").textContent = nr.rule;
+  }
+  document.querySelector("#screen-round-end .footer-cta .btn").textContent = isLast ? "Voir les résultats" : "Manche suivante";
+
+  savedScreen = "screen-round-end";
+  goTo("screen-round-end");
+}
+function continueAfterRound(){
+  const isLast = game.roundIndex >= game.roundsEnabled.length - 1;
+  if(isLast){ showFinal(); }
+  else{
+    game.roundIndex += 1;
+    game.currentTeam = (game.currentTeam+1) % game.teams.length;
+    startRound(true);
+  }
+}
+
+/* ============================================================
+   FINAL RESULTS
+   ============================================================ */
+function showFinal(){
+  const ranking = [...game.teams].sort((a,b)=>b.score-a.score);
+  document.getElementById("fi-winner").textContent = ranking[0].name;
+  document.getElementById("fi-winner").style.color = ranking[0].color;
+  document.getElementById("fi-score").textContent = ranking[0].score;
+
+  document.getElementById("fi-ranking").innerHTML = ranking.map((t,i)=>`
+    <div class="rank-row"><span class="rank-num">${i+1}</span><span class="swatch" style="background:${t.color}"></span>
+    <span style="flex:1">${t.name}</span><strong>${t.score}</strong></div>`).join("");
+
+  let head = "<tr><th>Manche</th>" + game.teams.map(t=>`<th>${t.name}</th>`).join("") + "</tr>";
+  let body = "";
+  game.roundsEnabled.forEach((rid, idx)=>{
+    if(idx > game.roundIndex) return;
+    const rdef = ROUNDS_DEF.find(x=>x.id===rid);
+    body += `<tr><td>${rdef.emoji} ${rdef.name}</td>` + game.roundScores[rid].map(s=>`<td>${s}</td>`).join("") + "</tr>";
+  });
+  document.getElementById("fi-detail-table").innerHTML = head + body;
+
+  const elapsedSec = Math.max(1, Math.round((Date.now()-game.startTime)/1000));
+  const mm = Math.floor(elapsedSec/60), ss = elapsedSec%60;
+  document.getElementById("fi-duration").textContent = `${mm}:${String(ss).padStart(2,"0")}`;
+  document.getElementById("fi-cards").textContent = game.totalCardsPlayed;
+
+  const statsBlock = document.getElementById("fi-stats-block");
+  if(setup.mode==="nominatif"){
+    statsBlock.style.display = "block";
+    const entries = Object.entries(game.playerStats).sort((a,b)=>b[1].found-a[1].found);
+    document.getElementById("fi-player-stats").innerHTML = entries.map(([name,s])=>`
+      <div class="row between" style="padding:6px 0; border-bottom:1px solid var(--line);">
+        <span>${name}</span><span class="muted">${s.found} trouvées · ${s.turns} tours</span></div>`).join("");
+    document.getElementById("fi-mvp").textContent = entries.length ? entries[0][0] : "—";
+  } else { statsBlock.style.display = "none"; }
+
+  savedScreen = "screen-final";
+  goTo("screen-final");
+}
+
+function rematchSameSettings(){
+  game.teams.forEach(t=>{ t.score=0; t.playerIdx=0; });
+  game.roundIndex = 0; game.currentTeam = 0; game.roundScores = {};
+  game.totalCardsPlayed = 0; game.startTime = Date.now();
+  if(setup.cardSource === "app"){ game.fullSet = buildDeck(); }
+  if(setup.mode==="nominatif"){ Object.keys(game.playerStats).forEach(k=> game.playerStats[k] = {found:0, turns:0}); }
+  startRound(true);
+}
+function resumeGame(){ if(savedScreen) goTo(savedScreen); }
+</script>
+</body>
+</html>

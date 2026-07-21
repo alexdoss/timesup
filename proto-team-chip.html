@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Proto — Select stylé en pill</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --brand: #d6336c;
+    --good: #33c26a;
+    --line: rgba(255,255,255,.09);
+    --ink: #fff;
+    --muted: #9a97ac;
+    --r-sm: 10px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Poppins', sans-serif;
+    background: #111016;
+    color: var(--ink);
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+  }
+  .demo {
+    width: 100%;
+    max-width: 360px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  h3 {
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--muted);
+    margin-bottom: 4px;
+  }
+
+  /* Player row */
+  .player-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 14px;
+    background: #1a1820;
+    border: 1px solid var(--line);
+    border-radius: var(--r-sm);
+  }
+  .swatch {
+    width: 12px;
+    height: 12px;
+    border-radius: 4px;
+    flex: none;
+    transition: background 0.2s;
+  }
+  .player-name {
+    flex: 1;
+    font-size: 0.9rem;
+    font-weight: 600;
+  }
+
+  /* Select stylé en pill arrondi */
+  .team-select-pill {
+    appearance: none;
+    -webkit-appearance: none;
+    border: 1px solid rgba(214, 51, 108, 0.3);
+    border-radius: 100px;
+    padding: 5px 28px 5px 12px;
+    font-family: 'Poppins', sans-serif;
+    font-size: 0.7rem;
+    font-weight: 700;
+    cursor: pointer;
+    outline: none;
+    background-color: rgba(214, 51, 108, 0.15);
+    color: var(--brand);
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%239a97ac'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 10px center;
+    background-size: 10px 6px;
+    transition: all 0.2s;
+  }
+  .team-select-pill.team-0 {
+    background-color: rgba(214, 51, 108, 0.15);
+    color: var(--brand);
+    border-color: rgba(214, 51, 108, 0.3);
+  }
+  .team-select-pill.team-1 {
+    background-color: rgba(51, 194, 106, 0.12);
+    color: var(--good);
+    border-color: rgba(51, 194, 106, 0.3);
+  }
+
+  .btn-remove {
+    background: none;
+    border: none;
+    color: #ff5470;
+    font-size: 1rem;
+    cursor: pointer;
+    padding: 0 2px;
+  }
+</style>
+</head>
+<body>
+<div class="demo">
+  <h3>Mode "Choisie" — Select natif stylé en pill</h3>
+
+  <div class="player-row">
+    <span class="swatch" style="background:var(--brand)"></span>
+    <span class="player-name">Marine</span>
+    <select class="team-select-pill team-0" onchange="updateRow(this)">
+      <option value="0">Équipe 1</option>
+      <option value="1">Équipe 2</option>
+    </select>
+    <button class="btn-remove">✕</button>
+  </div>
+
+  <div class="player-row">
+    <span class="swatch" style="background:var(--good)"></span>
+    <span class="player-name">Alexandre</span>
+    <select class="team-select-pill team-1" onchange="updateRow(this)">
+      <option value="0">Équipe 1</option>
+      <option value="1" selected>Équipe 2</option>
+    </select>
+    <button class="btn-remove">✕</button>
+  </div>
+
+  <div class="player-row">
+    <span class="swatch" style="background:var(--brand)"></span>
+    <span class="player-name">Sophie</span>
+    <select class="team-select-pill team-0" onchange="updateRow(this)">
+      <option value="0">Équipe 1</option>
+      <option value="1">Équipe 2</option>
+    </select>
+    <button class="btn-remove">✕</button>
+  </div>
+
+  <div class="player-row">
+    <span class="swatch" style="background:var(--good)"></span>
+    <span class="player-name">Lucas</span>
+    <select class="team-select-pill team-1" onchange="updateRow(this)">
+      <option value="0">Équipe 1</option>
+      <option value="1" selected>Équipe 2</option>
+    </select>
+    <button class="btn-remove">✕</button>
+  </div>
+</div>
+
+<script>
+const teamColors = ["var(--brand)", "var(--good)"];
+
+function updateRow(select) {
+  const teamIndex = parseInt(select.value);
+  const row = select.closest('.player-row');
+
+  // Update swatch
+  row.querySelector('.swatch').style.background = teamColors[teamIndex];
+
+  // Update select styling
+  select.className = 'team-select-pill team-' + teamIndex;
+}
+</script>
+</body>
+</html>

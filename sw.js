@@ -1,4 +1,4 @@
-const CACHE_NAME = 'timesup-v21';
+const CACHE_NAME = 'timesup-v26';
 const ASSETS = [
   '/',
   '/index.html',

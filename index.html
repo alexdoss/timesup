@@ -82,7 +82,7 @@
     <div id="screen-themes" class="screen">
       <button class="btn-close" onclick="showScreen('screen-home')">✕</button>
       <div class="wizard-header">
-        <span class="wizard-step">Étape 1/3</span>
+        <span class="wizard-step">Étape 1/4</span>
         <h2>Choisissez vos thèmes</h2>
         <p class="wizard-hint">Sélectionnez un ou plusieurs thèmes</p>
       </div>
@@ -92,45 +92,79 @@
       </div>
     </div>
 
-    <!-- ÉCRAN CONFIG — ÉTAPE 2 : JOUEURS -->
+    <!-- ÉCRAN CONFIG — ÉTAPE 2 : ÉQUIPES & JOUEURS -->
     <div id="screen-players" class="screen">
       <button class="btn-close" onclick="showScreen('screen-themes')">✕</button>
       <div class="wizard-header">
-        <span class="wizard-step">Étape 2/3</span>
-        <h2>Ajoutez les joueurs</h2>
-        <p class="wizard-hint">Minimum 4 joueurs</p>
+        <span class="wizard-step">Étape 2/4</span>
+        <h2>Équipes & Joueurs</h2>
       </div>
       <div class="config-form">
-        <div class="player-input-row">
-          <input type="text" id="player-name-input" placeholder="Nom du joueur" maxlength="20">
-          <button id="btn-add-player" class="btn btn-add">+</button>
+        <div class="config-section">
+          <span class="field-label">Mode de jeu</span>
+          <div class="pillgroup">
+            <button type="button" class="pill active" data-mode="nominatif">Nominatif</button>
+            <button type="button" class="pill" data-mode="simple">Simple</button>
+          </div>
+          <p id="mode-note" class="wizard-hint">Chaque joueur est identifié. Rotation et statistiques individuelles.</p>
         </div>
-        <ul id="player-list" class="player-list"></ul>
-        <p id="player-count" class="player-count">0 joueur(s)</p>
+        <div class="config-section">
+          <span class="field-label">Noms des équipes</span>
+          <div class="team-row">
+            <span class="swatch" style="background:var(--brand)"></span>
+            <input type="text" id="team1-name" value="Équipe 1" maxlength="15">
+          </div>
+          <div class="team-row">
+            <span class="swatch" style="background:var(--good)"></span>
+            <input type="text" id="team2-name" value="Équipe 2" maxlength="15">
+          </div>
+        </div>
+        <div id="nominatif-block">
+          <div id="assign-mode-block" class="config-section">
+            <span class="field-label">Attribution des équipes</span>
+            <div class="pillgroup">
+              <button type="button" class="pill active" data-assign="random">Aléatoire</button>
+              <button type="button" class="pill" data-assign="chosen">Choisie</button>
+            </div>
+            <p id="assign-mode-note" class="wizard-hint">Répartition automatique, un joueur sur deux, dans l'ordre d'ajout.</p>
+          </div>
+          <div class="config-section">
+            <span class="field-label">Joueurs</span>
+            <p class="wizard-hint">Minimum 4 joueurs</p>
+            <div class="player-input-row">
+              <input type="text" id="player-name-input" placeholder="Prénom du joueur" maxlength="20">
+              <button id="btn-add-player" class="btn btn-add">+</button>
+            </div>
+            <ul id="player-list" class="player-list"></ul>
+            <p id="player-count" class="player-count">0 joueur(s)</p>
+          </div>
+        </div>
         <button id="btn-next-players" class="btn btn-primary">Suivant ▶️</button>
-        <button id="btn-skip-players" class="btn btn-link">Passer (mode rapide) →</button>
       </div>
     </div>
 
-    <!-- ÉCRAN CONFIG — ÉTAPE 3 : PARAMÈTRES -->
-    <div id="screen-config" class="screen">
+    <!-- ÉCRAN CONFIG — ÉTAPE 3 : MANCHES -->
+    <div id="screen-rounds" class="screen">
       <button class="btn-close" onclick="showScreen('screen-players')">✕</button>
       <div class="wizard-header">
-        <span class="wizard-step">Étape 3/3</span>
+        <span class="wizard-step">Étape 3/4</span>
+        <h2>Choisissez les manches</h2>
+        <p class="wizard-hint">Les 3 manches classiques sont toujours activées.</p>
+      </div>
+      <div class="config-form">
+        <div id="rounds-list" class="rounds-list"></div>
+        <button id="btn-next-rounds" class="btn btn-primary">Suivant ▶️</button>
+      </div>
+    </div>
+
+    <!-- ÉCRAN CONFIG — ÉTAPE 4 : PARAMÈTRES -->
+    <div id="screen-config" class="screen">
+      <button class="btn-close" onclick="showScreen('screen-rounds')">✕</button>
+      <div class="wizard-header">
+        <span class="wizard-step">Étape 4/4</span>
         <h2>Paramètres de la partie</h2>
       </div>
       <div class="config-form">
-        <label>
-          Nom équipe 1
-          <input type="text" id="team1-name" value="Équipe 1" maxlength="15">
-        </label>
-        <label>
-          Nom équipe 2
-          <input type="text" id="team2-name" value="Équipe 2" maxlength="15">
-        </label>
-        <div id="teams-preview" class="teams-preview"></div>
-        <p id="teams-hint" class="wizard-hint">Tapez sur un joueur pour le changer d'équipe</p>
-        <button id="btn-shuffle-teams" class="btn btn-secondary">🔀 Re-mélanger les équipes</button>
         <label>
           Temps par tour (secondes)
           <div class="timer-selector">
@@ -155,7 +189,8 @@
     <div id="screen-round" class="screen">
       <button class="btn-close" onclick="confirmQuit()">✕</button>
       <div class="round-content">
-        <h2 id="round-title">Manche 1</h2>
+        <h2 id="round-title">Manche 1/3</h2>
+        <p id="round-name-label" class="round-name-label">🗣️ Décrivez</p>
         <div id="round-icon" class="round-icon">🗣️</div>
         <p id="round-description" class="round-desc"></p>
         <div class="score-board">

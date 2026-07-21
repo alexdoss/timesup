@@ -19,8 +19,10 @@ export function showCard(word, remaining) {
   document.getElementById('cards-left').textContent = remaining;
 }
 
-export function updateRoundScreen(round, teams) {
-  document.getElementById('round-title').textContent = round.name;
+export function updateRoundScreen(round, teams, roundLabel) {
+  document.getElementById('round-title').textContent = roundLabel;
+  const roundName = document.getElementById('round-name-label');
+  if (roundName) roundName.textContent = `${round.icon} ${round.name}`;
   document.getElementById('round-icon').textContent = round.icon;
   document.getElementById('round-description').textContent = round.desc;
   document.getElementById('round-team1-name').textContent = teams[0].name;
@@ -87,42 +89,126 @@ export function renderThemeButtons(themes, selectedThemes, container) {
   });
 }
 
-export function renderPlayerList(players, onRemove) {
+export function renderPlayerList(players, assignMode, teams, playerAssignments, onRemove, onTeamChange) {
   const list = document.getElementById('player-list');
   list.innerHTML = '';
-  players.forEach(name => {
+  const teamColors = ['var(--brand)', 'var(--good)'];
+
+  players.forEach((name, index) => {
     const li = document.createElement('li');
-    li.innerHTML = `<span>${name}</span><button class="btn-remove" data-player="${name}">✕</button>`;
-    li.querySelector('.btn-remove').addEventListener('click', () => onRemove(name));
+    const teamIndex = assignMode === 'chosen'
+      ? (Number.isInteger(playerAssignments[name]) ? playerAssignments[name] : 0)
+      : (index % teams.length);
+
+    if (assignMode === 'chosen') {
+      const swatch = document.createElement('span');
+      swatch.className = 'swatch';
+      swatch.style.background = teamColors[teamIndex] || 'var(--muted)';
+
+      const nameSpan = document.createElement('span');
+      nameSpan.className = 'player-name';
+      nameSpan.textContent = name;
+
+      const select = document.createElement('select');
+      select.className = 'player-team-select';
+      teams.forEach((team, tIdx) => {
+        const opt = document.createElement('option');
+        opt.value = String(tIdx);
+        opt.textContent = team.name;
+        if (tIdx === teamIndex) opt.selected = true;
+        select.appendChild(opt);
+      });
+      select.addEventListener('change', () => onTeamChange(name, parseInt(select.value, 10)));
+
+      const removeBtn = document.createElement('button');
+      removeBtn.className = 'btn-remove';
+      removeBtn.textContent = '✕';
+      removeBtn.addEventListener('click', () => onRemove(name));
+
+      li.appendChild(swatch);
+      li.appendChild(nameSpan);
+      li.appendChild(select);
+      li.appendChild(removeBtn);
+    } else {
+      const swatch = document.createElement('span');
+      swatch.className = 'swatch';
+      swatch.style.background = teamColors[teamIndex] || 'var(--muted)';
+
+      const nameSpan = document.createElement('span');
+      nameSpan.className = 'player-name';
+      nameSpan.textContent = name;
+
+      const teamLabel = document.createElement('span');
+      teamLabel.className = 'player-team-label';
+      teamLabel.textContent = teams[teamIndex]?.name || `Équipe ${teamIndex + 1}`;
+
+      const removeBtn = document.createElement('button');
+      removeBtn.className = 'btn-remove';
+      removeBtn.textContent = '✕';
+      removeBtn.addEventListener('click', () => onRemove(name));
+
+      li.appendChild(swatch);
+      li.appendChild(nameSpan);
+      li.appendChild(teamLabel);
+      li.appendChild(removeBtn);
+    }
+
     list.appendChild(li);
   });
   document.getElementById('player-count').textContent = `${players.length} joueur(s)`;
 }
 
-export function renderTeamsPreview(teams, interactive = false) {
-  const container = document.getElementById('teams-preview');
-  container.innerHTML = teams.map((team, teamIndex) => `
-    <div class="team-preview-col">
-      <h4>${team.name}</h4>
-      <ul>${team.players.map(p => `<li class="${interactive ? 'player-swappable' : ''}" data-player="${p}" data-team="${teamIndex}">${p}</li>`).join('')}</ul>
-    </div>
-  `).join('');
+export function renderRoundsSelector(rounds, activeRounds = [0, 1, 2]) {
+  const container = document.getElementById('rounds-list');
+  if (!container) return;
 
-  if (interactive) {
-    container.querySelectorAll('.player-swappable').forEach(li => {
-      li.addEventListener('click', () => {
-        const playerName = li.dataset.player;
-        const fromTeam = parseInt(li.dataset.team);
-        const toTeam = fromTeam === 0 ? 1 : 0;
+  container.innerHTML = '';
+  rounds.forEach((round, index) => {
+    const label = document.createElement('label');
+    label.className = 'chk';
 
-        // Move player
-        teams[fromTeam].players = teams[fromTeam].players.filter(p => p !== playerName);
-        teams[toTeam].players.push(playerName);
+    const input = document.createElement('input');
+    input.type = 'checkbox';
+    input.dataset.roundIndex = index;
+    input.checked = !round.optional || activeRounds.includes(index);
+    input.disabled = !round.optional;
 
-        // Re-render
-        renderTeamsPreview(teams, true);
-      });
-    });
+    const copy = document.createElement('span');
+    copy.className = 'chk-copy';
+
+    const title = document.createElement('strong');
+    title.textContent = `${round.icon} ${round.name}`;
+
+    const desc = document.createElement('small');
+    desc.textContent = round.desc;
+
+    copy.appendChild(title);
+    copy.appendChild(desc);
+
+    label.appendChild(input);
+    label.appendChild(copy);
+
+    if (!round.optional) {
+      const badge = document.createElement('span');
+      badge.className = 'badge';
+      badge.textContent = 'Obligatoire';
+      label.appendChild(badge);
+    }
+
+    container.appendChild(label);
+  });
+}
+
+export function renderAssignMode(mode) {
+  document.querySelectorAll('[data-assign]').forEach(pill => {
+    pill.classList.toggle('active', pill.dataset.assign === mode);
+  });
+
+  const note = document.getElementById('assign-mode-note');
+  if (note) {
+    note.textContent = mode === 'chosen'
+      ? "Choisissez l'équipe de chaque joueur ci-dessous."
+      : "Répartition automatique, un joueur sur deux, dans l'ordre d'ajout.";
   }
 }
 

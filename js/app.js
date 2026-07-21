@@ -2,8 +2,8 @@
 // Orchestre les modules et gère les événements
 
 import { loadThemes } from './themes.js';
-import { game, ROUNDS, resetGame, buildDeck, startNewRound, getCurrentCard, cardFound, cardPassed, switchTeam, isRoundOver, isGameOver, nextRound, getCardsRemaining, addPlayer, removePlayer, shuffleTeams, getCurrentPlayer, advancePlayer } from './game.js';
-import { showScreen, updateTimer, showCard, updateRoundScreen, updateTurnInfo, updateGameHeader, showTurnResult, showRoundEnd, showFinalScreen, renderThemeButtons, renderPlayerList, renderTeamsPreview, updateCurrentPlayer, renderPlayerStats } from './ui.js';
+import { game, ROUNDS, resetGame, buildDeck, startNewRound, getCurrentCard, cardFound, cardPassed, switchTeam, isRoundOver, isGameOver, nextRound, getCardsRemaining, addPlayer, removePlayer, assignTeamsRoundRobin, getCurrentPlayer, advancePlayer, getActiveRound, setPlayerTeam, syncChosenTeams } from './game.js';
+import { showScreen, updateTimer, showCard, updateRoundScreen, updateTurnInfo, updateGameHeader, showTurnResult, showRoundEnd, showFinalScreen, renderThemeButtons, renderPlayerList, updateCurrentPlayer, renderPlayerStats, renderRoundsSelector, renderAssignMode } from './ui.js';
 import { getCustomThemes, saveCustomTheme, deleteCustomTheme, generateWithAI } from './library.js';
 
 let THEMES = {};
@@ -25,11 +25,38 @@ async function init() {
   setupListeners();
 }
 
+function getRoundLabel() {
+  return `Manche ${game.currentRound + 1}/${game.activeRounds.length}`;
+}
+
+function syncTeamNamesFromInputs() {
+  game.teams[0].name = document.getElementById('team1-name').value.trim() || "Équipe 1";
+  game.teams[1].name = document.getElementById('team2-name').value.trim() || "Équipe 2";
+}
+
 function refreshPlayerList() {
-  renderPlayerList(game.players, (name) => {
+  syncTeamNamesFromInputs();
+  renderPlayerList(game.players, game.assignMode, game.teams, game.playerAssignments, (name) => {
     removePlayer(name);
     refreshPlayerList();
+  }, (playerName, teamIndex) => {
+    setPlayerTeam(playerName, teamIndex);
+    refreshPlayerList();
   });
+}
+
+function openRoundsStep() {
+  renderRoundsSelector(ROUNDS, game.activeRounds);
+  showScreen('screen-rounds');
+}
+
+function collectActiveRounds() {
+  const selected = [...document.querySelectorAll('#rounds-list input[type="checkbox"]')]
+    .filter(input => input.checked)
+    .map(input => parseInt(input.dataset.roundIndex, 10))
+    .sort((a, b) => a - b);
+
+  game.activeRounds = selected.length ? selected : [0, 1, 2];
 }
 
 function setupListeners() {
@@ -63,36 +90,59 @@ function setupListeners() {
     }
   });
 
-  // Players → Config (step 3)
+  // Game mode toggle (Nominatif / Simple)
+  document.querySelectorAll('[data-mode]').forEach(pill => {
+    pill.addEventListener('click', () => {
+      document.querySelectorAll('[data-mode]').forEach(p => p.classList.remove('active'));
+      pill.classList.add('active');
+      const mode = pill.dataset.mode;
+      game.nominativeMode = (mode === 'nominatif');
+      document.getElementById('nominatif-block').style.display = game.nominativeMode ? '' : 'none';
+      document.getElementById('mode-note').textContent = game.nominativeMode
+        ? "Chaque joueur est identifié. Rotation et statistiques individuelles."
+        : "Mode simple : seules les équipes et les scores sont suivis.";
+    });
+  });
+
+  // Assign mode toggle
+  document.querySelectorAll('[data-assign]').forEach(pill => {
+    pill.addEventListener('click', () => {
+      game.assignMode = pill.dataset.assign;
+      renderAssignMode(game.assignMode);
+      refreshPlayerList();
+    });
+  });
+
+  // Team name changes refresh player list (for dropdowns)
+  document.getElementById('team1-name').addEventListener('input', () => {
+    syncTeamNamesFromInputs();
+    refreshPlayerList();
+  });
+  document.getElementById('team2-name').addEventListener('input', () => {
+    syncTeamNamesFromInputs();
+    refreshPlayerList();
+  });
+
+  // Players → Rounds (step 3)
   document.getElementById('btn-next-players').addEventListener('click', () => {
-    if (game.players.length < 4) {
+    if (game.nominativeMode && game.players.length < 4) {
       alert("Il faut au moins 4 joueurs !");
       return;
     }
-    game.nominativeMode = true;
-    shuffleTeams();
-    renderTeamsPreview(game.teams, true);
-    document.getElementById('btn-shuffle-teams').style.display = '';
-    document.getElementById('teams-hint').style.display = '';
-    showScreen('screen-config');
+    if (!game.nominativeMode) {
+      game.players = [];
+      game.playerAssignments = {};
+      game.teams[0].players = [];
+      game.teams[1].players = [];
+    }
+    syncTeamNamesFromInputs();
+    openRoundsStep();
   });
 
-  // Skip players (mode rapide)
-  document.getElementById('btn-skip-players').addEventListener('click', () => {
-    game.nominativeMode = false;
-    game.players = [];
-    game.teams[0].players = [];
-    game.teams[1].players = [];
-    document.getElementById('teams-preview').innerHTML = '';
-    document.getElementById('btn-shuffle-teams').style.display = 'none';
-    document.getElementById('teams-hint').style.display = 'none';
+  // Rounds → Config (step 4)
+  document.getElementById('btn-next-rounds').addEventListener('click', () => {
+    collectActiveRounds();
     showScreen('screen-config');
-  });
-
-  // Shuffle teams button
-  document.getElementById('btn-shuffle-teams').addEventListener('click', () => {
-    shuffleTeams();
-    renderTeamsPreview(game.teams, true);
   });
 
   // Timer selector
@@ -163,8 +213,15 @@ function setupListeners() {
 
 // ===== GAME FLOW =====
 function startGame() {
-  game.teams[0].name = document.getElementById('team1-name').value || "Équipe 1";
-  game.teams[1].name = document.getElementById('team2-name').value || "Équipe 2";
+  syncTeamNamesFromInputs();
+  if (game.nominativeMode) {
+    if (game.assignMode === 'chosen') syncChosenTeams();
+    else assignTeamsRoundRobin();
+    if (game.teams.some(team => team.players.length === 0)) {
+      alert("Chaque équipe doit avoir au moins un joueur.");
+      return;
+    }
+  }
   resetGame();
   buildDeck(THEMES);
   beginRound();
@@ -172,8 +229,8 @@ function startGame() {
 
 function beginRound() {
   startNewRound();
-  const round = ROUNDS[game.currentRound];
-  updateRoundScreen(round, game.teams);
+  const round = getActiveRound();
+  updateRoundScreen(round, game.teams, getRoundLabel());
   updateTurnInfo(game.teams[game.currentTeam].name);
   updateCurrentPlayer(game.nominativeMode ? getCurrentPlayer() : null);
   showScreen('screen-round');
@@ -183,8 +240,8 @@ function startTurn() {
   game.turnScore = 0;
   game.timeLeft = game.turnTime;
 
-  const roundName = ROUNDS[game.currentRound].name.split(' — ')[0];
-  updateGameHeader(roundName, game.teams[game.currentTeam].name);
+  const round = getActiveRound();
+  updateGameHeader(`${getRoundLabel()} · ${round.name}`, game.teams[game.currentTeam].name);
   displayCurrentCard();
   updateTimer(game.timeLeft);
   showScreen('screen-game');
@@ -242,7 +299,7 @@ function onNextTurn() {
 
 function endRound() {
   clearInterval(game.timerInterval);
-  showRoundEnd(game.currentRound + 1, game.teams);
+  showRoundEnd(`${game.currentRound + 1}/${game.activeRounds.length}`, game.teams);
 
   const btnNext = document.getElementById('btn-next-round');
   if (isGameOver()) {

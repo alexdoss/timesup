@@ -100,58 +100,40 @@ export function renderPlayerList(players, assignMode, teams, playerAssignments, 
       ? (Number.isInteger(playerAssignments[name]) ? playerAssignments[name] : 0)
       : (index % teams.length);
 
+    const swatch = document.createElement('span');
+    swatch.className = 'swatch';
+    swatch.style.background = teamColors[teamIndex] || 'var(--muted)';
+
+    const nameSpan = document.createElement('span');
+    nameSpan.className = 'player-name';
+    nameSpan.textContent = name;
+
     if (assignMode === 'chosen') {
-      const swatch = document.createElement('span');
-      swatch.className = 'swatch';
-      swatch.style.background = teamColors[teamIndex] || 'var(--muted)';
-
-      const nameSpan = document.createElement('span');
-      nameSpan.className = 'player-name';
-      nameSpan.textContent = name;
-
-      const select = document.createElement('select');
-      select.className = 'player-team-select';
-      teams.forEach((team, tIdx) => {
-        const opt = document.createElement('option');
-        opt.value = String(tIdx);
-        opt.textContent = team.name;
-        if (tIdx === teamIndex) opt.selected = true;
-        select.appendChild(opt);
+      const chip = document.createElement('button');
+      chip.type = 'button';
+      chip.className = 'team-chip team-' + teamIndex;
+      chip.textContent = teams[teamIndex]?.name || `Équipe ${teamIndex + 1}`;
+      chip.addEventListener('click', () => {
+        const nextTeam = (teamIndex + 1) % teams.length;
+        onTeamChange(name, nextTeam);
       });
-      select.addEventListener('change', () => onTeamChange(name, parseInt(select.value, 10)));
-
-      const removeBtn = document.createElement('button');
-      removeBtn.className = 'btn-remove';
-      removeBtn.textContent = '✕';
-      removeBtn.addEventListener('click', () => onRemove(name));
-
       li.appendChild(swatch);
       li.appendChild(nameSpan);
-      li.appendChild(select);
-      li.appendChild(removeBtn);
+      li.appendChild(chip);
     } else {
-      const swatch = document.createElement('span');
-      swatch.className = 'swatch';
-      swatch.style.background = teamColors[teamIndex] || 'var(--muted)';
-
-      const nameSpan = document.createElement('span');
-      nameSpan.className = 'player-name';
-      nameSpan.textContent = name;
-
       const teamLabel = document.createElement('span');
       teamLabel.className = 'player-team-label';
       teamLabel.textContent = teams[teamIndex]?.name || `Équipe ${teamIndex + 1}`;
-
-      const removeBtn = document.createElement('button');
-      removeBtn.className = 'btn-remove';
-      removeBtn.textContent = '✕';
-      removeBtn.addEventListener('click', () => onRemove(name));
-
       li.appendChild(swatch);
       li.appendChild(nameSpan);
       li.appendChild(teamLabel);
-      li.appendChild(removeBtn);
     }
+
+    const removeBtn = document.createElement('button');
+    removeBtn.className = 'btn-remove';
+    removeBtn.textContent = '✕';
+    removeBtn.addEventListener('click', () => onRemove(name));
+    li.appendChild(removeBtn);
 
     list.appendChild(li);
   });
@@ -159,43 +141,28 @@ export function renderPlayerList(players, assignMode, teams, playerAssignments, 
 }
 
 export function renderRoundsSelector(rounds, activeRounds = [0, 1, 2]) {
-  const container = document.getElementById('rounds-list');
-  if (!container) return;
+  const mandatory = document.getElementById('rounds-mandatory');
+  const optional = document.getElementById('rounds-optional');
+  if (!mandatory || !optional) return;
 
-  container.innerHTML = '';
+  mandatory.innerHTML = '';
+  optional.innerHTML = '';
+
   rounds.forEach((round, index) => {
-    const label = document.createElement('label');
-    label.className = 'chk';
-
-    const input = document.createElement('input');
-    input.type = 'checkbox';
-    input.dataset.roundIndex = index;
-    input.checked = !round.optional || activeRounds.includes(index);
-    input.disabled = !round.optional;
-
-    const copy = document.createElement('span');
-    copy.className = 'chk-copy';
-
-    const title = document.createElement('strong');
-    title.textContent = `${round.icon} ${round.name}`;
-
-    const desc = document.createElement('small');
-    desc.textContent = round.desc;
-
-    copy.appendChild(title);
-    copy.appendChild(desc);
-
-    label.appendChild(input);
-    label.appendChild(copy);
-
     if (!round.optional) {
-      const badge = document.createElement('span');
-      badge.className = 'badge';
-      badge.textContent = 'Obligatoire';
-      label.appendChild(badge);
+      const tag = document.createElement('span');
+      tag.className = 'round-tag';
+      tag.textContent = `${round.icon} ${round.name}`;
+      mandatory.appendChild(tag);
+    } else {
+      const pill = document.createElement('button');
+      pill.type = 'button';
+      pill.className = 'round-pill' + (activeRounds.includes(index) ? ' active' : '');
+      pill.dataset.roundIndex = index;
+      pill.textContent = `${round.icon} ${round.name}`;
+      pill.addEventListener('click', () => pill.classList.toggle('active'));
+      optional.appendChild(pill);
     }
-
-    container.appendChild(label);
   });
 }
 
@@ -207,7 +174,7 @@ export function renderAssignMode(mode) {
   const note = document.getElementById('assign-mode-note');
   if (note) {
     note.textContent = mode === 'chosen'
-      ? "Choisissez l'équipe de chaque joueur ci-dessous."
+      ? "Tapez sur l'équipe d'un joueur pour la changer."
       : "Répartition automatique, un joueur sur deux, dans l'ordre d'ajout.";
   }
 }

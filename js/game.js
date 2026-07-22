@@ -2,11 +2,11 @@
 // Gère l'état du jeu, le timer, les manches et le score
 
 export const ROUNDS = [
-  { id: 'describe', name: "Décrivez", icon: "🗣️", desc: "Faites deviner avec autant de mots que vous voulez. Pas le droit de dire le mot !", optional: false },
-  { id: 'one-word', name: "Un seul mot", icon: "☝️", desc: "Un seul mot pour faire deviner. Choisissez bien !", optional: false },
-  { id: 'mime', name: "Mimez", icon: "🎭", desc: "Mimez sans parler, sans bruit. Que des gestes !", optional: false },
-  { id: 'freeze', name: "Pose figée", icon: "🗿", desc: "Prenez une pose immobile pour faire deviner. Pas le droit de bouger ni de parler !", optional: true },
-  { id: 'puppet', name: "Faire bouger un partenaire", icon: "🕺", desc: "Faites bouger un coéquipier comme une marionnette, sans lui parler. Il ne sait pas ce qu'il doit faire deviner !", optional: true }
+  { id: 'describe', name: "Description libre", icon: "💬", desc: "Le joueur parle librement, sans prononcer le mot inscrit sur la carte.", optional: false },
+  { id: 'one-word', name: "Un mot", icon: "🔤", desc: "Le joueur ne peut utiliser qu'un seul mot pour faire deviner la carte.", optional: false },
+  { id: 'mime', name: "Mime", icon: "🎭", desc: "Le joueur fait deviner la carte uniquement par des gestes, sans parler.", optional: false },
+  { id: 'freeze', name: "Pose figée", icon: "🗿", desc: "Le joueur prend une pose immobile pour faire deviner la carte.", optional: true },
+  { id: 'puppet', name: "Faire bouger un partenaire", icon: "🕺", desc: "Le joueur fait bouger un de ses partenaires sans lui parler.", optional: true }
 ];
 
 export const game = {

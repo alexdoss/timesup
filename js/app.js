@@ -45,18 +45,20 @@ function refreshPlayerList() {
   });
 }
 
-function openRoundsStep() {
+function openConfigStep() {
   renderRoundsSelector(ROUNDS, game.activeRounds);
-  showScreen('screen-rounds');
+  showScreen('screen-config');
 }
 
 function collectActiveRounds() {
-  const selected = [...document.querySelectorAll('#rounds-list input[type="checkbox"]')]
-    .filter(input => input.checked)
-    .map(input => parseInt(input.dataset.roundIndex, 10))
-    .sort((a, b) => a - b);
+  // Mandatory rounds (always 0,1,2)
+  const mandatory = [0, 1, 2];
+  // Optional rounds from active pills
+  const optional = [...document.querySelectorAll('#rounds-optional .round-pill.active')]
+    .map(pill => parseInt(pill.dataset.roundIndex, 10));
 
-  game.activeRounds = selected.length ? selected : [0, 1, 2];
+  const selected = [...mandatory, ...optional].sort((a, b) => a - b);
+  game.activeRounds = selected;
 }
 
 function setupListeners() {
@@ -136,13 +138,7 @@ function setupListeners() {
       game.teams[1].players = [];
     }
     syncTeamNamesFromInputs();
-    openRoundsStep();
-  });
-
-  // Rounds → Config (step 4)
-  document.getElementById('btn-next-rounds').addEventListener('click', () => {
-    collectActiveRounds();
-    showScreen('screen-config');
+    openConfigStep();
   });
 
   // Timer selector
@@ -213,6 +209,7 @@ function setupListeners() {
 
 // ===== GAME FLOW =====
 function startGame() {
+  collectActiveRounds();
   syncTeamNamesFromInputs();
   if (game.nominativeMode) {
     if (game.assignMode === 'chosen') syncChosenTeams();

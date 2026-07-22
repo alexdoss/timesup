@@ -311,52 +311,54 @@ body {
   color: #fff;
 }
 
-.rounds-list {
+/* ===== ROUNDS — OPTION A (tags + pills) ===== */
+.rounds-tags {
   display: flex;
-  flex-direction: column;
-  gap: 10px;
+  gap: 6px;
+  flex-wrap: wrap;
 }
 
-.chk {
+.rounds-tags .round-tag {
+  background: rgba(214, 51, 108, 0.12);
+  color: var(--brand);
+  border: 1px solid rgba(214, 51, 108, 0.25);
+  border-radius: 100px;
+  padding: 5px 12px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.rounds-pills {
   display: flex;
-  flex-direction: row;
-  align-items: flex-start;
-  gap: 12px;
-  padding: 12px 14px;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.rounds-pills .round-pill {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  border-radius: 100px;
   border: 1px solid var(--line);
-  border-radius: var(--r-sm);
   background: #1a1820;
-  text-align: left;
-  text-transform: none;
-  letter-spacing: normal;
-  font-weight: 500;
-  color: var(--ink);
-}
-
-.chk input {
-  width: 18px;
-  height: 18px;
-  accent-color: var(--brand);
-  margin-top: 2px;
-  flex: none;
-}
-
-.chk-copy {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  flex: 1;
-}
-
-.chk-copy strong {
-  color: var(--ink);
-  font-size: 0.92rem;
-}
-
-.chk-copy small {
   color: var(--muted);
   font-size: 0.78rem;
-  line-height: 1.45;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+  user-select: none;
+}
+
+.rounds-pills .round-pill.active {
+  background: rgba(214, 51, 108, 0.12);
+  color: var(--brand);
+  border-color: rgba(214, 51, 108, 0.35);
+}
+
+.rounds-pills .round-pill:active {
+  transform: scale(0.96);
 }
 
 .badge {
@@ -664,16 +666,38 @@ h2 {
   flex: none;
 }
 
-.player-list li .player-team-select {
-  background: #26242f;
-  border: 1px solid var(--line);
-  border-radius: var(--r-sm);
-  color: var(--ink);
+.player-list li .player-team-select,
+.player-list li .team-chip {
+  appearance: none;
+  border: 1px solid rgba(214, 51, 108, 0.3);
+  border-radius: 100px;
+  padding: 5px 12px;
   font-family: 'Poppins', sans-serif;
-  font-size: 0.75rem;
-  padding: 4px 8px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  cursor: pointer;
   flex: none;
   outline: none;
+  background: rgba(214, 51, 108, 0.15);
+  color: var(--brand);
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+
+.team-chip:active {
+  transform: scale(0.95);
+}
+
+.team-chip.team-0 {
+  background: rgba(214, 51, 108, 0.15);
+  color: var(--brand);
+  border-color: rgba(214, 51, 108, 0.3);
+}
+
+.team-chip.team-1 {
+  background: rgba(51, 194, 106, 0.12);
+  color: var(--good);
+  border-color: rgba(51, 194, 106, 0.3);
 }
 
 .btn-secondary {

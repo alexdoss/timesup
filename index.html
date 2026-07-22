@@ -82,7 +82,7 @@
     <div id="screen-themes" class="screen">
       <button class="btn-close" onclick="showScreen('screen-home')">✕</button>
       <div class="wizard-header">
-        <span class="wizard-step">Étape 1/4</span>
+        <span class="wizard-step">Étape 1/3</span>
         <h2>Choisissez vos thèmes</h2>
         <p class="wizard-hint">Sélectionnez un ou plusieurs thèmes</p>
       </div>
@@ -96,7 +96,7 @@
     <div id="screen-players" class="screen">
       <button class="btn-close" onclick="showScreen('screen-themes')">✕</button>
       <div class="wizard-header">
-        <span class="wizard-step">Étape 2/4</span>
+        <span class="wizard-step">Étape 2/3</span>
         <h2>Équipes & Joueurs</h2>
       </div>
       <div class="config-form">
@@ -144,27 +144,20 @@
     </div>
 
     <!-- ÉCRAN CONFIG — ÉTAPE 3 : MANCHES -->
-    <div id="screen-rounds" class="screen">
+    <!-- ÉCRAN CONFIG — ÉTAPE 3 : PARAMÈTRES & MANCHES -->
+    <div id="screen-config" class="screen">
       <button class="btn-close" onclick="showScreen('screen-players')">✕</button>
       <div class="wizard-header">
-        <span class="wizard-step">Étape 3/4</span>
-        <h2>Choisissez les manches</h2>
-        <p class="wizard-hint">Les 3 manches classiques sont toujours activées.</p>
+        <span class="wizard-step">Étape 3/3</span>
+        <h2>Paramètres</h2>
       </div>
       <div class="config-form">
-        <div id="rounds-list" class="rounds-list"></div>
-        <button id="btn-next-rounds" class="btn btn-primary">Suivant ▶️</button>
-      </div>
-    </div>
-
-    <!-- ÉCRAN CONFIG — ÉTAPE 4 : PARAMÈTRES -->
-    <div id="screen-config" class="screen">
-      <button class="btn-close" onclick="showScreen('screen-rounds')">✕</button>
-      <div class="wizard-header">
-        <span class="wizard-step">Étape 4/4</span>
-        <h2>Paramètres de la partie</h2>
-      </div>
-      <div class="config-form">
+        <div class="config-section">
+          <span class="field-label">Manches</span>
+          <div id="rounds-mandatory" class="rounds-tags"></div>
+          <p class="wizard-hint" style="margin:8px 0 6px">Optionnelles :</p>
+          <div id="rounds-optional" class="rounds-pills"></div>
+        </div>
         <label>
           Temps par tour (secondes)
           <div class="timer-selector">

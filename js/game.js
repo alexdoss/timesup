@@ -11,8 +11,8 @@ export const ROUNDS = [
 
 export const game = {
   teams: [
-    { name: "Équipe 1", score: 0, players: [], currentPlayerIndex: 0 },
-    { name: "Équipe 2", score: 0, players: [], currentPlayerIndex: 0 }
+    { name: "Équipe 1", score: 0, players: [], currentPlayerIndex: 0, color: "#d6336c" },
+    { name: "Équipe 2", score: 0, players: [], currentPlayerIndex: 0, color: "#33c26a" }
   ],
   players: [],             // liste de tous les joueurs
   playerStats: {},         // { playerName: { found: 0 } }
@@ -25,6 +25,10 @@ export const game = {
   currentRound: 0,
   turnTime: 40,
   numCards: 30,
+  passMode: 'unlimited',   // 'unlimited' | 'limited' | 'forbidden'
+  passLimit: 2,            // max passes par tour (si limited)
+  passReplace: 'bottom',   // 'bottom' | 'random'
+  passCount: 0,            // compteur de passes dans le tour en cours
   masterDeck: [],
   deck: [],
   currentCardIndex: 0,
@@ -153,8 +157,24 @@ export function cardFound() {
 
 export function cardPassed() {
   const skippedCard = game.deck[game.currentCardIndex];
-  game.deck.push(skippedCard);
-  game.currentCardIndex++;
+  if (game.passReplace === 'random') {
+    // Remove card and insert at random position after currentCardIndex
+    game.deck.splice(game.currentCardIndex, 1);
+    const minPos = game.currentCardIndex;
+    const insertPos = minPos + Math.floor(Math.random() * (game.deck.length - minPos + 1));
+    game.deck.splice(insertPos, 0, skippedCard);
+  } else {
+    // bottom: push to end
+    game.deck.push(skippedCard);
+    game.currentCardIndex++;
+  }
+  game.passCount++;
+}
+
+export function canPass() {
+  if (game.passMode === 'forbidden') return false;
+  if (game.passMode === 'limited' && game.passCount >= game.passLimit) return false;
+  return true;
 }
 
 export function switchTeam() {

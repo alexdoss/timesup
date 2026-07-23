@@ -23,12 +23,6 @@
       <div class="home-content">
         <h1 class="title">⏱️ Time's Up!</h1>
         <p class="subtitle">Le jeu de devinettes</p>
-        <div class="rules-summary">
-          <p><strong>3 manches :</strong></p>
-          <p>1️⃣ Décrivez avec des phrases</p>
-          <p>2️⃣ Un seul mot</p>
-          <p>3️⃣ Mimez !</p>
-        </div>
         <button id="btn-start" class="btn btn-primary">Nouvelle partie 🎮</button>
         <button id="btn-library" class="btn btn-secondary">📚 Bibliothèque de cartes</button>
       </div>
@@ -82,7 +76,7 @@
     <div id="screen-themes" class="screen">
       <button class="btn-close" onclick="showScreen('screen-home')">✕</button>
       <div class="wizard-header">
-        <span class="wizard-step">Étape 1/3</span>
+        <span class="wizard-step">Étape 1/4</span>
         <h2>Choisissez vos thèmes</h2>
         <p class="wizard-hint">Sélectionnez un ou plusieurs thèmes</p>
       </div>
@@ -96,7 +90,7 @@
     <div id="screen-players" class="screen">
       <button class="btn-close" onclick="showScreen('screen-themes')">✕</button>
       <div class="wizard-header">
-        <span class="wizard-step">Étape 2/3</span>
+        <span class="wizard-step">Étape 2/4</span>
         <h2>Équipes & Joueurs</h2>
       </div>
       <div class="config-form">
@@ -143,21 +137,29 @@
       </div>
     </div>
 
-    <!-- ÉCRAN CONFIG — ÉTAPE 3 : MANCHES -->
-    <!-- ÉCRAN CONFIG — ÉTAPE 3 : PARAMÈTRES & MANCHES -->
-    <div id="screen-config" class="screen">
+    <!-- ÉCRAN MANCHES — ÉTAPE 3 -->
+    <div id="screen-rounds" class="screen">
       <button class="btn-close" onclick="showScreen('screen-players')">✕</button>
       <div class="wizard-header">
-        <span class="wizard-step">Étape 3/3</span>
-        <h2>Paramètres</h2>
+        <span class="wizard-step">Étape 3/4</span>
+        <h2>Manches</h2>
       </div>
       <div class="config-form">
-        <div class="config-section">
-          <span class="field-label">Manches</span>
-          <div id="rounds-mandatory" class="rounds-tags"></div>
-          <p class="wizard-hint" style="margin:8px 0 6px">Optionnelles :</p>
-          <div id="rounds-optional" class="rounds-pills"></div>
-        </div>
+        <div id="rounds-mandatory" class="rounds-tags"></div>
+        <p class="wizard-hint" style="margin:8px 0 6px">Optionnelles :</p>
+        <div id="rounds-optional" class="rounds-pills"></div>
+        <button id="btn-next-rounds" class="btn btn-primary">Suivant ▶️</button>
+      </div>
+    </div>
+
+    <!-- ÉCRAN DÉROULEMENT — ÉTAPE 4 -->
+    <div id="screen-config" class="screen">
+      <button class="btn-close" onclick="showScreen('screen-rounds')">✕</button>
+      <div class="wizard-header">
+        <span class="wizard-step">Étape 4/4</span>
+        <h2>Déroulement</h2>
+      </div>
+      <div class="config-form">
         <label>
           Temps par tour (secondes)
           <div class="timer-selector">
@@ -166,6 +168,7 @@
             <button class="btn-timer" data-time="60">60s</button>
           </div>
         </label>
+
         <label>
           Nombre de cartes
           <div class="timer-selector">
@@ -174,6 +177,34 @@
             <button class="btn-cards" data-cards="40">40</button>
           </div>
         </label>
+
+        <div class="config-section">
+          <span class="field-label">Passer une carte</span>
+          <select id="pass-mode" class="config-select">
+            <option value="unlimited" selected>Autorisé — illimité</option>
+            <option value="limited">Autorisé — limité</option>
+            <option value="forbidden">Interdit</option>
+          </select>
+        </div>
+
+        <div id="pass-limit-section" class="config-section" style="display:none">
+          <span class="field-label">Passages max. par tour</span>
+          <select id="pass-limit" class="config-select">
+            <option value="1">1</option>
+            <option value="2" selected>2</option>
+            <option value="3">3</option>
+            <option value="5">5</option>
+          </select>
+        </div>
+
+        <div id="pass-replace-section" class="config-section">
+          <span class="field-label">Carte passée</span>
+          <select id="pass-replace" class="config-select">
+            <option value="bottom" selected>Replacée sous le paquet</option>
+            <option value="random">Replacée aléatoirement</option>
+          </select>
+        </div>
+
         <button id="btn-play" class="btn btn-primary">C'est parti ! 🚀</button>
       </div>
     </div>

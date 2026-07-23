@@ -2,8 +2,8 @@
 // Orchestre les modules et gère les événements
 
 import { loadThemes } from './themes.js';
-import { game, ROUNDS, resetGame, buildDeck, startNewRound, getCurrentCard, cardFound, cardPassed, switchTeam, isRoundOver, isGameOver, nextRound, getCardsRemaining, addPlayer, removePlayer, assignTeamsRoundRobin, getCurrentPlayer, advancePlayer, getActiveRound, setPlayerTeam, syncChosenTeams } from './game.js';
-import { showScreen, updateTimer, showCard, updateRoundScreen, updateTurnInfo, updateGameHeader, showTurnResult, showRoundEnd, showFinalScreen, renderThemeButtons, renderPlayerList, updateCurrentPlayer, renderPlayerStats, renderRoundsSelector, renderAssignMode } from './ui.js';
+import { game, ROUNDS, resetGame, buildDeck, startNewRound, getCurrentCard, cardFound, cardPassed, switchTeam, isRoundOver, isGameOver, nextRound, getCardsRemaining, addPlayer, removePlayer, assignTeamsRoundRobin, getCurrentPlayer, advancePlayer, getActiveRound, setPlayerTeam, syncChosenTeams, canPass } from './game.js';
+import { showScreen, updateTimer, showCard, updateRoundScreen, updateTurnInfo, updateGameHeader, showTurnResult, showRoundEnd, showFinalScreen, renderThemeButtons, renderPlayerList, updateCurrentPlayer, renderPlayerStats, renderRoundsSelector, renderAssignMode, applyTeamAccent } from './ui.js';
 import { getCustomThemes, saveCustomTheme, deleteCustomTheme, generateWithAI } from './library.js';
 
 let THEMES = {};
@@ -45,9 +45,9 @@ function refreshPlayerList() {
   });
 }
 
-function openConfigStep() {
+function openRoundsStep() {
   renderRoundsSelector(ROUNDS, game.activeRounds);
-  showScreen('screen-config');
+  showScreen('screen-rounds');
 }
 
 function collectActiveRounds() {
@@ -138,7 +138,13 @@ function setupListeners() {
       game.teams[1].players = [];
     }
     syncTeamNamesFromInputs();
-    openConfigStep();
+    openRoundsStep();
+  });
+
+  // Rounds → Config (step 4)
+  document.getElementById('btn-next-rounds').addEventListener('click', () => {
+    collectActiveRounds();
+    showScreen('screen-config');
   });
 
   // Timer selector
@@ -157,6 +163,25 @@ function setupListeners() {
       btn.classList.add('active');
       game.numCards = parseInt(btn.dataset.cards);
     });
+  });
+
+  // Pass mode selector
+  document.getElementById('pass-mode').addEventListener('change', (e) => {
+    game.passMode = e.target.value;
+    document.getElementById('pass-limit-section').style.display =
+      game.passMode === 'limited' ? '' : 'none';
+    document.getElementById('pass-replace-section').style.display =
+      game.passMode === 'forbidden' ? 'none' : '';
+  });
+
+  // Pass limit selector
+  document.getElementById('pass-limit').addEventListener('change', (e) => {
+    game.passLimit = parseInt(e.target.value);
+  });
+
+  // Pass replace selector
+  document.getElementById('pass-replace').addEventListener('change', (e) => {
+    game.passReplace = e.target.value;
   });
 
   // Start game
@@ -227,6 +252,7 @@ function startGame() {
 function beginRound() {
   startNewRound();
   const round = getActiveRound();
+  applyTeamAccent(game.teams[game.currentTeam].color);
   updateRoundScreen(round, game.teams, getRoundLabel());
   updateTurnInfo(game.teams[game.currentTeam].name);
   updateCurrentPlayer(game.nominativeMode ? getCurrentPlayer() : null);
@@ -235,11 +261,14 @@ function beginRound() {
 
 function startTurn() {
   game.turnScore = 0;
+  game.passCount = 0;
   game.timeLeft = game.turnTime;
 
   const round = getActiveRound();
+  applyTeamAccent(game.teams[game.currentTeam].color);
   updateGameHeader(`${getRoundLabel()} · ${round.name}`, game.teams[game.currentTeam].name);
   displayCurrentCard();
+  updatePassButton();
   updateTimer(game.timeLeft);
   showScreen('screen-game');
 
@@ -267,8 +296,17 @@ function onFound() {
 }
 
 function onPass() {
+  if (!canPass()) return;
   cardPassed();
+  updatePassButton();
   displayCurrentCard();
+}
+
+function updatePassButton() {
+  const btn = document.getElementById('btn-pass');
+  const allowed = canPass();
+  btn.disabled = !allowed;
+  btn.style.opacity = allowed ? '1' : '0.35';
 }
 
 function endTurn() {
@@ -288,6 +326,7 @@ function onNextTurn() {
   if (isRoundOver()) {
     endRound();
   } else {
+    applyTeamAccent(game.teams[game.currentTeam].color);
     updateTurnInfo(game.teams[game.currentTeam].name);
     updateCurrentPlayer(game.nominativeMode ? getCurrentPlayer() : null);
     showScreen('screen-round');

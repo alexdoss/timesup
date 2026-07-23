@@ -1,6 +1,14 @@
 // ===== UI MODULE =====
 // Gère l'affichage et les interactions DOM
 
+export function applyTeamAccent(teamColor) {
+  document.documentElement.style.setProperty('--accent', teamColor);
+  const teamLabel = document.getElementById('game-team-label');
+  if (teamLabel) {
+    teamLabel.style.background = teamColor + '22';
+  }
+}
+
 export function showScreen(id) {
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
   document.getElementById(id).classList.add('active');

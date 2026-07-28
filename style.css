@@ -946,3 +946,36 @@ h2 {
 .ai-preview.visible {
   display: block;
 }
+
+
+/* ===== MODE TILES (étape 1 : type de partie) ===== */
+.mode-choice { display: flex; flex-direction: column; gap: 12px; margin-bottom: 8px; }
+.mode-tile { display: flex; flex-direction: column; align-items: flex-start; text-align: left; gap: 6px; padding: 18px; border-radius: var(--r-md); border: 2px solid var(--line); background: var(--panel); color: var(--ink); cursor: pointer; transition: all .15s ease; font-family: inherit; }
+.mode-tile.active { border-color: var(--brand); background: rgba(214, 51, 108, 0.08); }
+.mode-tile-icon { font-size: 28px; }
+.mode-tile-title { font-size: 17px; font-weight: 600; }
+.mode-tile-desc { font-size: 13px; color: var(--muted); line-height: 1.35; }
+
+/* ===== SAISIE CARTES PERSO (handoff + input) ===== */
+.handoff-box { padding: 32px 20px; border-radius: var(--r-md); background: var(--panel); border: 1px solid var(--line); text-align: center; display: flex; flex-direction: column; gap: 10px; align-items: center; }
+.handoff-icon { font-size: 48px; }
+.handoff-label { font-size: 20px; font-weight: 600; }
+#custom-cards-list li { display: flex; justify-content: space-between; align-items: center; padding: 8px 12px; background: rgba(255,255,255,.04); border-radius: var(--r-sm); margin-top: 6px; }
+#custom-cards-list .card-hidden { letter-spacing: 4px; color: var(--muted); }
+#custom-cards-list button { background: transparent; border: none; color: var(--bad); cursor: pointer; font-size: 16px; }
+
+
+
+/* ===== STEPPER numérique ===== */
+.stepper { display: flex; align-items: center; gap: 12px; margin-top: 4px; }
+.stepper-btn { width: 44px; height: 44px; border-radius: var(--r-sm); border: 1px solid var(--line); background: var(--panel); color: var(--ink); font-size: 22px; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: center; font-family: inherit; }
+.stepper-btn:active { background: rgba(255,255,255,.06); }
+.stepper-btn:disabled { opacity: 0.35; cursor: not-allowed; }
+.stepper-input { width: 72px; height: 44px; text-align: center; font-size: 20px; font-weight: 600; border-radius: var(--r-sm); border: 1px solid var(--line); background: var(--panel); color: var(--ink); font-family: inherit; -moz-appearance: textfield; }
+.stepper-input::-webkit-outer-spin-button, .stepper-input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+
+
+
+/* ===== Custom batch choice ===== */
+#custom-batch-choice { display: flex; flex-direction: column; gap: 10px; margin-top: 12px; }
+

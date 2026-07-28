@@ -72,11 +72,36 @@
       </div>
     </div>
 
-    <!-- ÉCRAN CONFIG — ÉTAPE 1 : THÈMES -->
-    <div id="screen-themes" class="screen">
+    <!-- ÉCRAN CONFIG — ÉTAPE 1 : TYPE DE PARTIE -->
+    <div id="screen-mode" class="screen">
       <button class="btn-close" onclick="showScreen('screen-home')">✕</button>
       <div class="wizard-header">
-        <span class="wizard-step">Étape 1/4</span>
+        <span class="wizard-step" data-step="mode">Étape 1/5</span>
+        <h2>Type de partie</h2>
+        <p class="wizard-hint">Comment veux-tu constituer le paquet de cartes ?</p>
+      </div>
+      <div class="config-form">
+        <div class="mode-choice">
+          <button type="button" class="mode-tile active" data-source="themes">
+            <span class="mode-tile-icon">🎴</span>
+            <span class="mode-tile-title">Thèmes prédéfinis</span>
+            <span class="mode-tile-desc">Thèmes officiels et thèmes créés avec l'IA depuis la bibliothèque.</span>
+          </button>
+          <button type="button" class="mode-tile" data-source="custom">
+            <span class="mode-tile-icon">✍️</span>
+            <span class="mode-tile-title">Cartes personnalisées</span>
+            <span class="mode-tile-desc">Chaque joueur saisit ses propres cartes en début de partie (mode Time's Up classique).</span>
+          </button>
+        </div>
+        <button id="btn-next-mode" class="btn btn-primary">Suivant ▶️</button>
+      </div>
+    </div>
+
+    <!-- ÉCRAN CONFIG — ÉTAPE 2 (mode thèmes) : THÈMES -->
+    <div id="screen-themes" class="screen">
+      <button class="btn-close" onclick="showScreen('screen-mode')">✕</button>
+      <div class="wizard-header">
+        <span class="wizard-step" data-step="themes">Étape 2/5</span>
         <h2>Choisissez vos thèmes</h2>
         <p class="wizard-hint">Sélectionnez un ou plusieurs thèmes</p>
       </div>
@@ -86,11 +111,11 @@
       </div>
     </div>
 
-    <!-- ÉCRAN CONFIG — ÉTAPE 2 : ÉQUIPES & JOUEURS -->
+    <!-- ÉCRAN CONFIG — ÉTAPE 3 : ÉQUIPES & JOUEURS -->
     <div id="screen-players" class="screen">
-      <button class="btn-close" onclick="showScreen('screen-themes')">✕</button>
+      <button class="btn-close" onclick="handleBackFromPlayers()">✕</button>
       <div class="wizard-header">
-        <span class="wizard-step">Étape 2/4</span>
+        <span class="wizard-step" data-step="players">Étape 3/5</span>
         <h2>Équipes & Joueurs</h2>
       </div>
       <div class="config-form">
@@ -101,6 +126,9 @@
             <button type="button" class="pill" data-mode="simple">Simple</button>
           </div>
           <p id="mode-note" class="wizard-hint">Chaque joueur est identifié. Rotation et statistiques individuelles.</p>
+        </div>
+        <div id="simple-custom-block" class="config-section" style="display:none">
+          <p class="wizard-hint">Chaque joueur saisira ses cartes tour à tour au début de la partie.</p>
         </div>
         <div class="config-section">
           <span class="field-label">Noms des équipes</span>
@@ -137,11 +165,11 @@
       </div>
     </div>
 
-    <!-- ÉCRAN MANCHES — ÉTAPE 3 -->
+    <!-- ÉCRAN MANCHES — ÉTAPE 4 -->
     <div id="screen-rounds" class="screen">
       <button class="btn-close" onclick="showScreen('screen-players')">✕</button>
       <div class="wizard-header">
-        <span class="wizard-step">Étape 3/4</span>
+        <span class="wizard-step" data-step="rounds">Étape 4/5</span>
         <h2>Manches</h2>
       </div>
       <div class="config-form">
@@ -152,11 +180,11 @@
       </div>
     </div>
 
-    <!-- ÉCRAN DÉROULEMENT — ÉTAPE 4 -->
+    <!-- ÉCRAN DÉROULEMENT — ÉTAPE 5 -->
     <div id="screen-config" class="screen">
       <button class="btn-close" onclick="showScreen('screen-rounds')">✕</button>
       <div class="wizard-header">
-        <span class="wizard-step">Étape 4/4</span>
+        <span class="wizard-step" data-step="config">Étape 5/5</span>
         <h2>Déroulement</h2>
       </div>
       <div class="config-form">
@@ -170,12 +198,18 @@
         </label>
 
         <label>
-          Nombre de cartes
-          <div class="timer-selector">
+          <span id="cards-count-label">Nombre de cartes</span>
+          <div id="cards-preset" class="timer-selector">
             <button class="btn-cards" data-cards="20">20</button>
             <button class="btn-cards active" data-cards="30">30</button>
             <button class="btn-cards" data-cards="40">40</button>
           </div>
+          <div id="cards-stepper" class="stepper" style="display:none">
+            <button type="button" id="btn-cards-minus" class="stepper-btn">−</button>
+            <input type="number" id="cards-stepper-input" class="stepper-input" min="3" max="20" value="5">
+            <button type="button" id="btn-cards-plus" class="stepper-btn">+</button>
+          </div>
+          <p id="cards-count-hint" class="wizard-hint" style="display:none"></p>
         </label>
 
         <div class="config-section">
@@ -206,6 +240,44 @@
         </div>
 
         <button id="btn-play" class="btn btn-primary">C'est parti ! 🚀</button>
+      </div>
+    </div>
+
+    <!-- ÉCRAN SAISIE CARTES PERSO -->
+    <div id="screen-custom-cards" class="screen">
+      <button class="btn-close" onclick="showScreen('screen-config')">✕</button>
+      <div class="wizard-header">
+        <span class="wizard-step">Saisie des cartes</span>
+        <h2 id="custom-cards-title">Passe le téléphone</h2>
+        <p id="custom-cards-hint" class="wizard-hint"></p>
+      </div>
+
+      <!-- Sous-écran : transition (passer le tel) -->
+      <div id="custom-cards-handoff" class="config-form">
+        <div class="handoff-box">
+          <div class="handoff-icon">📱➡️</div>
+          <p class="handoff-label" id="handoff-player-label">Passe le téléphone à Joueur 1</p>
+          <p class="wizard-hint">Personne d'autre ne doit voir l'écran suivant.</p>
+        </div>
+        <button id="btn-handoff-ready" class="btn btn-primary">✍️ Ajouter mes cartes</button>
+        <button id="btn-handoff-launch" class="btn btn-secondary" style="display:none">🚀 Tout le monde a saisi — lancer la partie</button>
+      </div>
+
+      <!-- Sous-écran : saisie proprement dite -->
+      <div id="custom-cards-input" class="config-form" style="display:none">
+        <div class="config-section">
+          <span class="field-label" id="custom-input-header">Tes cartes</span>
+          <p class="wizard-hint" id="custom-progress"></p>
+          <div class="player-input-row">
+            <input type="password" id="custom-card-input" placeholder="Mot ou expression" maxlength="40" autocomplete="off">
+            <button id="btn-toggle-visibility" class="btn btn-add" title="Voir/masquer">👁</button>
+            <button id="btn-add-custom-card" class="btn btn-add">+</button>
+          </div>
+          <ul id="custom-cards-list" class="player-list"></ul>
+        </div>
+        <div id="custom-batch-choice" style="display:none">
+          <button id="btn-custom-done" class="btn btn-primary">✅ J'ai fini</button>
+        </div>
       </div>
     </div>
 

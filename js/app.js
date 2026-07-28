@@ -62,10 +62,31 @@ function collectActiveRounds() {
 }
 
 function setupListeners() {
-  // Home → Themes (step 1)
-  document.getElementById('btn-start').addEventListener('click', () => showScreen('screen-themes'));
+  // Home → Mode (step 1)
+  document.getElementById('btn-start').addEventListener('click', () => showScreen('screen-mode'));
 
-  // Themes → Players (step 2)
+  // Mode tiles selection
+  document.querySelectorAll('.mode-tile').forEach(tile => {
+    tile.addEventListener('click', () => {
+      document.querySelectorAll('.mode-tile').forEach(t => t.classList.remove('active'));
+      tile.classList.add('active');
+      game.cardSource = tile.dataset.source;
+    });
+  });
+
+  // Mode → next step
+  document.getElementById('btn-next-mode').addEventListener('click', () => {
+    updateWizardLabels();
+    updateCardsCountLabel();
+    updateSimpleCustomBlock();
+    if (game.cardSource === 'themes') {
+      showScreen('screen-themes');
+    } else {
+      showScreen('screen-players');
+    }
+  });
+
+  // Themes → Players (step)
   document.getElementById('btn-next-step').addEventListener('click', () => {
     if (game.selectedThemes.size === 0) {
       alert("Sélectionne au moins un thème !");
@@ -100,6 +121,7 @@ function setupListeners() {
       const mode = pill.dataset.mode;
       game.nominativeMode = (mode === 'nominatif');
       document.getElementById('nominatif-block').style.display = game.nominativeMode ? '' : 'none';
+      updateSimpleCustomBlock();
       document.getElementById('mode-note').textContent = game.nominativeMode
         ? "Chaque joueur est identifié. Rotation et statistiques individuelles."
         : "Mode simple : seules les équipes et les scores sont suivis.";
@@ -144,6 +166,7 @@ function setupListeners() {
   // Rounds → Config (step 4)
   document.getElementById('btn-next-rounds').addEventListener('click', () => {
     collectActiveRounds();
+    updateCardsCountLabel();
     showScreen('screen-config');
   });
 
@@ -165,6 +188,28 @@ function setupListeners() {
     });
   });
 
+  // Cards stepper (custom mode)
+  const stepInput = document.getElementById('cards-stepper-input');
+  const stepMin = 3, stepMax = 20;
+  const clampStep = (v) => Math.max(stepMin, Math.min(stepMax, v || stepMin));
+  const applyStep = () => {
+    game.numCards = clampStep(parseInt(stepInput.value));
+    stepInput.value = game.numCards;
+    document.getElementById('btn-cards-minus').disabled = game.numCards <= stepMin;
+    document.getElementById('btn-cards-plus').disabled = game.numCards >= stepMax;
+    updateCustomTotalHint();
+  };
+  document.getElementById('btn-cards-minus').addEventListener('click', () => {
+    stepInput.value = clampStep(parseInt(stepInput.value) - 1);
+    applyStep();
+  });
+  document.getElementById('btn-cards-plus').addEventListener('click', () => {
+    stepInput.value = clampStep(parseInt(stepInput.value) + 1);
+    applyStep();
+  });
+  stepInput.addEventListener('input', applyStep);
+  stepInput.addEventListener('blur', applyStep);
+
   // Pass mode selector
   document.getElementById('pass-mode').addEventListener('change', (e) => {
     game.passMode = e.target.value;
@@ -185,7 +230,20 @@ function setupListeners() {
   });
 
   // Start game
-  document.getElementById('btn-play').addEventListener('click', startGame);
+  document.getElementById('btn-play').addEventListener('click', onPlayClicked);
+
+  // Custom cards flow
+  document.getElementById('btn-handoff-ready').addEventListener('click', showCustomInput);
+  document.getElementById('btn-handoff-launch').addEventListener('click', () => startGame());
+  document.getElementById('btn-add-custom-card').addEventListener('click', addCustomCard);
+  document.getElementById('custom-card-input').addEventListener('keypress', (e) => {
+    if (e.key === 'Enter') addCustomCard();
+  });
+  document.getElementById('btn-toggle-visibility').addEventListener('click', () => {
+    const input = document.getElementById('custom-card-input');
+    input.type = input.type === 'password' ? 'text' : 'password';
+  });
+  document.getElementById('btn-custom-done').addEventListener('click', finishCurrentPlayerEntry);
 
   // Start turn
   document.getElementById('btn-start-turn').addEventListener('click', startTurn);
@@ -230,6 +288,200 @@ function setupListeners() {
 
   // Save generated theme
   document.getElementById('btn-save-theme').addEventListener('click', handleSaveTheme);
+}
+
+// ===== WIZARD HELPERS =====
+function updateWizardLabels() {
+  const total = 5;
+  const steps = {
+    mode: 1,
+    themes: game.cardSource === 'themes' ? 2 : null,
+    players: game.cardSource === 'themes' ? 3 : 2,
+    rounds: game.cardSource === 'themes' ? 4 : 3,
+    config: game.cardSource === 'themes' ? 5 : 4
+  };
+  const totalDisplay = game.cardSource === 'themes' ? 5 : 4;
+  document.querySelectorAll('[data-step]').forEach(el => {
+    const s = el.dataset.step;
+    if (steps[s]) el.textContent = `Étape ${steps[s]}/${totalDisplay}`;
+  });
+}
+
+function updateCardsCountLabel() {
+  const label = document.getElementById('cards-count-label');
+  const hint = document.getElementById('cards-count-hint');
+  const preset = document.getElementById('cards-preset');
+  const stepper = document.getElementById('cards-stepper');
+
+  if (game.cardSource === 'custom') {
+    label.textContent = 'Cartes saisies par joueur';
+    preset.style.display = 'none';
+    stepper.style.display = '';
+    const input = document.getElementById('cards-stepper-input');
+    if (!input.value || parseInt(input.value) < 3) input.value = 5;
+    game.numCards = parseInt(input.value);
+    hint.style.display = '';
+    updateCustomTotalHint();
+  } else {
+    label.textContent = 'Nombre de cartes';
+    preset.style.display = '';
+    stepper.style.display = 'none';
+    hint.style.display = 'none';
+    const active = document.querySelector('.btn-cards.active');
+    if (active) game.numCards = parseInt(active.dataset.cards);
+  }
+}
+
+function updateCustomTotalHint() {
+  const hint = document.getElementById('cards-count-hint');
+  if (game.nominativeMode) {
+    const nb = game.players.length;
+    hint.textContent = `Total du paquet : ${nb} joueurs × ${game.numCards} = ${nb * game.numCards} cartes`;
+  } else {
+    hint.textContent = `Chaque joueur saisira exactement ${game.numCards} carte(s).`;
+  }
+}
+
+function updateSimpleCustomBlock() {
+  const block = document.getElementById('simple-custom-block');
+  block.style.display = (game.cardSource === 'custom' && !game.nominativeMode) ? '' : 'none';
+}
+
+window.handleBackFromPlayers = function() {
+  showScreen(game.cardSource === 'themes' ? 'screen-themes' : 'screen-mode');
+};
+
+// ===== CUSTOM CARDS ENTRY =====
+let customEntry = { playerIndex: 0, playerList: [], currentCards: [], batchSize: 0, currentTarget: 0 };
+
+function onPlayClicked() {
+  if (game.cardSource === 'custom') {
+    startCustomCardsEntry();
+  } else {
+    startGame();
+  }
+}
+
+function startCustomCardsEntry() {
+  collectActiveRounds();
+  syncTeamNamesFromInputs();
+  if (game.nominativeMode) {
+    if (game.players.length < 4) { alert("Il faut au moins 4 joueurs !"); return; }
+    customEntry.playerList = [...game.players];
+  } else {
+    customEntry.playerList = null; // simple mode: unbounded
+  }
+  customEntry.batchSize = game.numCards;
+  customEntry.playerIndex = 0;
+  game.customCards = [];
+  showHandoff();
+  showScreen('screen-custom-cards');
+}
+
+function showHandoff() {
+  const isSimple = !game.nominativeMode;
+  const handoffLabel = document.getElementById('handoff-player-label');
+  const title = document.getElementById('custom-cards-title');
+  const hint = document.getElementById('custom-cards-hint');
+  const launchBtn = document.getElementById('btn-handoff-launch');
+
+  if (isSimple) {
+    const n = customEntry.playerIndex + 1;
+    handoffLabel.textContent = customEntry.playerIndex === 0
+      ? `Passe le téléphone au premier joueur`
+      : `Passe le téléphone au joueur suivant`;
+    title.textContent = `Saisisseur ${n}`;
+    hint.textContent = `Chacun saisira au moins ${customEntry.batchSize} carte(s).`;
+    // Show launch button only if at least one player has entered cards
+    launchBtn.style.display = customEntry.playerIndex > 0 ? '' : 'none';
+  } else {
+    const name = customEntry.playerList[customEntry.playerIndex];
+    const total = customEntry.playerList.length;
+    handoffLabel.textContent = `Passe le téléphone à ${name}`;
+    title.textContent = `Joueur ${customEntry.playerIndex + 1}/${total}`;
+    hint.textContent = `Au moins ${customEntry.batchSize} carte(s) à saisir.`;
+    launchBtn.style.display = 'none';
+  }
+
+  document.getElementById('custom-cards-handoff').style.display = '';
+  document.getElementById('custom-cards-input').style.display = 'none';
+}
+
+function showCustomInput() {
+  customEntry.currentCards = [];
+  customEntry.currentTarget = customEntry.batchSize;
+  document.getElementById('custom-cards-handoff').style.display = 'none';
+  document.getElementById('custom-cards-input').style.display = '';
+  const label = game.nominativeMode
+    ? `${customEntry.playerList[customEntry.playerIndex]} — tes cartes`
+    : `Saisisseur ${customEntry.playerIndex + 1} — tes cartes`;
+  document.getElementById('custom-input-header').textContent = label;
+  document.getElementById('batch-size-label').textContent = customEntry.batchSize;
+  document.getElementById('custom-batch-choice').style.display = 'none';
+  refreshCustomCardsUI();
+  const input = document.getElementById('custom-card-input');
+  input.type = 'password';
+  input.value = '';
+  input.disabled = false;
+  document.getElementById('btn-add-custom-card').disabled = false;
+  input.focus();
+}
+
+function addCustomCard() {
+  const input = document.getElementById('custom-card-input');
+  const raw = input.value.trim();
+  if (!raw) return;
+  if (raw.length < 2) { alert("Trop court"); return; }
+  if (customEntry.currentCards.length >= customEntry.currentTarget) return;
+  const norm = raw.toLocaleLowerCase();
+  const allExisting = [...game.customCards, ...customEntry.currentCards].map(c => c.toLocaleLowerCase());
+  if (allExisting.includes(norm)) { alert("Cette carte existe déjà"); return; }
+  customEntry.currentCards.push(raw);
+  input.value = '';
+  input.focus();
+  refreshCustomCardsUI();
+  if (customEntry.currentCards.length >= customEntry.currentTarget) {
+    document.getElementById('custom-batch-choice').style.display = '';
+    input.disabled = true;
+    document.getElementById('btn-add-custom-card').disabled = true;
+  }
+}
+
+function refreshCustomCardsUI() {
+  const list = document.getElementById('custom-cards-list');
+  const n = customEntry.currentCards.length;
+  const target = customEntry.currentTarget;
+  document.getElementById('custom-progress').textContent = `${n}/${target} carte(s) saisie(s)`;
+  list.innerHTML = customEntry.currentCards.map((_, idx) =>
+    `<li><span class="card-hidden">••••••••</span><button data-idx="${idx}">🗑️</button></li>`
+  ).join('');
+  list.querySelectorAll('button').forEach(b => {
+    b.addEventListener('click', () => {
+      customEntry.currentCards.splice(parseInt(b.dataset.idx), 1);
+      refreshCustomCardsUI();
+      if (customEntry.currentCards.length < customEntry.currentTarget) {
+        document.getElementById('custom-batch-choice').style.display = 'none';
+        document.getElementById('custom-card-input').disabled = false;
+        document.getElementById('btn-add-custom-card').disabled = false;
+      }
+    });
+  });
+}
+
+function finishCurrentPlayerEntry() {
+  game.customCards = game.customCards.concat(customEntry.currentCards);
+  customEntry.playerIndex++;
+
+  if (game.nominativeMode) {
+    if (customEntry.playerIndex < customEntry.playerList.length) {
+      showHandoff();
+    } else {
+      startGame();
+    }
+  } else {
+    // Simple mode: always propose to hand off or launch
+    showHandoff();
+  }
 }
 
 // ===== GAME FLOW =====

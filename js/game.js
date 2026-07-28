@@ -17,7 +17,9 @@ export const game = {
   players: [],             // liste de tous les joueurs
   playerStats: {},         // { playerName: { found: 0 } }
   playerAssignments: {},   // { playerName: teamIndex }
-  nominativeMode: false,   // true = avec noms de joueurs
+  nominativeMode: true,    // true = avec noms de joueurs
+  cardSource: 'themes',    // 'themes' | 'custom'
+  customCards: [],         // cartes saisies manuellement en mode custom
   selectedThemes: new Set(),
   activeRounds: [0, 1, 2],
   assignMode: 'random',
@@ -124,6 +126,11 @@ export function advancePlayer() {
 }
 
 export function buildDeck(themes) {
+  if (game.cardSource === 'custom') {
+    const shuffled = shuffle([...game.customCards]);
+    game.masterDeck = shuffled;
+    return;
+  }
   let wordPool = [];
   game.selectedThemes.forEach(key => {
     if (themes[key]) {

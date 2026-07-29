@@ -5,14 +5,14 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <meta name="theme-color" content="#111016">
+  <meta name="theme-color" content="#0F172A">
   <title>Rush</title>
   <link rel="manifest" href="manifest.json">
   <link rel="apple-touch-icon" href="icons/icon-192.png">
   <link rel="icon" href="icons/icon-192.png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -21,7 +21,14 @@
     <!-- ÉCRAN ACCUEIL -->
     <div id="screen-home" class="screen active">
       <div class="home-content">
-        <h1 class="title">⚡ Rush</h1>
+        <div class="logo-wrap">
+          <svg class="logo-mark" viewBox="0 0 100 130" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+            <path d="M 5 5 L 95 5 L 50 68 Z" fill="#6D28D9"/>
+            <path d="M 5 125 L 95 125 L 50 62 Z" fill="#F59E0B"/>
+            <path d="M 58 18 L 32 70 L 47 70 L 40 112 L 68 60 L 53 60 L 62 18 Z" fill="#F8FAFC"/>
+          </svg>
+          <h1 class="title">RUSH</h1>
+        </div>
         <p class="subtitle">Le jeu de devinettes</p>
         <button id="btn-start" class="btn btn-primary">Nouvelle partie 🎮</button>
         <button id="btn-library" class="btn btn-secondary">📚 Bibliothèque de cartes</button>

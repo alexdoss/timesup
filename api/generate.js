@@ -15,7 +15,7 @@ export default async function handler(req, res) {
     return res.status(400).json({ error: 'Missing parameters' });
   }
 
-  let prompt = `Tu es un assistant pour le jeu Time's Up. Génère exactement ${count} éléments sur le thème "${themeName}".`;
+  let prompt = `Tu es un assistant pour un jeu de devinettes appelé Rush. Génère exactement ${count} éléments sur le thème "${themeName}".`;
 
   if (comment) {
     prompt += `\nConsigne supplémentaire de l'utilisateur : ${comment}`;

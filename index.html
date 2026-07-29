@@ -6,7 +6,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="theme-color" content="#111016">
-  <title>Time's Up!</title>
+  <title>Rush</title>
   <link rel="manifest" href="manifest.json">
   <link rel="apple-touch-icon" href="icons/icon-192.png">
   <link rel="icon" href="icons/icon-192.png">
@@ -21,7 +21,7 @@
     <!-- ÉCRAN ACCUEIL -->
     <div id="screen-home" class="screen active">
       <div class="home-content">
-        <h1 class="title">⏱️ Time's Up!</h1>
+        <h1 class="title">⚡ Rush</h1>
         <p class="subtitle">Le jeu de devinettes</p>
         <button id="btn-start" class="btn btn-primary">Nouvelle partie 🎮</button>
         <button id="btn-library" class="btn btn-secondary">📚 Bibliothèque de cartes</button>
@@ -43,7 +43,8 @@
 
     <!-- ÉCRAN CRÉATION THÈME IA -->
     <div id="screen-ai-create" class="screen">
-      <button class="btn-close" onclick="showScreen('screen-library')">✕</button>
+      <button class="btn-back" onclick="showScreen('screen-library')">←</button>
+      <button class="btn-close" onclick="showScreen('screen-home')">✕</button>
       <div class="wizard-header">
         <h2>✨ Création assistée</h2>
         <p class="wizard-hint">Décrivez votre thème, l'IA génère les cartes</p>
@@ -90,7 +91,7 @@
           <button type="button" class="mode-tile" data-source="custom">
             <span class="mode-tile-icon">✍️</span>
             <span class="mode-tile-title">Cartes personnalisées</span>
-            <span class="mode-tile-desc">Chaque joueur saisit ses propres cartes en début de partie (mode Time's Up classique).</span>
+            <span class="mode-tile-desc">Chaque joueur saisit ses propres cartes en début de partie.</span>
           </button>
         </div>
         <button id="btn-next-mode" class="btn btn-primary">Suivant ▶️</button>
@@ -99,7 +100,8 @@
 
     <!-- ÉCRAN CONFIG — ÉTAPE 2 (mode thèmes) : THÈMES -->
     <div id="screen-themes" class="screen">
-      <button class="btn-close" onclick="showScreen('screen-mode')">✕</button>
+      <button class="btn-back" onclick="showScreen('screen-mode')">←</button>
+      <button class="btn-close" onclick="showScreen('screen-home')">✕</button>
       <div class="wizard-header">
         <span class="wizard-step" data-step="themes">Étape 2/5</span>
         <h2>Choisissez vos thèmes</h2>
@@ -113,7 +115,8 @@
 
     <!-- ÉCRAN CONFIG — ÉTAPE 3 : ÉQUIPES & JOUEURS -->
     <div id="screen-players" class="screen">
-      <button class="btn-close" onclick="handleBackFromPlayers()">✕</button>
+      <button class="btn-back" onclick="handleBackFromPlayers()">←</button>
+      <button class="btn-close" onclick="showScreen('screen-home')">✕</button>
       <div class="wizard-header">
         <span class="wizard-step" data-step="players">Étape 3/5</span>
         <h2>Équipes & Joueurs</h2>
@@ -167,7 +170,8 @@
 
     <!-- ÉCRAN MANCHES — ÉTAPE 4 -->
     <div id="screen-rounds" class="screen">
-      <button class="btn-close" onclick="showScreen('screen-players')">✕</button>
+      <button class="btn-back" onclick="showScreen('screen-players')">←</button>
+      <button class="btn-close" onclick="showScreen('screen-home')">✕</button>
       <div class="wizard-header">
         <span class="wizard-step" data-step="rounds">Étape 4/5</span>
         <h2>Manches</h2>
@@ -182,7 +186,8 @@
 
     <!-- ÉCRAN DÉROULEMENT — ÉTAPE 5 -->
     <div id="screen-config" class="screen">
-      <button class="btn-close" onclick="showScreen('screen-rounds')">✕</button>
+      <button class="btn-back" onclick="showScreen('screen-rounds')">←</button>
+      <button class="btn-close" onclick="showScreen('screen-home')">✕</button>
       <div class="wizard-header">
         <span class="wizard-step" data-step="config">Étape 5/5</span>
         <h2>Déroulement</h2>
@@ -245,7 +250,8 @@
 
     <!-- ÉCRAN SAISIE CARTES PERSO -->
     <div id="screen-custom-cards" class="screen">
-      <button class="btn-close" onclick="showScreen('screen-config')">✕</button>
+      <button class="btn-back" onclick="showScreen('screen-config')">←</button>
+      <button class="btn-close" onclick="showScreen('screen-home')">✕</button>
       <div class="wizard-header">
         <span class="wizard-step">Saisie des cartes</span>
         <h2 id="custom-cards-title">Passe le téléphone</h2>

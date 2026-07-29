@@ -1,0 +1,495 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Rush — Proto Sprint 2</title>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+<style>
+  :root {
+    --primary: #6D28D9;
+    --primary-2: #8B5CF6;
+    --secondary: #F59E0B;
+    --secondary-2: #FBBF24;
+    --bg: #0F172A;
+    --surface: #1E293B;
+    --surface-2: #273449;
+    --border: #334155;
+    --text: #F8FAFC;
+    --muted: #94A3B8;
+    --success: #10B981;
+    --error: #EF4444;
+    --r-md: 12px;
+    --r-lg: 16px;
+    --r-xl: 24px;
+    --shadow: 0 8px 24px rgba(0,0,0,.35);
+    --shadow-glow: 0 0 32px rgba(109, 40, 217, .35);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Outfit', system-ui, sans-serif;
+    background: radial-gradient(ellipse at top, #1a2340 0%, var(--bg) 60%);
+    color: var(--text);
+    min-height: 100vh;
+    padding: 24px 16px 80px;
+  }
+  .container {
+    max-width: 480px;
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    gap: 32px;
+  }
+  h1 {
+    font-weight: 800;
+    font-style: italic;
+    font-size: 2rem;
+    text-align: center;
+    letter-spacing: -0.02em;
+  }
+  h1 span { color: var(--secondary); }
+  h2 {
+    font-weight: 700;
+    font-size: 1.1rem;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  section {
+    background: var(--surface);
+    border-radius: var(--r-xl);
+    padding: 24px;
+    box-shadow: var(--shadow);
+    border: 1px solid var(--border);
+  }
+  .lucide { width: 20px; height: 20px; stroke-width: 2; }
+
+  /* ============ TIMER CIRCULAIRE ============ */
+  .timer-wrap {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 20px;
+  }
+  .timer-ring {
+    position: relative;
+    width: 200px;
+    height: 200px;
+  }
+  .timer-ring svg {
+    width: 100%;
+    height: 100%;
+    transform: rotate(-90deg);
+  }
+  .timer-ring .bg-ring {
+    fill: none;
+    stroke: var(--surface-2);
+    stroke-width: 12;
+  }
+  .timer-ring .progress-ring {
+    fill: none;
+    stroke: var(--secondary);
+    stroke-width: 12;
+    stroke-linecap: round;
+    transition: stroke-dashoffset 1s linear, stroke 0.5s ease;
+    filter: drop-shadow(0 0 8px rgba(245, 158, 11, 0.5));
+  }
+  .timer-ring.warning .progress-ring { stroke: #FB923C; }
+  .timer-ring.danger .progress-ring {
+    stroke: var(--error);
+    animation: pulse 0.8s ease-in-out infinite;
+  }
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.4; }
+  }
+  .timer-text {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+  }
+  .timer-text .value {
+    font-size: 4rem;
+    font-weight: 800;
+    font-variant-numeric: tabular-nums;
+    color: var(--text);
+    line-height: 1;
+  }
+  .timer-text .label {
+    font-size: 0.75rem;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+  }
+  .timer-controls {
+    display: flex;
+    gap: 12px;
+  }
+
+  /* ============ CARTE 3D FLIP ============ */
+  .card-stage {
+    perspective: 1200px;
+    display: flex;
+    justify-content: center;
+    padding: 20px 0;
+  }
+  .card {
+    position: relative;
+    width: 280px;
+    height: 380px;
+    transform-style: preserve-3d;
+    transition: transform 0.7s cubic-bezier(0.4, 0, 0.2, 1);
+    cursor: pointer;
+  }
+  .card.flipped { transform: rotateY(180deg); }
+  .card-face {
+    position: absolute;
+    inset: 0;
+    border-radius: var(--r-xl);
+    backface-visibility: hidden;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    padding: 28px;
+    box-shadow: var(--shadow), var(--shadow-glow);
+  }
+  .card-back {
+    background: linear-gradient(135deg, var(--primary) 0%, var(--primary-2) 100%);
+    align-items: center;
+    justify-content: center;
+    gap: 20px;
+  }
+  .card-back .logo-svg { width: 96px; height: 120px; }
+  .card-back .brand {
+    font-weight: 800;
+    font-style: italic;
+    font-size: 2rem;
+    letter-spacing: 0.05em;
+  }
+  .card-back .hint {
+    font-size: 0.85rem;
+    color: rgba(248, 250, 252, 0.7);
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+  }
+  .card-front {
+    background: linear-gradient(160deg, var(--surface-2) 0%, var(--surface) 100%);
+    transform: rotateY(180deg);
+    border: 1px solid var(--border);
+  }
+  .card-front .word {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 2.4rem;
+    font-weight: 700;
+    text-align: center;
+    color: var(--text);
+  }
+  .card-front .category {
+    align-self: flex-start;
+    padding: 6px 14px;
+    background: rgba(109, 40, 217, 0.25);
+    border: 1px solid var(--primary);
+    border-radius: 999px;
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--primary-2);
+    font-weight: 600;
+  }
+  .card-front .footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    color: var(--muted);
+    font-size: 0.8rem;
+  }
+
+  /* ============ BOUTONS avec icônes ============ */
+  .btn-row { display: flex; flex-direction: column; gap: 12px; }
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    padding: 14px 20px;
+    border: none;
+    border-radius: var(--r-md);
+    font-family: inherit;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: transform 0.2s ease-out, box-shadow 0.2s ease-out, background 0.2s;
+  }
+  .btn:hover { transform: scale(1.02); }
+  .btn:active { transform: scale(0.98); }
+  .btn-primary {
+    background: var(--primary);
+    color: var(--text);
+    box-shadow: 0 4px 14px rgba(109, 40, 217, 0.4);
+  }
+  .btn-primary:hover { background: var(--primary-2); }
+  .btn-success {
+    background: var(--success);
+    color: white;
+  }
+  .btn-danger {
+    background: var(--error);
+    color: white;
+  }
+  .btn-ghost {
+    background: transparent;
+    color: var(--muted);
+    border: 1px solid var(--border);
+  }
+  .btn-ghost:hover { color: var(--text); border-color: var(--primary); }
+
+  /* ============ NAV ICONS ============ */
+  .nav-bar {
+    display: flex;
+    justify-content: space-around;
+    padding: 12px;
+    background: var(--surface);
+    border-radius: var(--r-lg);
+    border: 1px solid var(--border);
+  }
+  .nav-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    color: var(--muted);
+    cursor: pointer;
+    padding: 8px 12px;
+    border-radius: 8px;
+    transition: all 0.2s;
+  }
+  .nav-item:hover { color: var(--text); background: var(--surface-2); }
+  .nav-item.active { color: var(--secondary); }
+  .nav-item .lucide { width: 24px; height: 24px; }
+  .nav-item span { font-size: 0.7rem; font-weight: 500; }
+
+  /* ============ SCORE avec animation ============ */
+  .score-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+  }
+  .score-card {
+    background: var(--surface-2);
+    border-radius: var(--r-md);
+    padding: 16px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    border: 1px solid var(--border);
+    transition: all 0.3s;
+  }
+  .score-card.pop { animation: pop 0.4s ease; }
+  @keyframes pop {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.08); box-shadow: 0 0 20px rgba(245, 158, 11, 0.4); }
+    100% { transform: scale(1); }
+  }
+  .score-card .icon-wrap {
+    width: 40px; height: 40px;
+    border-radius: 10px;
+    background: rgba(109, 40, 217, 0.2);
+    display: flex; align-items: center; justify-content: center;
+    color: var(--primary-2);
+  }
+  .score-card .info { flex: 1; }
+  .score-card .name { font-weight: 600; font-size: 0.9rem; }
+  .score-card .pts { font-size: 1.4rem; font-weight: 800; color: var(--secondary); font-variant-numeric: tabular-nums; }
+
+  .note {
+    background: rgba(109, 40, 217, 0.08);
+    border-left: 3px solid var(--primary);
+    padding: 12px 16px;
+    border-radius: 8px;
+    font-size: 0.85rem;
+    color: var(--muted);
+  }
+  .note strong { color: var(--text); }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <h1>Proto <span>Sprint 2</span></h1>
+
+  <div class="note">
+    <strong>Ce prototype montre les 3 briques du Sprint 2 :</strong> timer circulaire animé,
+    carte 3D avec flip, icônes Lucide. Cliquez sur la carte pour la retourner,
+    lancez le timer pour voir le décompte, tapez ✅/❌ pour animer les scores.
+  </div>
+
+  <!-- TIMER -->
+  <section>
+    <h2><i data-lucide="timer"></i> Timer circulaire</h2>
+    <div class="timer-wrap">
+      <div class="timer-ring" id="timerRing">
+        <svg viewBox="0 0 200 200">
+          <circle class="bg-ring" cx="100" cy="100" r="88"/>
+          <circle class="progress-ring" id="progressRing" cx="100" cy="100" r="88"
+                  stroke-dasharray="553" stroke-dashoffset="0"/>
+        </svg>
+        <div class="timer-text">
+          <div class="value" id="timerValue">30</div>
+          <div class="label">secondes</div>
+        </div>
+      </div>
+      <div class="timer-controls">
+        <button class="btn btn-primary" onclick="startTimer()">
+          <i data-lucide="play"></i> Démarrer
+        </button>
+        <button class="btn btn-ghost" onclick="resetTimer()">
+          <i data-lucide="rotate-ccw"></i> Reset
+        </button>
+      </div>
+    </div>
+  </section>
+
+  <!-- CARTE 3D -->
+  <section>
+    <h2><i data-lucide="layers"></i> Carte 3D — clique pour flip</h2>
+    <div class="card-stage">
+      <div class="card" id="card" onclick="this.classList.toggle('flipped')">
+        <div class="card-face card-back">
+          <svg class="logo-svg" viewBox="0 0 100 130" xmlns="http://www.w3.org/2000/svg">
+            <path d="M 5 5 L 95 5 L 50 68 Z" fill="#F59E0B"/>
+            <path d="M 5 125 L 95 125 L 50 62 Z" fill="#FBBF24"/>
+            <path d="M 58 18 L 32 70 L 47 70 L 40 112 L 68 60 L 53 60 L 62 18 Z" fill="#F8FAFC"/>
+          </svg>
+          <div class="brand">RUSH</div>
+          <div class="hint">Tap to reveal</div>
+        </div>
+        <div class="card-face card-front">
+          <span class="category">Cinéma</span>
+          <div class="word">Le Roi Lion</div>
+          <div class="footer">
+            <span>Carte 12 / 30</span>
+            <i data-lucide="sparkles"></i>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="btn-row">
+      <button class="btn btn-success" onclick="popScore('teamA')">
+        <i data-lucide="check"></i> Deviné
+      </button>
+      <button class="btn btn-danger" onclick="popScore('teamB')">
+        <i data-lucide="x"></i> Passer
+      </button>
+    </div>
+  </section>
+
+  <!-- SCORES -->
+  <section>
+    <h2><i data-lucide="trophy"></i> Scores avec pop animation</h2>
+    <div class="score-grid">
+      <div class="score-card" id="teamA">
+        <div class="icon-wrap"><i data-lucide="users"></i></div>
+        <div class="info">
+          <div class="name">Équipe A</div>
+          <div class="pts" id="ptsA">12</div>
+        </div>
+      </div>
+      <div class="score-card" id="teamB">
+        <div class="icon-wrap"><i data-lucide="users"></i></div>
+        <div class="info">
+          <div class="name">Équipe B</div>
+          <div class="pts" id="ptsB">9</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- BOUTONS -->
+  <section>
+    <h2><i data-lucide="mouse-pointer-click"></i> Boutons + icônes Lucide</h2>
+    <div class="btn-row">
+      <button class="btn btn-primary"><i data-lucide="play"></i> Nouvelle partie</button>
+      <button class="btn btn-primary"><i data-lucide="arrow-right"></i> Suivant</button>
+      <button class="btn btn-ghost"><i data-lucide="settings"></i> Paramètres</button>
+      <button class="btn btn-ghost"><i data-lucide="library"></i> Ma bibliothèque</button>
+    </div>
+  </section>
+
+  <!-- NAV -->
+  <section>
+    <h2><i data-lucide="layout-dashboard"></i> Navigation basse</h2>
+    <div class="nav-bar">
+      <div class="nav-item active">
+        <i data-lucide="home"></i><span>Accueil</span>
+      </div>
+      <div class="nav-item">
+        <i data-lucide="library"></i><span>Cartes</span>
+      </div>
+      <div class="nav-item">
+        <i data-lucide="bar-chart-3"></i><span>Stats</span>
+      </div>
+      <div class="nav-item">
+        <i data-lucide="settings"></i><span>Réglages</span>
+      </div>
+    </div>
+  </section>
+
+</div>
+
+<script>
+  lucide.createIcons();
+
+  // Timer
+  const RADIUS = 88;
+  const CIRC = 2 * Math.PI * RADIUS;
+  const ring = document.getElementById('progressRing');
+  const timerWrap = document.getElementById('timerRing');
+  const timerValue = document.getElementById('timerValue');
+  ring.setAttribute('stroke-dasharray', CIRC);
+  let total = 30, current = 30, interval = null;
+
+  function updateRing() {
+    const pct = current / total;
+    ring.style.strokeDashoffset = CIRC * (1 - pct);
+    timerValue.textContent = current;
+    timerWrap.classList.toggle('warning', current <= 10 && current > 5);
+    timerWrap.classList.toggle('danger', current <= 5);
+  }
+  function startTimer() {
+    if (interval) return;
+    interval = setInterval(() => {
+      current--;
+      updateRing();
+      if (current <= 0) { clearInterval(interval); interval = null; }
+    }, 1000);
+  }
+  function resetTimer() {
+    clearInterval(interval); interval = null;
+    current = total; updateRing();
+  }
+  updateRing();
+
+  // Score pop
+  function popScore(id) {
+    const card = document.getElementById(id);
+    const pts = document.getElementById(id === 'teamA' ? 'ptsA' : 'ptsB');
+    pts.textContent = parseInt(pts.textContent) + 1;
+    card.classList.remove('pop');
+    void card.offsetWidth;
+    card.classList.add('pop');
+  }
+</script>
+</body>
+</html>

@@ -470,6 +470,8 @@ function refreshCustomCardsUI() {
 
 function finishCurrentPlayerEntry() {
   game.customCards = game.customCards.concat(customEntry.currentCards);
+  customEntry.currentCards = [];
+  customEntry.currentTarget = 0;
   customEntry.playerIndex++;
 
   if (game.nominativeMode) {

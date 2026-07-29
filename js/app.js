@@ -415,8 +415,10 @@ function showCustomInput() {
   const label = game.nominativeMode
     ? `${customEntry.playerList[customEntry.playerIndex]} — tes cartes`
     : `Saisisseur ${customEntry.playerIndex + 1} — tes cartes`;
-  document.getElementById('custom-input-header').textContent = label;
-  document.getElementById('batch-size-label').textContent = customEntry.batchSize;
+  const header = document.getElementById('custom-input-header');
+  if (header) header.textContent = label;
+  const sizeLabel = document.getElementById('batch-size-label');
+  if (sizeLabel) sizeLabel.textContent = customEntry.batchSize;
   document.getElementById('custom-batch-choice').style.display = 'none';
   refreshCustomCardsUI();
   const input = document.getElementById('custom-card-input');

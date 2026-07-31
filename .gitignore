@@ -1,0 +1,13 @@
+# Fichiers temporaires Word (créés quand un .docx est ouvert)
+~$*
+
+# Système
+.DS_Store
+Thumbs.db
+
+# Outils
+.vercel/
+node_modules/
+
+# Réglages Claude Code propres à cette machine (les commandes, elles, sont versionnées)
+.claude/settings.local.json

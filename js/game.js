@@ -36,7 +36,8 @@ export const game = {
   currentCardIndex: 0,
   turnScore: 0,
   timerInterval: null,
-  timeLeft: 0
+  timeLeft: 0,
+  turnActive: false        // un tour est en cours (sert à reprendre une partie interrompue en plein tour)
 };
 
 export function shuffle(arr) {
@@ -55,6 +56,7 @@ export function resetGame() {
   game.teams[1].currentPlayerIndex = 0;
   game.currentRound = 0;
   game.currentTeam = 0;
+  game.turnActive = false;
   // Reset player stats
   game.playerStats = {};
   game.players.forEach(p => {

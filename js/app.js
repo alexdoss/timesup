@@ -3,11 +3,13 @@
 
 import { loadThemes } from './themes.js';
 import { game, ROUNDS, resetGame, buildDeck, startNewRound, getCurrentCard, cardFound, cardPassed, switchTeam, isRoundOver, isGameOver, nextRound, getCardsRemaining, addPlayer, removePlayer, assignTeamsRoundRobin, getCurrentPlayer, advancePlayer, getActiveRound, setPlayerTeam, syncChosenTeams, canPass } from './game.js';
-import { showScreen, updateTimer, showCard, updateRoundScreen, updateTurnInfo, updateGameHeader, showTurnResult, showRoundEnd, showFinalScreen, renderThemeButtons, renderPlayerList, updateCurrentPlayer, renderPlayerStats, renderRoundsSelector, renderAssignMode, applyTeamAccent } from './ui.js';
+import { showScreen, updateTimer, showCard, updateRoundScreen, updateTurnInfo, updateGameHeader, showTurnResult, showRoundEnd, showFinalScreen, renderThemeButtons, renderPlayerList, updateCurrentPlayer, renderPlayerStats, renderRoundsSelector, renderAssignMode, applyTeamAccent, showResumeOption } from './ui.js';
 import { getCustomThemes, saveCustomTheme, deleteCustomTheme, generateWithAI } from './library.js';
+import { saveGame, loadSavedGame, clearSavedGame, restoreInto } from './persistence.js';
 
 let THEMES = {};
 let aiGeneratedWords = [];
+let pendingResume = null;
 
 // ===== INIT =====
 async function init() {
@@ -22,7 +24,44 @@ async function init() {
   const container = document.getElementById('theme-selector');
   renderThemeButtons(THEMES, game.selectedThemes, container);
 
+  refreshResumeOption();
   setupListeners();
+}
+
+// ===== REPRISE DE PARTIE =====
+function refreshResumeOption() {
+  pendingResume = loadSavedGame();
+  showResumeOption(pendingResume ? describeSavedGame(pendingResume) : null);
+}
+
+// Résumé affiché sous le bouton « Reprendre la partie », sur deux lignes :
+//   Manche 1 sur 3 · tour en cours, 30 s restantes
+//   Équipe 1 : 2  —  Équipe 2 : 0
+function describeSavedGame(snapshot) {
+  const s = snapshot.state;
+  const tour = s.turnActive && s.timeLeft > 0
+    ? ` · tour en cours, ${s.timeLeft} s restante${s.timeLeft > 1 ? 's' : ''}`
+    : '';
+  const situation = `Manche ${s.currentRound + 1} sur ${s.activeRounds.length}${tour}`;
+  const score = `${s.teams[0].name} : ${s.teams[0].score}  —  ${s.teams[1].name} : ${s.teams[1].score}`;
+  return `${situation}\n${score}`;
+}
+
+function resumeGame() {
+  if (!pendingResume) return;
+  restoreInto(game, pendingResume);
+  pendingResume = null;
+  showResumeOption(null);
+
+  if (game.turnActive && game.timeLeft > 0 && getCurrentCard()) {
+    // Interruption en plein tour : on repart avec le chrono figé et la même carte
+    runTurn();
+  } else if (isRoundOver()) {
+    // Le paquet était épuisé : on reprend à l'écran de fin de manche
+    endRound();
+  } else {
+    showRoundScreen();
+  }
 }
 
 function getRoundLabel() {
@@ -64,6 +103,9 @@ function collectActiveRounds() {
 function setupListeners() {
   // Home → Mode (step 1)
   document.getElementById('btn-start').addEventListener('click', () => showScreen('screen-mode'));
+
+  // Reprendre une partie interrompue
+  document.getElementById('btn-resume').addEventListener('click', resumeGame);
 
   // Mode tiles selection
   document.querySelectorAll('.mode-tile').forEach(tile => {
@@ -256,7 +298,10 @@ function setupListeners() {
   document.getElementById('btn-next-turn').addEventListener('click', onNextTurn);
 
   // Restart
-  document.getElementById('btn-restart').addEventListener('click', () => showScreen('screen-home'));
+  document.getElementById('btn-restart').addEventListener('click', () => {
+    refreshResumeOption();
+    showScreen('screen-home');
+  });
 
   // ===== LIBRARY =====
   document.getElementById('btn-library').addEventListener('click', () => {
@@ -507,6 +552,12 @@ function startGame() {
 
 function beginRound() {
   startNewRound();
+  saveGame(game);
+  showRoundScreen();
+}
+
+// Affiche l'écran de début de tour sans toucher au paquet (utilisé aussi à la reprise)
+function showRoundScreen() {
   const round = getActiveRound();
   applyTeamAccent(game.teams[game.currentTeam].color);
   updateRoundScreen(round, game.teams, getRoundLabel());
@@ -519,7 +570,14 @@ function startTurn() {
   game.turnScore = 0;
   game.passCount = 0;
   game.timeLeft = game.turnTime;
+  game.turnActive = true;
+  saveGame(game);
+  runTurn();
+}
 
+// Affiche et lance le tour à partir de l'état courant.
+// Appelé au démarrage d'un tour, mais aussi à la reprise d'une partie interrompue en plein tour.
+function runTurn() {
   const round = getActiveRound();
   applyTeamAccent(game.teams[game.currentTeam].color);
   updateGameHeader(`${getRoundLabel()} · ${round.name}`, game.teams[game.currentTeam].name);
@@ -528,9 +586,11 @@ function startTurn() {
   updateTimer(game.timeLeft);
   showScreen('screen-game');
 
+  clearInterval(game.timerInterval);
   game.timerInterval = setInterval(() => {
     game.timeLeft--;
     updateTimer(game.timeLeft);
+    saveGame(game);   // le chrono est figé à la seconde près si l'app se ferme
     if (game.timeLeft <= 0) {
       endTurn();
     }
@@ -548,12 +608,14 @@ function displayCurrentCard() {
 
 function onFound() {
   cardFound();
+  saveGame(game);
   displayCurrentCard();
 }
 
 function onPass() {
   if (!canPass()) return;
   cardPassed();
+  saveGame(game);
   updatePassButton();
   displayCurrentCard();
 }
@@ -567,6 +629,7 @@ function updatePassButton() {
 
 function endTurn() {
   clearInterval(game.timerInterval);
+  game.turnActive = false;
   if (game.nominativeMode) {
     const player = getCurrentPlayer();
     showTurnResult(`${player} (${game.teams[game.currentTeam].name})`, game.turnScore);
@@ -575,6 +638,7 @@ function endTurn() {
     showTurnResult(game.teams[game.currentTeam].name, game.turnScore);
   }
   switchTeam();
+  saveGame(game);
   showScreen('screen-turn-end');
 }
 
@@ -582,21 +646,21 @@ function onNextTurn() {
   if (isRoundOver()) {
     endRound();
   } else {
-    applyTeamAccent(game.teams[game.currentTeam].color);
-    updateTurnInfo(game.teams[game.currentTeam].name);
-    updateCurrentPlayer(game.nominativeMode ? getCurrentPlayer() : null);
-    showScreen('screen-round');
+    showRoundScreen();
   }
 }
 
 function endRound() {
   clearInterval(game.timerInterval);
+  game.turnActive = false;
+  saveGame(game);
   showRoundEnd(`${game.currentRound + 1}/${game.activeRounds.length}`, game.teams);
 
   const btnNext = document.getElementById('btn-next-round');
   if (isGameOver()) {
     btnNext.textContent = "Voir les résultats 🏆";
     btnNext.onclick = () => {
+      clearSavedGame();
       showFinalScreen(game.teams);
       if (game.nominativeMode) {
         renderPlayerStats(game.playerStats, game.teams);
@@ -704,6 +768,8 @@ function handleSaveTheme() {
 window.confirmQuit = function() {
   if (confirm("Quitter la partie en cours ?")) {
     clearInterval(game.timerInterval);
+    clearSavedGame();
+    refreshResumeOption();
     showScreen('screen-home');
   }
 };

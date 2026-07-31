@@ -14,6 +14,21 @@ export function showScreen(id) {
   document.getElementById(id).classList.add('active');
 }
 
+export function showResumeOption(detail) {
+  const block = document.getElementById('resume-block');
+  const line = document.getElementById('resume-detail');
+  if (!block || !line) return;
+
+  if (!detail) {
+    block.style.display = 'none';
+    line.textContent = '';
+    return;
+  }
+
+  block.style.display = '';
+  line.textContent = detail;
+}
+
 export function updateTimer(timeLeft) {
   const el = document.getElementById('timer');
   el.textContent = timeLeft;

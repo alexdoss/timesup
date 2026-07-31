@@ -132,6 +132,24 @@ body {
   gap: 20px;
 }
 
+/* Bloc « Reprendre la partie » : le bouton et son résumé restent solidaires */
+.resume-block {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  max-width: 320px;
+}
+
+.resume-detail {
+  font-size: 0.85rem;
+  line-height: 1.5;
+  color: var(--muted);
+  text-align: center;
+  white-space: pre-line;   /* le résumé tient sur deux lignes */
+}
+
 .logo-wrap {
   display: flex;
   align-items: center;

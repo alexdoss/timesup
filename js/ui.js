@@ -64,6 +64,32 @@ export function updateGameHeader(roundName, teamName) {
   document.getElementById('game-team-label').textContent = teamName;
 }
 
+export function showPauseOverlay(info, teams) {
+  document.getElementById('screen-game').classList.add('paused');
+  document.getElementById('pause-overlay').style.display = '';
+  document.getElementById('pause-panel').style.display = '';
+  document.getElementById('pause-countdown').style.display = 'none';
+  document.getElementById('pause-info').textContent = info;
+  document.getElementById('pause-team1-name').textContent = teams[0].name;
+  document.getElementById('pause-team2-name').textContent = teams[1].name;
+  document.getElementById('pause-team1-score').textContent = teams[0].score;
+  document.getElementById('pause-team2-score').textContent = teams[1].score;
+}
+
+export function showPauseCountdown(n) {
+  document.getElementById('screen-game').classList.add('paused');
+  document.getElementById('pause-overlay').style.display = '';
+  document.getElementById('pause-panel').style.display = 'none';
+  const el = document.getElementById('pause-countdown');
+  el.style.display = '';
+  el.textContent = n;
+}
+
+export function hidePause() {
+  document.getElementById('screen-game').classList.remove('paused');
+  document.getElementById('pause-overlay').style.display = 'none';
+}
+
 export function showTurnResult(teamName, score) {
   document.getElementById('turn-result').textContent =
     `${teamName} a trouvé ${score} carte(s) !`;
@@ -200,6 +226,12 @@ export function renderAssignMode(mode) {
       ? "Tapez sur l'équipe d'un joueur pour la changer."
       : "Répartition automatique, un joueur sur deux, dans l'ordre d'ajout.";
   }
+}
+
+export function renderSoundSetting(enabled) {
+  document.querySelectorAll('[data-sound]').forEach(pill => {
+    pill.classList.toggle('active', (pill.dataset.sound === 'on') === enabled);
+  });
 }
 
 export function updateCurrentPlayer(playerName) {

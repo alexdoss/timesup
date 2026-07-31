@@ -3,13 +3,15 @@
 
 import { loadThemes } from './themes.js';
 import { game, ROUNDS, resetGame, buildDeck, startNewRound, getCurrentCard, cardFound, cardPassed, switchTeam, isRoundOver, isGameOver, nextRound, getCardsRemaining, addPlayer, removePlayer, assignTeamsRoundRobin, getCurrentPlayer, advancePlayer, getActiveRound, setPlayerTeam, syncChosenTeams, canPass } from './game.js';
-import { showScreen, updateTimer, showCard, updateRoundScreen, updateTurnInfo, updateGameHeader, showTurnResult, showRoundEnd, showFinalScreen, renderThemeButtons, renderPlayerList, updateCurrentPlayer, renderPlayerStats, renderRoundsSelector, renderAssignMode, applyTeamAccent, showResumeOption } from './ui.js';
+import { showScreen, updateTimer, showCard, updateRoundScreen, updateTurnInfo, updateGameHeader, showTurnResult, showRoundEnd, showFinalScreen, renderThemeButtons, renderPlayerList, updateCurrentPlayer, renderPlayerStats, renderRoundsSelector, renderAssignMode, applyTeamAccent, showResumeOption, renderSoundSetting, showPauseOverlay, showPauseCountdown, hidePause } from './ui.js';
 import { getCustomThemes, saveCustomTheme, deleteCustomTheme, generateWithAI } from './library.js';
 import { saveGame, loadSavedGame, clearSavedGame, restoreInto } from './persistence.js';
+import { playTick, playBuzzer, unlockAudio, isSoundEnabled, setSoundEnabled } from './sound.js';
 
 let THEMES = {};
 let aiGeneratedWords = [];
 let pendingResume = null;
+let resumeCountdown = null;
 
 // ===== INIT =====
 async function init() {
@@ -25,6 +27,7 @@ async function init() {
   renderThemeButtons(THEMES, game.selectedThemes, container);
 
   refreshResumeOption();
+  renderSoundSetting(isSoundEnabled());
   setupListeners();
 }
 
@@ -54,8 +57,9 @@ function resumeGame() {
   showResumeOption(null);
 
   if (game.turnActive && game.timeLeft > 0 && getCurrentCard()) {
-    // Interruption en plein tour : on repart avec le chrono figé et la même carte
-    runTurn();
+    // Interruption en plein tour : on réaffiche le jeu figé, puis on repasse par le sas 3·2·1
+    renderTurn();
+    startResumeCountdown();
   } else if (isRoundOver()) {
     // Le paquet était épuisé : on reprend à l'écran de fin de manche
     endRound();
@@ -271,6 +275,16 @@ function setupListeners() {
     game.passReplace = e.target.value;
   });
 
+  // Son et vibration (préférence mémorisée d'une partie à l'autre)
+  document.querySelectorAll('[data-sound]').forEach(pill => {
+    pill.addEventListener('click', () => {
+      const on = pill.dataset.sound === 'on';
+      setSoundEnabled(on);
+      renderSoundSetting(on);
+      if (on) unlockAudio();
+    });
+  });
+
   // Start game
   document.getElementById('btn-play').addEventListener('click', onPlayClicked);
 
@@ -293,6 +307,12 @@ function setupListeners() {
   // Found / Pass
   document.getElementById('btn-found').addEventListener('click', onFound);
   document.getElementById('btn-pass').addEventListener('click', onPass);
+
+  // Pause
+  document.getElementById('btn-pause').addEventListener('click', pauseTurn);
+  document.getElementById('btn-resume-turn').addEventListener('click', startResumeCountdown);
+  document.getElementById('btn-quit-game').addEventListener('click', quitToHome);
+  document.getElementById('btn-abandon-game').addEventListener('click', abandonGame);
 
   // Next turn
   document.getElementById('btn-next-turn').addEventListener('click', onNextTurn);
@@ -571,13 +591,13 @@ function startTurn() {
   game.passCount = 0;
   game.timeLeft = game.turnTime;
   game.turnActive = true;
+  unlockAudio();   // le clic sur « Lancer le tour » est le geste qui autorise l'audio
   saveGame(game);
   runTurn();
 }
 
-// Affiche et lance le tour à partir de l'état courant.
-// Appelé au démarrage d'un tour, mais aussi à la reprise d'une partie interrompue en plein tour.
-function runTurn() {
+// Affiche l'écran de jeu dans son état courant, sans lancer le chrono.
+function renderTurn() {
   const round = getActiveRound();
   applyTeamAccent(game.teams[game.currentTeam].color);
   updateGameHeader(`${getRoundLabel()} · ${round.name}`, game.teams[game.currentTeam].name);
@@ -585,14 +605,21 @@ function runTurn() {
   updatePassButton();
   updateTimer(game.timeLeft);
   showScreen('screen-game');
+}
 
+// Affiche le tour et lance le chrono.
+function runTurn() {
+  renderTurn();
   clearInterval(game.timerInterval);
   game.timerInterval = setInterval(() => {
     game.timeLeft--;
     updateTimer(game.timeLeft);
     saveGame(game);   // le chrono est figé à la seconde près si l'app se ferme
     if (game.timeLeft <= 0) {
+      playBuzzer();
       endTurn();
+    } else if (game.timeLeft <= 5) {
+      playTick();
     }
   }, 1000);
 }
@@ -625,6 +652,61 @@ function updatePassButton() {
   const allowed = canPass();
   btn.disabled = !allowed;
   btn.style.opacity = allowed ? '1' : '0.35';
+}
+
+// ===== PAUSE =====
+// Le chrono est gelé et le jeu passe sous un voile flouté : la carte n'est plus lisible.
+function pauseTurn() {
+  if (!game.turnActive) return;
+  clearInterval(game.timerInterval);
+  saveGame(game);
+  showPauseOverlay(`${getRoundLabel()} · il reste ${game.timeLeft} s`, game.teams);
+}
+
+// Sas de reprise : 3 · 2 · 1 avant que le chrono reparte, le temps que le joueur
+// retrouve ses esprits. La carte reste floutée jusqu'au départ.
+function startResumeCountdown() {
+  clearInterval(resumeCountdown);
+  let n = 3;
+  showPauseCountdown(n);
+  playTick();
+
+  resumeCountdown = setInterval(() => {
+    n--;
+    if (n > 0) {
+      showPauseCountdown(n);
+      playTick();
+    } else {
+      clearInterval(resumeCountdown);
+      resumeCountdown = null;
+      hidePause();
+      runTurn();
+    }
+  }, 1000);
+}
+
+// Quitter sans rien perdre : la partie reste proposée à la reprise depuis l'accueil.
+function quitToHome() {
+  clearInterval(game.timerInterval);
+  clearInterval(resumeCountdown);
+  resumeCountdown = null;
+  hidePause();
+  saveGame(game);
+  refreshResumeOption();
+  showScreen('screen-home');
+}
+
+// Arrêter pour de bon : la partie est effacée, rien ne sera proposé à l'accueil.
+function abandonGame() {
+  if (!confirm("Abandonner la partie ? Les scores seront perdus.")) return;
+  clearInterval(game.timerInterval);
+  clearInterval(resumeCountdown);
+  resumeCountdown = null;
+  hidePause();
+  game.turnActive = false;
+  clearSavedGame();
+  refreshResumeOption();
+  showScreen('screen-home');
 }
 
 function endTurn() {
@@ -766,11 +848,8 @@ function handleSaveTheme() {
 
 // ===== QUIT (global for HTML onclick) =====
 window.confirmQuit = function() {
-  if (confirm("Quitter la partie en cours ?")) {
-    clearInterval(game.timerInterval);
-    clearSavedGame();
-    refreshResumeOption();
-    showScreen('screen-home');
+  if (confirm("Quitter la partie ? Tu pourras la reprendre depuis l'accueil.")) {
+    quitToHome();
   }
 };
 

@@ -571,6 +571,82 @@ body {
   font-size: 3.5rem;
 }
 
+/* ===== PAUSE ===== */
+/* Le bouton est à l'opposé des boutons d'action, pour éviter les fausses manipulations */
+.btn-pause {
+  position: absolute;
+  top: 16px;
+  left: 16px;
+  width: 36px;
+  height: 36px;
+  border: none;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--muted);
+  font-size: 1rem;
+  cursor: pointer;
+  transition: background var(--transition);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10;
+}
+
+.btn-pause:hover {
+  background: rgba(255, 255, 255, 0.16);
+}
+
+/* Sous le voile, le jeu est flouté : on devine qu'il y a une carte, on ne peut pas la lire */
+#screen-game.paused > *:not(.pause-overlay) {
+  filter: blur(11px);
+  opacity: 0.75;
+  pointer-events: none;
+  user-select: none;
+}
+
+.pause-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: rgba(15, 23, 42, 0.45);
+  animation: fadeIn 0.2s ease;
+}
+
+.pause-panel {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  width: 100%;
+  max-width: 340px;
+  padding: 26px 22px;
+  border-radius: var(--r-xl);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow);
+}
+
+.pause-panel h2 {
+  font-size: 1.3rem;
+}
+
+.pause-info {
+  font-size: 0.9rem;
+  color: var(--muted);
+}
+
+.pause-countdown {
+  font-size: 7rem;
+  font-weight: 800;
+  color: var(--secondary);
+  line-height: 1;
+  letter-spacing: -0.03em;
+}
+
 /* ===== GAME SCREEN ===== */
 .game-header {
   display: flex;

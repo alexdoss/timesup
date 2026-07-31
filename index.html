@@ -247,6 +247,15 @@
           </select>
         </div>
 
+        <div class="config-section">
+          <span class="field-label">Son et vibration</span>
+          <div class="pillgroup">
+            <button type="button" class="pill active" data-sound="on">Activés</button>
+            <button type="button" class="pill" data-sound="off">Coupés</button>
+          </div>
+          <p class="wizard-hint">Tic pendant les 5 dernières secondes, buzzer en fin de tour. La vibration n'existe pas sur iPhone.</p>
+        </div>
+
         <div id="pass-replace-section" class="config-section">
           <span class="field-label">Carte passée</span>
           <select id="pass-replace" class="config-select">
@@ -324,7 +333,7 @@
 
     <!-- ÉCRAN DE JEU -->
     <div id="screen-game" class="screen">
-      <button class="btn-close" onclick="confirmQuit()">✕</button>
+      <button id="btn-pause" class="btn-pause" title="Mettre en pause">⏸</button>
       <div class="game-header">
         <span id="game-round-label" class="round-label">Manche 1</span>
         <span id="game-team-label" class="team-label">Équipe 1</span>
@@ -339,6 +348,28 @@
       <div class="game-actions">
         <button id="btn-pass" class="btn btn-skip">Passer ✗</button>
         <button id="btn-found" class="btn btn-found">Trouvé ✓</button>
+      </div>
+
+      <!-- Voile de pause : recouvre le jeu, la carte est floutée dessous -->
+      <div id="pause-overlay" class="pause-overlay" style="display:none">
+        <div id="pause-panel" class="pause-panel">
+          <h2>⏸ Pause</h2>
+          <p id="pause-info" class="pause-info"></p>
+          <div class="score-board">
+            <div class="score-team">
+              <span id="pause-team1-name">Équipe 1</span>
+              <span id="pause-team1-score" class="score">0</span>
+            </div>
+            <div class="score-team">
+              <span id="pause-team2-name">Équipe 2</span>
+              <span id="pause-team2-score" class="score">0</span>
+            </div>
+          </div>
+          <button id="btn-resume-turn" class="btn btn-primary">▶️ Reprendre</button>
+          <button id="btn-quit-game" class="btn btn-secondary">🏠 Quitter et reprendre plus tard</button>
+          <button id="btn-abandon-game" class="btn-link">🗑️ Abandonner la partie</button>
+        </div>
+        <div id="pause-countdown" class="pause-countdown" style="display:none"></div>
       </div>
     </div>
 

@@ -2,9 +2,9 @@
 // Orchestre les modules et gère les événements
 
 import { loadThemes } from './themes.js';
-import { game, ROUNDS, resetGame, buildDeck, startNewRound, getCurrentCard, cardFound, cardPassed, switchTeam, isRoundOver, isGameOver, nextRound, getCardsRemaining, addPlayer, removePlayer, assignTeamsRoundRobin, getCurrentPlayer, advancePlayer, getActiveRound, setPlayerTeam, syncChosenTeams, canPass } from './game.js';
-import { showScreen, updateTimer, showCard, updateRoundScreen, updateTurnInfo, updateGameHeader, showTurnResult, showRoundEnd, showFinalScreen, renderThemeButtons, renderPlayerList, updateCurrentPlayer, renderPlayerStats, renderRoundsSelector, renderAssignMode, applyTeamAccent, showResumeOption, renderSoundSetting, renderVibrationSetting, showPauseOverlay, showPauseCountdown, hidePause } from './ui.js';
-import { getCustomThemes, saveCustomTheme, deleteCustomTheme, generateWithAI } from './library.js';
+import { game, ROUNDS, resetGame, buildDeck, startNewRound, getCurrentCard, cardFound, cardPassed, switchTeam, isRoundOver, isGameOver, nextRound, getCardsRemaining, addPlayer, removePlayer, assignTeamsRoundRobin, getCurrentPlayer, advancePlayer, getActiveRound, setPlayerTeam, syncChosenTeams, canPass, getPlannedTeamSizes } from './game.js';
+import { showScreen, updateTimer, showCard, updateRoundScreen, updateTurnInfo, updateGameHeader, showTurnResult, showRoundEnd, showFinalScreen, renderThemeButtons, renderPlayerList, updateCurrentPlayer, renderPlayerStats, renderRoundsSelector, renderAssignMode, applyTeamAccent, showResumeOption, renderSoundSetting, renderVibrationSetting, showPauseOverlay, showPauseCountdown, hidePause, showPuppetConfirm, setRoundsNextEnabled, renderThemeEditor, showThemeEditError, renderCustomThemes } from './ui.js';
+import { getCustomThemes, saveCustomTheme, deleteCustomTheme, generateWithAI, getQuota } from './library.js';
 import { saveGame, loadSavedGame, clearSavedGame, restoreInto } from './persistence.js';
 import { playTick, playBuzzer, unlockAudio, isSoundEnabled, setSoundEnabled, isVibrationEnabled, setVibrationEnabled, isVibrationSupported } from './sound.js';
 
@@ -13,6 +13,9 @@ let aiGeneratedWords = [];
 let pendingResume = null;
 let resumeCountdown = null;
 let settingsReturn = 'home';   // d'où on a ouvert les paramètres, pour savoir où revenir
+let pausedAuto = false;        // la pause en cours vient-elle d'un passage en arrière-plan
+let puppetAnswer = null;       // réponse à la question d'effectif en mode simple (null / true / false)
+let editingThemeId = null;     // thème maison ouvert dans la fiche d'édition
 
 // ===== INIT =====
 async function init() {
@@ -90,8 +93,33 @@ function refreshPlayerList() {
 }
 
 function openRoundsStep() {
-  renderRoundsSelector(ROUNDS, game.activeRounds);
+  puppetAnswer = null;
+  renderRoundsSelector(ROUNDS, game.activeRounds, getPlannedTeamSizes(), onRoundToggle);
+  refreshPuppetGate();
   showScreen('screen-rounds');
+}
+
+// Manches optionnelles sélectionnées qui exigent un effectif minimum par équipe
+function selectedRoundsWithMinimum() {
+  return [...document.querySelectorAll('#rounds-optional .round-pill.active')]
+    .filter(pill => ROUNDS[parseInt(pill.dataset.roundIndex, 10)]?.minPerTeam);
+}
+
+// En mode simple, l'app ignore les effectifs : il faut demander à l'utilisateur.
+function needsPuppetConfirm() {
+  if (getPlannedTeamSizes() !== null) return false;
+  return selectedRoundsWithMinimum().length > 0;
+}
+
+function refreshPuppetGate() {
+  const besoin = needsPuppetConfirm();
+  showPuppetConfirm(besoin, puppetAnswer);
+  setRoundsNextEnabled(!besoin || puppetAnswer === true);
+}
+
+function onRoundToggle() {
+  if (!needsPuppetConfirm()) puppetAnswer = null;
+  refreshPuppetGate();
 }
 
 function collectActiveRounds() {
@@ -102,7 +130,14 @@ function collectActiveRounds() {
     .map(pill => parseInt(pill.dataset.roundIndex, 10));
 
   const selected = [...mandatory, ...optional].sort((a, b) => a - b);
-  game.activeRounds = selected;
+
+  // Filet de sécurité : une manche à effectif minimum ne passe jamais si l'effectif est connu et insuffisant
+  const sizes = getPlannedTeamSizes();
+  const plusPetiteEquipe = sizes ? Math.min(...sizes) : null;
+  game.activeRounds = selected.filter(index => {
+    const round = ROUNDS[index];
+    return !(round.minPerTeam && plusPetiteEquipe !== null && plusPetiteEquipe < round.minPerTeam);
+  });
 }
 
 function setupListeners() {
@@ -208,6 +243,20 @@ function setupListeners() {
     }
     syncTeamNamesFromInputs();
     openRoundsStep();
+  });
+
+  // Confirmation d'effectif pour les manches qui l'exigent (mode simple)
+  document.querySelectorAll('[data-puppet]').forEach(pill => {
+    pill.addEventListener('click', () => {
+      if (pill.dataset.puppet === 'oui') {
+        puppetAnswer = true;
+      } else {
+        // Non : on désélectionne la manche, sinon l'utilisateur reste bloqué sans issue visible
+        selectedRoundsWithMinimum().forEach(p => p.classList.remove('active'));
+        puppetAnswer = null;
+      }
+      refreshPuppetGate();
+    });
   });
 
   // Rounds → Config (step 4)
@@ -319,7 +368,8 @@ function setupListeners() {
   document.getElementById('btn-pass').addEventListener('click', onPass);
 
   // Pause
-  document.getElementById('btn-pause').addEventListener('click', pauseTurn);
+  document.getElementById('btn-pause').addEventListener('click', () => pauseTurn(false));
+  document.addEventListener('visibilitychange', onAppHidden);
   document.getElementById('btn-resume-turn').addEventListener('click', startResumeCountdown);
   document.getElementById('btn-quit-game').addEventListener('click', quitToHome);
   document.getElementById('btn-abandon-game').addEventListener('click', abandonGame);
@@ -352,8 +402,28 @@ function setupListeners() {
     document.getElementById('ai-preview').innerHTML = '';
     document.getElementById('ai-preview').classList.remove('visible');
     document.getElementById('btn-save-theme').style.display = 'none';
+    refreshQuotaDisplay();
     showScreen('screen-ai-create');
   });
+
+  // Création d'un thème entièrement manuel
+  document.getElementById('btn-create-manual').addEventListener('click', () => {
+    document.getElementById('manual-theme-name').value = '';
+    document.getElementById('manual-theme-error').textContent = '';
+    showScreen('screen-manual-create');
+  });
+  document.getElementById('btn-manual-create').addEventListener('click', createManualTheme);
+  document.getElementById('manual-theme-name').addEventListener('keypress', (e) => {
+    if (e.key === 'Enter') createManualTheme();
+  });
+
+  // Fiche d'un thème maison
+  document.getElementById('btn-add-theme-card').addEventListener('click', addThemeCard);
+  document.getElementById('theme-card-input').addEventListener('keypress', (e) => {
+    if (e.key === 'Enter') addThemeCard();
+  });
+  document.getElementById('btn-theme-back').addEventListener('click', closeThemeEditor);
+  document.getElementById('btn-theme-done').addEventListener('click', closeThemeEditor);
 
   // AI card count selector
   document.querySelectorAll('.btn-ai-count').forEach(btn => {
@@ -625,7 +695,7 @@ function renderTurn() {
 // Affiche le tour et lance le chrono.
 function runTurn() {
   renderTurn();
-  clearInterval(game.timerInterval);
+  stopTimer();
   game.timerInterval = setInterval(() => {
     game.timeLeft--;
     updateTimer(game.timeLeft);
@@ -685,9 +755,9 @@ function openSettings(from) {
 
 function closeSettings() {
   if (settingsReturn === 'pause') {
-    // On retourne au jeu, toujours en pause
+    // On retourne au jeu, toujours en pause, avec le même motif qu'avant le détour
     showScreen('screen-game');
-    showPauseOverlay(`${getRoundLabel()} · il reste ${game.timeLeft} s`, game.teams);
+    showPause(pausedAuto);
   } else {
     showScreen('screen-home');
   }
@@ -695,11 +765,46 @@ function closeSettings() {
 
 // ===== PAUSE =====
 // Le chrono est gelé et le jeu passe sous un voile flouté : la carte n'est plus lisible.
-function pauseTurn() {
-  if (!game.turnActive) return;
+
+function stopTimer() {
   clearInterval(game.timerInterval);
+  game.timerInterval = null;
+}
+
+function isTurnRunning() {
+  return game.turnActive && game.timerInterval !== null;
+}
+
+function showPause(auto) {
+  pausedAuto = auto;
+  const titre = auto ? '⏸ Mise en pause automatique' : '⏸ Pause';
+  const info = auto
+    ? `L'application a été quittée — le chrono s'est arrêté à ${game.timeLeft} s.`
+    : `${getRoundLabel()} · il reste ${game.timeLeft} s`;
+  showPauseOverlay(titre, info, game.teams);
+}
+
+function pauseTurn(auto = false) {
+  if (!isTurnRunning()) return;
+  stopTimer();
   saveGame(game);
-  showPauseOverlay(`${getRoundLabel()} · il reste ${game.timeLeft} s`, game.teams);
+  showPause(auto);
+}
+
+// Écran verrouillé, appel entrant, changement d'application : le navigateur gèlerait
+// le chrono de façon imprévisible. On met la partie en pause franchement, et on le dit.
+function onAppHidden() {
+  if (!document.hidden) return;
+
+  if (resumeCountdown) {
+    // Interruption pendant le décompte de reprise : retour au panneau de pause
+    clearInterval(resumeCountdown);
+    resumeCountdown = null;
+    showPause(true);
+    return;
+  }
+
+  pauseTurn(true);
 }
 
 // Sas de reprise : 3 · 2 · 1 avant que le chrono reparte, le temps que le joueur
@@ -726,7 +831,7 @@ function startResumeCountdown() {
 
 // Quitter sans rien perdre : la partie reste proposée à la reprise depuis l'accueil.
 function quitToHome() {
-  clearInterval(game.timerInterval);
+  stopTimer();
   clearInterval(resumeCountdown);
   resumeCountdown = null;
   hidePause();
@@ -738,7 +843,7 @@ function quitToHome() {
 // Arrêter pour de bon : la partie est effacée, rien ne sera proposé à l'accueil.
 function abandonGame() {
   if (!confirm("Abandonner la partie ? Les scores seront perdus.")) return;
-  clearInterval(game.timerInterval);
+  stopTimer();
   clearInterval(resumeCountdown);
   resumeCountdown = null;
   hidePause();
@@ -749,7 +854,7 @@ function abandonGame() {
 }
 
 function endTurn() {
-  clearInterval(game.timerInterval);
+  stopTimer();
   game.turnActive = false;
   if (game.nominativeMode) {
     const player = getCurrentPlayer();
@@ -772,7 +877,7 @@ function onNextTurn() {
 }
 
 function endRound() {
-  clearInterval(game.timerInterval);
+  stopTimer();
   game.turnActive = false;
   saveGame(game);
   showRoundEnd(`${game.currentRound + 1}/${game.activeRounds.length}`, game.teams);
@@ -802,33 +907,119 @@ function endRound() {
 }
 
 // ===== LIBRARY FUNCTIONS =====
-function renderCustomThemesList() {
-  const container = document.getElementById('custom-themes-list');
-  const customThemes = getCustomThemes();
-  const keys = Object.keys(customThemes);
+function refreshThemeSelector() {
+  renderThemeButtons(THEMES, game.selectedThemes, document.getElementById('theme-selector'));
+}
 
-  if (keys.length === 0) {
-    container.innerHTML = '<p class="wizard-hint">Aucun thème personnalisé. Créez-en un !</p>';
+function renderCustomThemesList() {
+  renderCustomThemes(getCustomThemes(), openThemeEditor, confirmDeleteTheme);
+}
+
+function confirmDeleteTheme(id) {
+  const themes = getCustomThemes();
+  if (!themes[id]) return;
+  if (!confirm(`Supprimer le thème "${themes[id].name}" et toutes ses cartes ?`)) return;
+
+  deleteCustomTheme(id);
+  delete THEMES[id];
+  game.selectedThemes.delete(id);   // sinon le thème resterait coché et amputerait le paquet
+  refreshThemeSelector();
+  renderCustomThemesList();
+}
+
+// Crée un thème vide puis enchaîne directement sur sa fiche, où on ajoute les cartes.
+// L'icône ✍️ le distingue des thèmes générés par l'IA (✨) dans la sélection.
+function createManualTheme() {
+  const champ = document.getElementById('manual-theme-name');
+  const erreur = document.getElementById('manual-theme-error');
+  const nom = champ.value.trim();
+
+  if (nom.length < 2) {
+    erreur.textContent = 'Donne un nom d’au moins 2 caractères.';
     return;
   }
 
-  container.innerHTML = keys.map(key => {
-    const theme = customThemes[key];
-    return `<div class="custom-theme-item">
-      <span>✨ ${theme.name} <span class="theme-count">(${theme.words.length} cartes)</span></span>
-      <button class="btn-delete-theme" data-id="${key}">🗑️</button>
-    </div>`;
-  }).join('');
+  const id = 'manual_' + Date.now();
+  const theme = { id, name: nom, icon: '✍️', words: [] };
+  saveCustomTheme(id, theme);
+  THEMES[id] = theme;
+  refreshThemeSelector();
+  erreur.textContent = '';
+  openThemeEditor(id);
+}
 
-  container.querySelectorAll('.btn-delete-theme').forEach(btn => {
-    btn.addEventListener('click', () => {
-      if (confirm(`Supprimer le thème "${customThemes[btn.dataset.id].name}" ?`)) {
-        deleteCustomTheme(btn.dataset.id);
-        delete THEMES[btn.dataset.id];
-        renderCustomThemesList();
-      }
-    });
-  });
+// ===== FICHE D'UN THÈME MAISON =====
+function openThemeEditor(id) {
+  const themes = getCustomThemes();
+  if (!themes[id]) return;
+  editingThemeId = id;
+  showThemeEditError('');
+  document.getElementById('theme-card-input').value = '';
+  renderThemeEditor(themes[id], removeThemeCard);
+  showScreen('screen-theme-edit');
+}
+
+// Rien à sauvegarder ici : chaque ajout et chaque suppression est déjà écrit.
+// Le bouton « Terminer » et la flèche retour font donc exactement la même chose.
+function closeThemeEditor() {
+  editingThemeId = null;
+  renderCustomThemesList();
+  showScreen('screen-library');
+}
+
+function currentEditedTheme() {
+  return getCustomThemes()[editingThemeId] || null;
+}
+
+function persistEditedTheme(theme) {
+  saveCustomTheme(editingThemeId, theme);
+  THEMES[editingThemeId] = theme;
+  refreshThemeSelector();
+  renderThemeEditor(theme, removeThemeCard);
+}
+
+function addThemeCard() {
+  const input = document.getElementById('theme-card-input');
+  const brut = input.value.trim();
+  const theme = currentEditedTheme();
+  if (!theme) return;
+
+  if (brut.length < 2) {
+    showThemeEditError('Une carte doit faire au moins 2 caractères.');
+    return;
+  }
+  const normalise = brut.toLocaleLowerCase();
+  if (theme.words.some(mot => mot.toLocaleLowerCase() === normalise)) {
+    showThemeEditError('Cette carte est déjà dans le thème.');
+    return;
+  }
+
+  theme.words.push(brut);
+  persistEditedTheme(theme);
+  showThemeEditError('');
+  input.value = '';
+  input.focus();
+}
+
+function removeThemeCard(index) {
+  const theme = currentEditedTheme();
+  if (!theme) return;
+  theme.words.splice(index, 1);
+  persistEditedTheme(theme);
+  showThemeEditError('');
+}
+
+// ===== QUOTA DE GÉNÉRATION IA =====
+function refreshQuotaDisplay() {
+  const quota = getQuota();
+  const ligne = document.getElementById('ai-quota');
+  if (ligne) {
+    ligne.textContent = quota.restant > 0
+      ? `${quota.restant} génération(s) restante(s) aujourd'hui, sur ${quota.max}.`
+      : `Limite atteinte : ${quota.max} générations par jour. Réessaie demain.`;
+  }
+  const bouton = document.getElementById('btn-generate');
+  if (bouton) bouton.disabled = quota.restant <= 0;
 }
 
 async function handleGenerate() {
@@ -857,7 +1048,7 @@ async function handleGenerate() {
   } catch (err) {
     statusEl.textContent = `❌ Erreur : ${err.message}`;
   } finally {
-    btnGenerate.disabled = false;
+    refreshQuotaDisplay();   // remet le bouton dans le bon état et met le compteur à jour
   }
 }
 
@@ -877,8 +1068,7 @@ function handleSaveTheme() {
 
   // Refresh theme buttons in config (keep current selection + add new theme)
   game.selectedThemes.add(id);
-  const container = document.getElementById('theme-selector');
-  renderThemeButtons(THEMES, game.selectedThemes, container);
+  refreshThemeSelector();
 
   alert(`Thème "${themeName}" sauvegardé ! Il apparaîtra dans la sélection de thèmes.`);
   showScreen('screen-library');

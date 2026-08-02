@@ -1,0 +1,9 @@
+# Outillage de développement : versionné dans le dépôt, mais inutile en ligne.
+# Sans ce fichier, Vercel publie tout le contenu du dépôt, y compris ces dossiers.
+tests/
+scripts/
+.claude/
+
+# Documents de travail
+*.docx
+theme people.txt

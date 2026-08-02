@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head><meta charset="utf-8"><title>Test Rush — son coupe</title></head>
+<body>
+<pre id="log">demarrage...</pre>
+<iframe id="f" src="/" style="width:420px;height:900px;border:1px solid #ccc"></iframe>
+<script>
+const out = [];
+function log(s) { out.push(s); document.getElementById('log').textContent = out.join('\n'); }
+function check(name, cond) { log((cond ? 'PASS' : 'FAIL') + ' -- ' + name); }
+const wait = ms => new Promise(r => setTimeout(r, ms));
+
+document.getElementById('f').addEventListener('load', async () => {
+  const f = document.getElementById('f'), d = f.contentDocument, w = f.contentWindow;
+  w.onerror = (m, s, l) => log('ERREUR APP: ' + m + ' @' + s + ':' + l);
+  const $ = id => d.getElementById(id);
+  const screen = () => [...d.querySelectorAll('.screen')].find(s => s.classList.contains('active'))?.id;
+
+  let oscs = 0;
+  const AC = w.AudioContext || w.webkitAudioContext;
+  const origCreate = AC.prototype.createOscillator;
+  AC.prototype.createOscillator = function () { oscs++; return origCreate.apply(this, arguments); };
+
+  const vibrations = [];
+  Object.defineProperty(w.navigator, 'vibrate', {
+    value: p => { vibrations.push(p); return true; }, configurable: true, writable: true
+  });
+
+  try {
+    await wait(1200);
+
+    // --- On coupe le son depuis les parametres globaux ---
+    $('btn-settings').click();
+    check('parametres ouverts', screen() === 'screen-settings');
+    d.querySelector('[data-sound="off"]').click();
+    check('son coupe selectionne', d.querySelector('[data-sound="off"]').classList.contains('active'));
+    check('son active deselectionne', !d.querySelector('[data-sound="on"]').classList.contains('active'));
+    check('preference son enregistree', w.localStorage.getItem('timesup_son') === 'off');
+    check('la vibration reste activee (reglage independant)', d.querySelector('[data-vibration="on"]').classList.contains('active'));
+    check('la preference vibration n a pas ete touchee', w.localStorage.getItem('timesup_vibration') === null);
+    $('btn-settings-back').click();
+    check('retour a l accueil', screen() === 'screen-home');
+
+    $('btn-start').click();
+    $('btn-next-mode').click();
+    d.querySelectorAll('#theme-selector .btn-theme')[0].click();
+    $('btn-next-step').click();
+    d.querySelector('[data-mode="simple"]').click();
+    $('btn-next-players').click();
+    $('btn-next-rounds').click();
+    $('btn-play').click();
+    $('btn-start-turn').click();
+    let n = 0;
+    while (screen() !== 'screen-turn-end' && n < 60) { await wait(1000); n++; }
+    check('le tour s est termine normalement', screen() === 'screen-turn-end');
+
+    log('       oscillateurs crees : ' + oscs + ' / vibrations : ' + vibrations.length);
+    check('aucun son produit', oscs === 0);
+    check('la vibration continue de fonctionner', vibrations.length === 6);
+    check('le motif de fin de tour est intact', JSON.stringify(vibrations[5]) === JSON.stringify([300, 120, 300]));
+
+    log('SCENARIO 8 TERMINE');
+  } catch (e) { log('EXCEPTION: ' + e.message + '\n' + e.stack); }
+});
+</script>
+</body>
+</html>

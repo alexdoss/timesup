@@ -1,3 +1,54 @@
+// Plafond par adresse IP et par jour. C'est un garde-fou contre l'abus de l'adresse
+// publique, pas la limite affichée au joueur : celle-ci est de 5 par appareil et vit
+// dans js/library.js. Une valeur plus haute évite de bloquer plusieurs personnes
+// derrière une même connexion (foyer, réseau d'entreprise).
+const PLAFOND_IP_PAR_JOUR = 20;
+
+// Vercel KV expose ces variables automatiquement une fois le stockage rattaché au projet.
+// Sans elles, le plafond serveur est simplement inactif — la génération continue de marcher.
+const KV_URL = process.env.KV_REST_API_URL;
+const KV_TOKEN = process.env.KV_REST_API_TOKEN;
+
+function jourCourant() {
+  return new Date().toISOString().slice(0, 10);
+}
+
+function adresseAppelant(req) {
+  const entete = req.headers['x-forwarded-for'] || '';
+  return entete.split(',')[0].trim() || 'inconnue';
+}
+
+async function commandeKV(commande) {
+  const reponse = await fetch(KV_URL, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${KV_TOKEN}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify(commande)
+  });
+  if (!reponse.ok) throw new Error(`KV ${reponse.status}`);
+  return reponse.json();
+}
+
+// Renvoie { autorise, compte } — et laisse toujours passer si le compteur est indisponible :
+// mieux vaut une génération de trop qu'une app cassée par un service tiers en panne.
+async function verifierPlafondIP(req) {
+  if (!KV_URL || !KV_TOKEN) return { autorise: true, actif: false };
+
+  const cle = `rush:ia:${jourCourant()}:${adresseAppelant(req)}`;
+  try {
+    const { result } = await commandeKV(['INCR', cle]);
+    if (result === 1) {
+      await commandeKV(['EXPIRE', cle, 172800]);   // la clé s'efface d'elle-même après 48 h
+    }
+    return { autorise: result <= PLAFOND_IP_PAR_JOUR, compte: result, actif: true };
+  } catch (err) {
+    console.error('Compteur KV indisponible, plafond ignoré :', err.message);
+    return { autorise: true, actif: false };
+  }
+}
+
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
@@ -13,6 +64,13 @@ export default async function handler(req, res) {
 
   if (!themeName || !count) {
     return res.status(400).json({ error: 'Missing parameters' });
+  }
+
+  const plafond = await verifierPlafondIP(req);
+  if (!plafond.autorise) {
+    return res.status(429).json({
+      error: "Trop de générations depuis cette connexion aujourd'hui. Réessaie demain."
+    });
   }
 
   let prompt = `Tu es un assistant pour un jeu de devinettes appelé Rush. Génère exactement ${count} éléments sur le thème "${themeName}".`;

@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head><meta charset="utf-8"><title>Pilote de test Rush</title></head>
+<body>
+<pre id="log">demarrage...</pre>
+<iframe id="f" src="/" style="width:420px;height:900px;border:1px solid #ccc"></iframe>
+<script>
+const out = [];
+function log(s) { out.push(s); document.getElementById('log').textContent = out.join('\n'); }
+function check(name, cond) { log((cond ? 'PASS' : 'FAIL') + ' -- ' + name); }
+
+const wait = ms => new Promise(r => setTimeout(r, ms));
+
+window.onerror = (m, src, l) => log('ERREUR TOP: ' + m + ' @' + src + ':' + l);
+
+const f = document.getElementById('f');
+f.addEventListener('load', async () => {
+  const d = f.contentDocument;
+  const w = f.contentWindow;
+  w.onerror = (m, src, l) => log('ERREUR APP: ' + m + ' @' + src + ':' + l);
+
+  const $ = id => d.getElementById(id);
+  const screen = () => [...d.querySelectorAll('.screen')].find(s => s.classList.contains('active'))?.id;
+  const click = id => { const el = $(id); if (!el) { log('INTROUVABLE: #' + id); return false; } el.click(); return true; };
+
+  try {
+    await wait(1200); // laisser init() charger les themes
+
+    const themeBtns = d.querySelectorAll('#theme-selector .btn-theme');
+    check('les themes officiels sont charges (' + themeBtns.length + ')', themeBtns.length >= 5);
+    check('ecran d accueil actif', screen() === 'screen-home');
+    check('bloc Reprendre masque quand aucune sauvegarde', $('resume-block').style.display === 'none');
+
+    click('btn-start');              check('etape 1 : mode', screen() === 'screen-mode');
+    click('btn-next-mode');          check('etape 2 : themes', screen() === 'screen-themes');
+    themeBtns[0].click();
+    click('btn-next-step');          check('etape 3 : joueurs', screen() === 'screen-players');
+    d.querySelector('[data-mode="simple"]').click();
+    click('btn-next-players');       check('etape 4 : manches', screen() === 'screen-rounds');
+    click('btn-next-rounds');        check('etape 5 : deroulement', screen() === 'screen-config');
+    click('btn-play');               check('debut de manche', screen() === 'screen-round');
+
+    const brut1 = w.localStorage.getItem('timesup_partie_en_cours');
+    check('sauvegarde ecrite des le debut de manche', !!brut1);
+
+    click('btn-start-turn');         check('ecran de jeu', screen() === 'screen-game');
+    const mot1 = $('card-word').textContent;
+    click('btn-found');
+    click('btn-found');
+    check('la carte a change apres 2 trouvees', $('card-word').textContent !== mot1);
+
+    const snap = JSON.parse(w.localStorage.getItem('timesup_partie_en_cours'));
+    check('score sauvegarde = 2', snap.state.teams[0].score === 2);
+    check('position dans le paquet sauvegardee = 2', snap.state.currentCardIndex === 2);
+    check('selectedThemes serialise en tableau', Array.isArray(snap.state.selectedThemes));
+    check('timerInterval absent de la sauvegarde', !('timerInterval' in snap.state));
+    check('le paquet est sauvegarde (' + snap.state.deck.length + ' cartes)', snap.state.deck.length > 0);
+
+    log('SCENARIO 1 TERMINE');
+  } catch (e) {
+    log('EXCEPTION: ' + e.message + '\n' + e.stack);
+  }
+});
+</script>
+</body>
+</html>

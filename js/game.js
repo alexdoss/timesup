@@ -6,7 +6,8 @@ export const ROUNDS = [
   { id: 'one-word', name: "Un mot", icon: "🔤", desc: "Le joueur ne peut utiliser qu'un seul mot pour faire deviner la carte.", optional: false },
   { id: 'mime', name: "Mime", icon: "🎭", desc: "Le joueur fait deviner la carte uniquement par des gestes, sans parler.", optional: false },
   { id: 'freeze', name: "Pose figée", icon: "🗿", desc: "Le joueur prend une pose immobile pour faire deviner la carte.", optional: true },
-  { id: 'puppet', name: "Faire bouger un partenaire", icon: "🕺", desc: "Le joueur fait bouger un de ses partenaires sans lui parler.", optional: true }
+  // minPerTeam : un joueur qui manipule, un partenaire qui sert de pantin, au moins un devineur
+  { id: 'puppet', name: "Faire bouger un partenaire", icon: "🕺", desc: "Le joueur fait bouger un de ses partenaires sans lui parler.", optional: true, minPerTeam: 3 }
 ];
 
 export const game = {
@@ -113,6 +114,26 @@ export function syncChosenTeams() {
       : 0;
     game.teams[safeTeamIndex].players.push(player);
   });
+}
+
+// Effectifs prévus par équipe, tels qu'ils seront au lancement de la partie.
+// Renvoie null en mode simple : l'app ne connaît pas les effectifs réels.
+export function getPlannedTeamSizes() {
+  if (!game.nominativeMode) return null;
+
+  const sizes = game.teams.map(() => 0);
+  if (game.assignMode === 'chosen') {
+    game.players.forEach(player => {
+      const chosen = game.playerAssignments[player];
+      const safe = Number.isInteger(chosen) && chosen >= 0 && chosen < sizes.length ? chosen : 0;
+      sizes[safe]++;
+    });
+  } else {
+    game.players.forEach((_, index) => {
+      sizes[index % sizes.length]++;
+    });
+  }
+  return sizes;
 }
 
 export function getCurrentPlayer() {

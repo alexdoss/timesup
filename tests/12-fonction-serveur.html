@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head><meta charset="utf-8"><title>Test Rush — fonction serveur /api/generate</title></head>
+<body>
+<pre id="log">demarrage...</pre>
+<script type="module">
+const out = [];
+function log(s) { out.push(s); document.getElementById('log').textContent = out.join('\n'); }
+function check(name, cond) { log((cond ? 'PASS' : 'FAIL') + ' -- ' + name); }
+
+const URL_KV = 'https://kv.exemple/';
+let appelsKV = [];
+let compteurKV = 0;
+let appelsGroq = 0;
+let reponseGroq = { ok: true, texte: '["Un", " Deux ", "", "Trois"]' };
+
+// Faux fetch : intercepte les appels du module serveur
+window.__fauxFetch = async (url, options) => {
+  if (String(url).startsWith(URL_KV)) {
+    const commande = JSON.parse(options.body);
+    appelsKV.push(commande);
+    if (commande[0] === 'INCR') { compteurKV++; return { ok: true, json: async () => ({ result: compteurKV }) }; }
+    return { ok: true, json: async () => ({ result: 'OK' }) };
+  }
+  appelsGroq++;
+  if (!reponseGroq.ok) {
+    return { ok: false, status: 500, text: async () => 'boom' };
+  }
+  return {
+    ok: true,
+    json: async () => ({ choices: [{ message: { content: reponseGroq.texte } }] })
+  };
+};
+
+let source = null;
+async function charger(env) {
+  if (!source) source = await (await fetch('/api/generate.js')).text();
+  const shim = `const process = { env: ${JSON.stringify(env)} };\n`
+             + `const fetch = (...a) => window.__fauxFetch(...a);\n`;
+  const blob = new Blob([shim + source], { type: 'text/javascript' });
+  const url = URL.createObjectURL(blob);
+  const mod = await import(url);
+  URL.revokeObjectURL(url);
+  return mod.default;
+}
+
+function fauxRes() {
+  const r = { code: 0, body: null };
+  r.status = c => { r.code = c; return r; };
+  r.json = b => { r.body = b; return r; };
+  return r;
+}
+
+function fauxReq(corps, ip = '10.0.0.1', methode = 'POST') {
+  return { method: methode, headers: { 'x-forwarded-for': ip }, body: corps };
+}
+
+(async () => {
+  try {
+    // --- Le fichier est-il seulement valide ? ---
+    const handler = await charger({ GROQ_API_KEY: 'cle-test' });
+    check('le module serveur se charge sans erreur de syntaxe', typeof handler === 'function');
+
+    // --- Methode refusee ---
+    let res = fauxRes();
+    await handler(fauxReq({ themeName: 'X', count: 10 }, '10.0.0.1', 'GET'), res);
+    check('une requete GET est refusee (405)', res.code === 405);
+
+    // --- Cle API absente ---
+    const sansCle = await charger({});
+    res = fauxRes();
+    await sansCle(fauxReq({ themeName: 'X', count: 10 }), res);
+    check('sans cle Groq, erreur 500 explicite', res.code === 500 && res.body.error.includes('API key'));
+
+    // --- Parametres manquants ---
+    res = fauxRes();
+    await handler(fauxReq({ count: 10 }), res);
+    check('sans nom de theme, erreur 400', res.code === 400);
+
+    // --- Cas nominal, sans stockage KV configure ---
+    appelsGroq = 0; appelsKV = [];
+    res = fauxRes();
+    await handler(fauxReq({ themeName: 'Sport', count: 3 }), res);
+    check('sans stockage configure, la generation fonctionne', res.code === 200);
+    check('aucun appel au compteur quand il n est pas configure', appelsKV.length === 0);
+    log('       mots renvoyes : ' + JSON.stringify(res.body.words));
+    check('les mots sont nettoyes et les vides ecartes', JSON.stringify(res.body.words) === JSON.stringify(['Un', 'Deux', 'Trois']));
+
+    // --- Avec stockage KV : le plafond par IP s applique ---
+    const avecKV = await charger({ GROQ_API_KEY: 'cle-test', KV_REST_API_URL: URL_KV, KV_REST_API_TOKEN: 'jeton' });
+    compteurKV = 0; appelsKV = []; appelsGroq = 0;
+
+    res = fauxRes();
+    await avecKV(fauxReq({ themeName: 'Sport', count: 3 }), res);
+    check('premiere generation acceptee', res.code === 200);
+    check('le compteur est incremente', appelsKV.some(c => c[0] === 'INCR'));
+    check('une expiration est posee au premier appel', appelsKV.some(c => c[0] === 'EXPIRE'));
+
+    // on pousse jusqu'au plafond de 20
+    for (let i = 2; i <= 20; i++) { res = fauxRes(); await avecKV(fauxReq({ themeName: 'Sport', count: 3 }), res); }
+    check('la 20e generation passe encore', res.code === 200);
+
+    const groqAvant = appelsGroq;
+    res = fauxRes();
+    await avecKV(fauxReq({ themeName: 'Sport', count: 3 }), res);
+    log('       reponse 21e : ' + res.code + ' — ' + (res.body.error || ''));
+    check('la 21e est refusee (429)', res.code === 429);
+    check('le message est en francais et comprehensible', res.body.error.includes('Trop de générations'));
+    check('aucun appel a l IA quand le plafond est atteint', appelsGroq === groqAvant);
+
+    // --- Le compteur en panne ne doit pas casser la generation ---
+    const sauvegarde = window.__fauxFetch;
+    window.__fauxFetch = async (url, options) => {
+      if (String(url).startsWith(URL_KV)) throw new Error('service indisponible');
+      return sauvegarde(url, options);
+    };
+    res = fauxRes();
+    await avecKV(fauxReq({ themeName: 'Sport', count: 3 }), res);
+    check('compteur en panne : la generation passe quand meme', res.code === 200);
+    window.__fauxFetch = sauvegarde;
+
+    // --- Erreur Groq remontee proprement ---
+    reponseGroq = { ok: false };
+    res = fauxRes();
+    await handler(fauxReq({ themeName: 'Sport', count: 3 }), res);
+    check('une panne de Groq renvoie 502', res.code === 502);
+
+    log('SCENARIO 20 TERMINE');
+  } catch (e) {
+    log('EXCEPTION: ' + e.message + '\n' + e.stack);
+  }
+})();
+</script>
+</body>
+</html>

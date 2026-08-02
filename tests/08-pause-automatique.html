@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head><meta charset="utf-8"><title>Test Rush — pause automatique</title></head>
+<body>
+<pre id="log">demarrage...</pre>
+<iframe id="f" src="/" style="width:420px;height:900px;border:1px solid #ccc"></iframe>
+<script>
+const out = [];
+function log(s) { out.push(s); document.getElementById('log').textContent = out.join('\n'); }
+function check(name, cond) { log((cond ? 'PASS' : 'FAIL') + ' -- ' + name); }
+const wait = ms => new Promise(r => setTimeout(r, ms));
+
+document.getElementById('f').addEventListener('load', async () => {
+  const f = document.getElementById('f'), d = f.contentDocument, w = f.contentWindow;
+  w.onerror = (m, s, l) => log('ERREUR APP: ' + m + ' @' + s + ':' + l);
+  const $ = id => d.getElementById(id);
+  const screen = () => [...d.querySelectorAll('.screen')].find(s => s.classList.contains('active'))?.id;
+  const sauvegarde = () => JSON.parse(w.localStorage.getItem('timesup_partie_en_cours'));
+  const voile = () => $('pause-overlay').style.display !== 'none';
+  const floute = () => $('screen-game').classList.contains('paused');
+
+  // Simule la mise en veille / le passage en arriere-plan
+  function cacher(valeur) {
+    Object.defineProperty(d, 'hidden', { value: valeur, configurable: true });
+    d.dispatchEvent(new w.Event('visibilitychange'));
+  }
+
+  try {
+    await wait(1200);
+    $('btn-start').click();
+    $('btn-next-mode').click();
+    d.querySelectorAll('#theme-selector .btn-theme')[0].click();
+    $('btn-next-step').click();
+    d.querySelector('[data-mode="simple"]').click();
+    $('btn-next-players').click();
+    $('btn-next-rounds').click();
+    $('btn-play').click();
+    $('btn-start-turn').click();
+    $('btn-found').click();
+    const carte = $('card-word').textContent;
+    await wait(5000);
+
+    const chrono = parseInt($('timer').textContent, 10);
+    check('tour en cours avant la mise en veille', screen() === 'screen-game' && !voile());
+
+    // ===== L'app passe en arriere-plan =====
+    cacher(true);
+    check('pause declenchee automatiquement', voile());
+    check('la carte est masquee par le flou', floute());
+    check('on reste sur l ecran de jeu', screen() === 'screen-game');
+    log('       titre : "' + $('pause-title').textContent + '"');
+    log('       texte : "' + $('pause-info').textContent + '"');
+    check('le titre annonce une pause automatique', $('pause-title').textContent.includes('automatique'));
+    check('le texte explique pourquoi', $('pause-info').textContent.includes('quittée'));
+    check('le texte rappelle le temps fige', $('pause-info').textContent.includes(chrono + ' s'));
+
+    // ===== Le chrono ne doit plus bouger =====
+    await wait(6000);
+    check('le chrono est gele pendant l absence', sauvegarde().state.timeLeft === chrono);
+    check('l etat est bien sauvegarde comme tour en cours', sauvegarde().state.turnActive === true);
+
+    // ===== Retour dans l'app : pas de reprise automatique =====
+    cacher(false);
+    check('toujours en pause au retour (pas de reprise sauvage)', voile());
+    check('le panneau est affiche, pas le decompte', $('pause-panel').style.display !== 'none');
+    await wait(3000);
+    check('le chrono n a toujours pas bouge', sauvegarde().state.timeLeft === chrono);
+
+    // ===== Reprise manuelle par le sas =====
+    $('btn-resume-turn').click();
+    check('le decompte demarre', $('pause-countdown').textContent === '3');
+
+    // ===== Re-basculement en arriere-plan pendant le decompte =====
+    await wait(1100);
+    cacher(true);
+    check('le decompte est interrompu', $('pause-panel').style.display !== 'none');
+    check('retour au panneau de pause automatique', $('pause-title').textContent.includes('automatique'));
+    check('le chrono est intact apres ce va-et-vient', sauvegarde().state.timeLeft === chrono);
+
+    cacher(false);
+    $('btn-resume-turn').click();
+    await wait(3300);
+    check('le jeu repart apres le decompte complet', !voile() && !floute());
+    check('meme carte qu avant la mise en veille', $('card-word').textContent === carte);
+    check('chrono repris a la valeur exacte', parseInt($('timer').textContent, 10) === chrono);
+
+    await wait(2500);
+    check('le chrono redescend normalement', parseInt($('timer').textContent, 10) < chrono);
+
+    log('SCENARIO 16 TERMINE');
+  } catch (e) { log('EXCEPTION: ' + e.message + '\n' + e.stack); }
+});
+</script>
+</body>
+</html>

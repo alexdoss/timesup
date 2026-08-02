@@ -1,7 +1,10 @@
 {
   "permissions": {
     "allow": [
-      "PowerShell(pwsh -NoProfile -ExecutionPolicy Bypass -File scripts/deploy.ps1 -Check)"
+      "PowerShell(pwsh -NoProfile -ExecutionPolicy Bypass -File scripts/deploy.ps1 -Check)",
+      "PowerShell(pwsh -NoProfile -ExecutionPolicy Bypass -File scripts/test.ps1)",
+      "PowerShell(pwsh -NoProfile -ExecutionPolicy Bypass -File scripts/test.ps1 -Detail)",
+      "PowerShell(pwsh -NoProfile -ExecutionPolicy Bypass -File scripts/serve.ps1)"
     ]
   }
 }

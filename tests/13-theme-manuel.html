@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head><meta charset="utf-8"><title>Test Rush — thème créé à la main</title></head>
+<body>
+<pre id="log">demarrage...</pre>
+<div id="hote"></div>
+<script>
+const out = [];
+function log(s) { out.push(s); document.getElementById('log').textContent = out.join('\n'); }
+function check(name, cond) { log((cond ? 'PASS' : 'FAIL') + ' -- ' + name); }
+const wait = ms => new Promise(r => setTimeout(r, ms));
+
+localStorage.removeItem('timesup_custom_themes');
+localStorage.removeItem('timesup_partie_en_cours');
+
+const f = document.createElement('iframe');
+f.src = '/';
+f.style.cssText = 'width:420px;height:900px;border:1px solid #ccc';
+document.getElementById('hote').appendChild(f);
+
+f.addEventListener('load', async () => {
+  const d = f.contentDocument, w = f.contentWindow;
+  w.onerror = (m, s, l) => log('ERREUR APP: ' + m + ' @' + s + ':' + l);
+  const $ = id => d.getElementById(id);
+  const screen = () => [...d.querySelectorAll('.screen')].find(s => s.classList.contains('active'))?.id;
+  const cartes = () => [...d.querySelectorAll('#theme-cards-list li .player-name')].map(e => e.textContent);
+  const themes = () => JSON.parse(w.localStorage.getItem('timesup_custom_themes') || '{}');
+  const boutonTheme = nom => [...d.querySelectorAll('#theme-selector .btn-theme')].find(b => b.textContent.includes(nom));
+
+  try {
+    await wait(1200);
+
+    $('btn-library').click();
+    check('la bibliotheque propose la creation manuelle', !!$('btn-create-manual'));
+    $('btn-create-manual').click();
+    check('l ecran de creation manuelle s ouvre', screen() === 'screen-manual-create');
+
+    // --- Nom trop court refuse ---
+    $('manual-theme-name').value = 'x';
+    $('btn-manual-create').click();
+    check('un nom d une lettre est refuse', screen() === 'screen-manual-create');
+    check('un message l explique', $('manual-theme-error').textContent.includes('2 caractères'));
+
+    // --- Creation ---
+    $('manual-theme-name').value = 'Vacances 2026';
+    $('btn-manual-create').click();
+    check('on enchaine sur la fiche du theme', screen() === 'screen-theme-edit');
+    check('le titre porte le nom saisi', $('theme-edit-title').textContent.includes('Vacances 2026'));
+    check('l icone distingue un theme manuel', $('theme-edit-title').textContent.includes('✍️'));
+    check('le theme est cree vide', $('theme-edit-count').textContent.includes('Aucune carte'));
+
+    const cle = Object.keys(themes())[0];
+    check('le theme est enregistre', !!cle && themes()[cle].name === 'Vacances 2026');
+    check('il porte bien l icone manuelle', themes()[cle].icon === '✍️');
+    check('il ne contient aucune carte', themes()[cle].words.length === 0);
+
+    // --- Remplissage a la main ---
+    for (const mot of ['Plage', 'Valise', 'Coup de soleil']) {
+      $('theme-card-input').value = mot;
+      $('btn-add-theme-card').click();
+    }
+    check('les 3 cartes sont saisies', JSON.stringify(cartes()) === JSON.stringify(['Plage', 'Valise', 'Coup de soleil']));
+    check('elles sont enregistrees', themes()[cle].words.length === 3);
+    check('le compteur suit', $('theme-edit-count').textContent.includes('3 carte'));
+
+    // --- Le theme est jouable ---
+    check('un bouton Terminer est propose', !!$('btn-theme-done'));
+    $('btn-theme-done').click();
+    check('Terminer ramene a la bibliotheque', screen() === 'screen-library');
+    check('les cartes saisies sont conservees', themes()[cle].words.length === 3);
+    d.querySelector('.custom-theme-open').click();
+    $('btn-theme-back').click();
+    check('retour a la bibliotheque', screen() === 'screen-library');
+    check('le theme apparait dans la liste', d.querySelector('.custom-theme-open').textContent.includes('Vacances 2026'));
+
+    d.querySelector('#screen-library .btn-close').click();
+    $('btn-start').click();
+    $('btn-next-mode').click();
+    const bt = boutonTheme('Vacances 2026');
+    check('le theme manuel est proposable en partie', !!bt && !bt.disabled);
+    check('avec son nombre de cartes', bt.textContent.includes('(3)'));
+
+    log('SCENARIO 21 TERMINE');
+  } catch (e) { log('EXCEPTION: ' + e.message + '\n' + e.stack); }
+});
+</script>
+</body>
+</html>

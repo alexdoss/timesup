@@ -45,11 +45,12 @@
       <button class="btn-close" onclick="showScreen('screen-home')">✕</button>
       <div class="wizard-header">
         <h2>📚 Bibliothèque</h2>
-        <p class="wizard-hint">Créez vos propres thèmes avec l'IA</p>
+        <p class="wizard-hint">Créez vos thèmes avec l'IA ou à la main, et modifiez leurs cartes</p>
       </div>
       <div class="config-form">
         <div id="custom-themes-list" class="custom-themes-list"></div>
         <button id="btn-create-theme" class="btn btn-primary">✨ Créer un thème avec l'IA</button>
+        <button id="btn-create-manual" class="btn btn-secondary">✍️ Créer un thème à la main</button>
       </div>
     </div>
 
@@ -106,10 +107,52 @@
             <button class="btn-ai-count" data-count="60">60</button>
           </div>
         </label>
+        <p id="ai-quota" class="wizard-hint"></p>
         <button id="btn-generate" class="btn btn-primary">🚀 Générer</button>
         <div id="ai-status" class="ai-status"></div>
         <div id="ai-preview" class="ai-preview"></div>
         <button id="btn-save-theme" class="btn btn-primary" style="display:none">💾 Sauvegarder ce thème</button>
+      </div>
+    </div>
+
+    <!-- ÉCRAN CRÉATION MANUELLE D'UN THÈME -->
+    <div id="screen-manual-create" class="screen">
+      <button class="btn-back" onclick="showScreen('screen-library')">←</button>
+      <button class="btn-close" onclick="showScreen('screen-home')">✕</button>
+      <div class="wizard-header">
+        <h2>✍️ Nouveau thème</h2>
+        <p class="wizard-hint">Donne-lui un nom, puis ajoute tes cartes une par une.</p>
+      </div>
+      <div class="config-form">
+        <label>
+          Nom du thème
+          <input type="text" id="manual-theme-name" placeholder="Ex : Souvenirs de vacances" maxlength="30">
+        </label>
+        <p id="manual-theme-error" class="wizard-hint"></p>
+        <button id="btn-manual-create" class="btn btn-primary">Créer et ajouter les cartes ▶️</button>
+      </div>
+    </div>
+
+    <!-- ÉCRAN FICHE D'UN THÈME MAISON -->
+    <div id="screen-theme-edit" class="screen">
+      <button id="btn-theme-back" class="btn-back">←</button>
+      <button class="btn-close" onclick="showScreen('screen-home')">✕</button>
+      <div class="wizard-header">
+        <h2 id="theme-edit-title">Thème</h2>
+        <p id="theme-edit-count" class="wizard-hint"></p>
+      </div>
+      <div class="config-form">
+        <div class="config-section">
+          <span class="field-label">Ajouter une carte</span>
+          <div class="player-input-row">
+            <input type="text" id="theme-card-input" placeholder="Mot ou expression" maxlength="40" autocomplete="off">
+            <button id="btn-add-theme-card" class="btn btn-add">+</button>
+          </div>
+          <p id="theme-edit-error" class="wizard-hint"></p>
+        </div>
+        <ul id="theme-cards-list" class="player-list"></ul>
+        <button id="btn-theme-done" class="btn btn-primary">✅ Terminer</button>
+        <p class="wizard-hint">Tes cartes sont enregistrées au fur et à mesure : tu peux quitter et revenir quand tu veux.</p>
       </div>
     </div>
 
@@ -220,6 +263,17 @@
         <div id="rounds-mandatory" class="rounds-tags"></div>
         <p class="wizard-hint" style="margin:8px 0 6px">Optionnelles :</p>
         <div id="rounds-optional" class="rounds-pills"></div>
+        <p id="rounds-note" class="wizard-hint" style="display:none"></p>
+
+        <div id="puppet-confirm" class="config-section" style="display:none">
+          <span class="field-label">Chaque équipe compte-t-elle au moins 3 joueurs ?</span>
+          <p class="wizard-hint">« Faire bouger un partenaire » demande un joueur qui manipule, un partenaire qui sert de pantin, et au moins un qui devine.</p>
+          <div class="pillgroup">
+            <button type="button" class="pill" data-puppet="oui">Oui</button>
+            <button type="button" class="pill" data-puppet="non">Non</button>
+          </div>
+        </div>
+
         <button id="btn-next-rounds" class="btn btn-primary">Suivant ▶️</button>
       </div>
     </div>
@@ -373,7 +427,7 @@
       <!-- Voile de pause : recouvre le jeu, la carte est floutée dessous -->
       <div id="pause-overlay" class="pause-overlay" style="display:none">
         <div id="pause-panel" class="pause-panel">
-          <h2>⏸ Pause</h2>
+          <h2 id="pause-title">⏸ Pause</h2>
           <p id="pause-info" class="pause-info"></p>
           <div class="score-board">
             <div class="score-team">

@@ -571,8 +571,12 @@ body {
   font-size: 3.5rem;
 }
 
-/* Réglage indisponible sur l'appareil (vibration sur iOS) */
-.pill:disabled {
+/* Réglage indisponible sur l'appareil (vibration sur iOS)
+   ou action momentanément impossible (manche verrouillée, Suivant bloqué) */
+.pill:disabled,
+.round-pill:disabled,
+.btn-theme:disabled,
+.btn:disabled {
   opacity: 0.4;
   cursor: default;
 }
@@ -1062,6 +1066,24 @@ h2 {
 .custom-theme-item .theme-count {
   color: var(--muted);
   font-size: 0.75rem;
+}
+
+/* Toute la ligne ouvre la fiche du thème ; la corbeille reste une action distincte */
+.custom-theme-item .custom-theme-open {
+  flex: 1;
+  text-align: left;
+  background: none;
+  border: none;
+  color: var(--ink);
+  font-family: 'Outfit', sans-serif;
+  font-size: 0.9rem;
+  font-weight: 500;
+  padding: 0;
+  cursor: pointer;
+}
+
+.custom-theme-item .custom-theme-open:hover {
+  color: var(--brand);
 }
 
 .custom-theme-item .btn-delete-theme {

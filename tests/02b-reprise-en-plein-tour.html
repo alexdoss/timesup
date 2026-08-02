@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head><meta charset="utf-8"><title>Test Rush — reprise en plein tour</title></head>
+<body>
+<pre id="log">demarrage...</pre>
+<iframe id="f" src="/" style="width:420px;height:900px;border:1px solid #ccc"></iframe>
+<script>
+const out = [];
+function log(s) { out.push(s); document.getElementById('log').textContent = out.join('\n'); }
+function check(name, cond) { log((cond ? 'PASS' : 'FAIL') + ' -- ' + name); }
+const wait = ms => new Promise(r => setTimeout(r, ms));
+
+const f = document.getElementById('f');
+f.addEventListener('load', async () => {
+  const d = f.contentDocument, w = f.contentWindow;
+  w.onerror = (m, src, l) => log('ERREUR APP: ' + m + ' @' + src + ':' + l);
+  const $ = id => d.getElementById(id);
+  const screen = () => [...d.querySelectorAll('.screen')].find(s => s.classList.contains('active'))?.id;
+
+  try {
+    await wait(1200);
+
+    // Etat tel qu'il a survecu a la fermeture du navigateur
+    const snap = JSON.parse(w.localStorage.getItem('timesup_partie_en_cours'));
+    const attenduChrono = snap.state.timeLeft;
+    const attenduCarte  = snap.state.deck[snap.state.currentCardIndex];
+    const attenduReste  = snap.state.deck.length - snap.state.currentCardIndex;
+    log('       etat retrouve : chrono ' + attenduChrono + 's, carte "' + attenduCarte + '", ' + attenduReste + ' restantes');
+
+    check('le tour en cours a survecu a la fermeture', snap.state.turnActive === true);
+    const detail = $('resume-detail').textContent;
+    log('       resume affiche :\n         ' + detail.split('\n').join('\n         '));
+    check('bloc Reprendre visible', $('resume-block').style.display !== 'none');
+    check('le resume tient sur deux lignes', detail.split('\n').length === 2);
+    check('ligne 1 : manche + tour en cours', /^Manche \d+ sur \d+ · tour en cours, \d+ s restantes?$/.test(detail.split('\n')[0]));
+    check('ligne 2 : score nomme par equipe', /^.+ : \d+ {2}— {2}.+ : \d+$/.test(detail.split('\n')[1]));
+    check('le chrono annonce correspond a la sauvegarde', detail.includes(attenduChrono + ' s restante'));
+
+    $('btn-resume').click();
+    check('reprise directe sur l ecran de jeu', screen() === 'screen-game');
+    check('le sas 3-2-1 se declenche', $('pause-countdown').textContent === '3');
+    check('la carte reste floutee pendant le sas', $('screen-game').classList.contains('paused'));
+    await wait(3300);
+    check('le voile a disparu apres le sas', $('pause-overlay').style.display === 'none');
+    check('chrono repris a la valeur exacte', $('timer').textContent === String(attenduChrono));
+    check('meme carte qu avant l interruption', $('card-word').textContent === attenduCarte);
+    check('cartes restantes identiques', $('cards-left').textContent === String(attenduReste));
+
+    // On laisse le tour se terminer : le score du tour doit avoir ete conserve
+    let tours = 0;
+    while (screen() !== 'screen-turn-end' && tours < 60) { await wait(1000); tours++; }
+    check('le tour se termine normalement', screen() === 'screen-turn-end');
+    const resultat = $('turn-result').textContent;
+    log('       resultat du tour : "' + resultat + '"');
+    check('les 2 cartes trouvees avant l interruption sont comptees', resultat.includes('2 carte'));
+
+    log('SCENARIO 4 TERMINE');
+  } catch (e) {
+    log('EXCEPTION: ' + e.message + '\n' + e.stack);
+  }
+});
+</script>
+</body>
+</html>

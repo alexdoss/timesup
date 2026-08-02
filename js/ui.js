@@ -64,11 +64,12 @@ export function updateGameHeader(roundName, teamName) {
   document.getElementById('game-team-label').textContent = teamName;
 }
 
-export function showPauseOverlay(info, teams) {
+export function showPauseOverlay(title, info, teams) {
   document.getElementById('screen-game').classList.add('paused');
   document.getElementById('pause-overlay').style.display = '';
   document.getElementById('pause-panel').style.display = '';
   document.getElementById('pause-countdown').style.display = 'none';
+  document.getElementById('pause-title').textContent = title;
   document.getElementById('pause-info').textContent = info;
   document.getElementById('pause-team1-name').textContent = teams[0].name;
   document.getElementById('pause-team2-name').textContent = teams[1].name;
@@ -123,8 +124,19 @@ export function renderThemeButtons(themes, selectedThemes, container) {
   Object.entries(themes).forEach(([key, theme]) => {
     const btn = document.createElement('button');
     btn.type = 'button';
-    btn.className = selectedThemes.has(key) ? 'btn-theme active' : 'btn-theme';
     btn.dataset.theme = key;
+
+    // Un thème sans carte n'apporterait rien au paquet : on le montre, on l'empêche de partir
+    if (theme.words.length === 0) {
+      selectedThemes.delete(key);
+      btn.className = 'btn-theme';
+      btn.textContent = `${theme.icon} ${theme.name} (vide)`;
+      btn.disabled = true;
+      container.appendChild(btn);
+      return;
+    }
+
+    btn.className = selectedThemes.has(key) ? 'btn-theme active' : 'btn-theme';
     btn.textContent = `${theme.icon} ${theme.name} (${theme.words.length})`;
     btn.addEventListener('click', () => {
       btn.classList.toggle('active');
@@ -189,13 +201,16 @@ export function renderPlayerList(players, assignMode, teams, playerAssignments, 
   document.getElementById('player-count').textContent = `${players.length} joueur(s)`;
 }
 
-export function renderRoundsSelector(rounds, activeRounds = [0, 1, 2]) {
+// teamSizes : effectifs par équipe, ou null si l'app ne les connaît pas (mode simple).
+// onToggle(index, actif) : prévient app.js qu'une manche optionnelle a changé d'état.
+export function renderRoundsSelector(rounds, activeRounds = [0, 1, 2], teamSizes = null, onToggle = null) {
   const mandatory = document.getElementById('rounds-mandatory');
   const optional = document.getElementById('rounds-optional');
   if (!mandatory || !optional) return;
 
   mandatory.innerHTML = '';
   optional.innerHTML = '';
+  const blocages = [];
 
   rounds.forEach((round, index) => {
     if (!round.optional) {
@@ -203,16 +218,53 @@ export function renderRoundsSelector(rounds, activeRounds = [0, 1, 2]) {
       tag.className = 'round-tag';
       tag.textContent = `${round.icon} ${round.name}`;
       mandatory.appendChild(tag);
-    } else {
-      const pill = document.createElement('button');
-      pill.type = 'button';
-      pill.className = 'round-pill' + (activeRounds.includes(index) ? ' active' : '');
-      pill.dataset.roundIndex = index;
-      pill.textContent = `${round.icon} ${round.name}`;
-      pill.addEventListener('click', () => pill.classList.toggle('active'));
-      optional.appendChild(pill);
+      return;
     }
+
+    // Effectif insuffisant et connu : la manche est verrouillée
+    const plusPetiteEquipe = teamSizes ? Math.min(...teamSizes) : null;
+    const verrouillee = round.minPerTeam && plusPetiteEquipe !== null && plusPetiteEquipe < round.minPerTeam;
+
+    const pill = document.createElement('button');
+    pill.type = 'button';
+    pill.className = 'round-pill' + (!verrouillee && activeRounds.includes(index) ? ' active' : '');
+    pill.dataset.roundIndex = index;
+    pill.textContent = `${round.icon} ${round.name}`;
+    pill.disabled = !!verrouillee;
+
+    if (verrouillee) {
+      blocages.push(`« ${round.name} » demande au moins ${round.minPerTeam} joueurs par équipe. La plus petite en compte ${plusPetiteEquipe}.`);
+    } else {
+      pill.addEventListener('click', () => {
+        pill.classList.toggle('active');
+        if (onToggle) onToggle(index, pill.classList.contains('active'));
+      });
+    }
+
+    optional.appendChild(pill);
   });
+
+  const note = document.getElementById('rounds-note');
+  if (note) {
+    note.textContent = blocages.join(' ');
+    note.style.display = blocages.length ? '' : 'none';
+  }
+}
+
+// Question posée en mode simple, quand l'app ne peut pas vérifier les effectifs elle-même.
+export function showPuppetConfirm(visible, answer) {
+  const bloc = document.getElementById('puppet-confirm');
+  if (!bloc) return;
+  bloc.style.display = visible ? '' : 'none';
+  document.querySelectorAll('[data-puppet]').forEach(pill => {
+    const value = pill.dataset.puppet === 'oui';
+    pill.classList.toggle('active', answer !== null && value === answer);
+  });
+}
+
+export function setRoundsNextEnabled(enabled) {
+  const btn = document.getElementById('btn-next-rounds');
+  if (btn) btn.disabled = !enabled;
 }
 
 export function renderAssignMode(mode) {
@@ -251,6 +303,79 @@ export function renderVibrationSetting(enabled, supported) {
 export function updateCurrentPlayer(playerName) {
   document.getElementById('current-player').textContent =
     playerName ? `🎤 ${playerName} fait deviner` : '';
+}
+
+// Fiche d'un thème maison : ses cartes en clair, avec suppression carte par carte.
+// Construit en DOM plutôt qu'en HTML brut : un nom de carte ne peut pas casser l'affichage.
+export function renderThemeEditor(theme, onRemove) {
+  document.getElementById('theme-edit-title').textContent = `${theme.icon} ${theme.name}`;
+  document.getElementById('theme-edit-count').textContent =
+    theme.words.length === 0
+      ? "Aucune carte pour l'instant"
+      : `${theme.words.length} carte(s)`;
+
+  const list = document.getElementById('theme-cards-list');
+  list.innerHTML = '';
+
+  theme.words.forEach((mot, index) => {
+    const li = document.createElement('li');
+
+    const nom = document.createElement('span');
+    nom.className = 'player-name';
+    nom.textContent = mot;
+
+    const supprimer = document.createElement('button');
+    supprimer.className = 'btn-remove';
+    supprimer.textContent = '✕';
+    supprimer.title = 'Supprimer cette carte';
+    supprimer.addEventListener('click', () => onRemove(index));
+
+    li.appendChild(nom);
+    li.appendChild(supprimer);
+    list.appendChild(li);
+  });
+}
+
+export function showThemeEditError(message) {
+  const el = document.getElementById('theme-edit-error');
+  if (el) el.textContent = message || '';
+}
+
+export function renderCustomThemes(themes, onOpen, onDelete) {
+  const container = document.getElementById('custom-themes-list');
+  container.innerHTML = '';
+  const keys = Object.keys(themes);
+
+  if (keys.length === 0) {
+    const vide = document.createElement('p');
+    vide.className = 'wizard-hint';
+    vide.textContent = "Aucun thème personnalisé pour l'instant.";
+    container.appendChild(vide);
+    return;
+  }
+
+  keys.forEach(key => {
+    const theme = themes[key];
+    const ligne = document.createElement('div');
+    ligne.className = 'custom-theme-item';
+
+    const ouvrir = document.createElement('button');
+    ouvrir.className = 'custom-theme-open';
+    ouvrir.type = 'button';
+    ouvrir.textContent = `${theme.icon} ${theme.name} (${theme.words.length} cartes)`;
+    ouvrir.addEventListener('click', () => onOpen(key));
+
+    const supprimer = document.createElement('button');
+    supprimer.className = 'btn-delete-theme';
+    supprimer.type = 'button';
+    supprimer.textContent = '🗑️';
+    supprimer.title = 'Supprimer ce thème';
+    supprimer.addEventListener('click', () => onDelete(key));
+
+    ligne.appendChild(ouvrir);
+    ligne.appendChild(supprimer);
+    container.appendChild(ligne);
+  });
 }
 
 export function renderPlayerStats(playerStats, teams) {

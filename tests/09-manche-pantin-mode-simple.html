@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head><meta charset="utf-8"><title>Test Rush — manche pantin, mode simple</title></head>
+<body>
+<pre id="log">demarrage...</pre>
+<iframe id="f" src="/" style="width:420px;height:900px;border:1px solid #ccc"></iframe>
+<script>
+const out = [];
+function log(s) { out.push(s); document.getElementById('log').textContent = out.join('\n'); }
+function check(name, cond) { log((cond ? 'PASS' : 'FAIL') + ' -- ' + name); }
+const wait = ms => new Promise(r => setTimeout(r, ms));
+
+document.getElementById('f').addEventListener('load', async () => {
+  const f = document.getElementById('f'), d = f.contentDocument, w = f.contentWindow;
+  w.onerror = (m, s, l) => log('ERREUR APP: ' + m + ' @' + s + ':' + l);
+  const $ = id => d.getElementById(id);
+  const screen = () => [...d.querySelectorAll('.screen')].find(s => s.classList.contains('active'))?.id;
+  const pilule = nom => [...d.querySelectorAll('#rounds-optional .round-pill')].find(p => p.textContent.includes(nom));
+  const question = () => $('puppet-confirm').style.display !== 'none';
+  const suivantActif = () => !$('btn-next-rounds').disabled;
+
+  try {
+    await wait(1200);
+    $('btn-start').click();
+    $('btn-next-mode').click();
+    d.querySelectorAll('#theme-selector .btn-theme')[0].click();
+    $('btn-next-step').click();
+    d.querySelector('[data-mode="simple"]').click();
+    $('btn-next-players').click();
+    check('etape des manches', screen() === 'screen-rounds');
+
+    const pantin = pilule('bouger');
+    check('la manche pantin est proposee', !!pantin);
+    check('elle n est pas verrouillee en mode simple', !pantin.disabled);
+    check('aucune question tant qu elle n est pas choisie', !question());
+    check('Suivant est actif', suivantActif());
+
+    // --- Selection : la question apparait et bloque Suivant ---
+    pantin.click();
+    check('la manche est selectionnee', pantin.classList.contains('active'));
+    check('la question sur l effectif apparait', question());
+    check('Suivant est bloque tant qu on n a pas repondu', !suivantActif());
+
+    // --- Repondre Non : la manche est retiree, la question disparait ---
+    d.querySelector('[data-puppet="non"]').click();
+    check('repondre Non deselectionne la manche', !pilule('bouger').classList.contains('active'));
+    check('la question disparait', !question());
+    check('Suivant redevient actif', suivantActif());
+
+    // --- Re-selection puis Oui ---
+    pilule('bouger').click();
+    check('la question revient', question());
+    check('Suivant est de nouveau bloque', !suivantActif());
+    d.querySelector('[data-puppet="oui"]').click();
+    check('Oui est retenu', d.querySelector('[data-puppet="oui"]').classList.contains('active'));
+    check('la manche reste selectionnee', pilule('bouger').classList.contains('active'));
+    check('Suivant est debloque', suivantActif());
+
+    // --- La manche part bien dans la partie ---
+    $('btn-next-rounds').click();
+    check('on passe a l etape suivante', screen() === 'screen-config');
+    $('btn-play').click();
+    $('btn-start-turn').click();
+    await wait(500);
+    const snap = JSON.parse(w.localStorage.getItem('timesup_partie_en_cours'));
+    log('       manches retenues : ' + JSON.stringify(snap.state.activeRounds));
+    check('la manche pantin est bien dans la partie', snap.state.activeRounds.includes(4));
+    check('4 manches au total', snap.state.activeRounds.length === 4);
+
+    log('SCENARIO 17 TERMINE');
+  } catch (e) { log('EXCEPTION: ' + e.message + '\n' + e.stack); }
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head><meta charset="utf-8"><title>Test Rush — interruption hors tour</title></head>
+<body>
+<pre id="log">demarrage...</pre>
+<iframe id="f" src="/" style="width:420px;height:900px;border:1px solid #ccc"></iframe>
+<script>
+const out = [];
+function log(s) { out.push(s); document.getElementById('log').textContent = out.join('\n'); }
+function check(name, cond) { log((cond ? 'PASS' : 'FAIL') + ' -- ' + name); }
+const wait = ms => new Promise(r => setTimeout(r, ms));
+
+document.getElementById('f').addEventListener('load', async () => {
+  const f = document.getElementById('f'), d = f.contentDocument, w = f.contentWindow;
+  w.onerror = (m, s, l) => log('ERREUR APP: ' + m + ' @' + s + ':' + l);
+  const $ = id => d.getElementById(id);
+  const screen = () => [...d.querySelectorAll('.screen')].find(s => s.classList.contains('active'))?.id;
+  try {
+    await wait(1200);
+    $('btn-start').click();
+    $('btn-next-mode').click();
+    d.querySelectorAll('#theme-selector .btn-theme')[0].click();
+    $('btn-next-step').click();
+    d.querySelector('[data-mode="simple"]').click();
+    $('btn-next-players').click();
+    $('btn-next-rounds').click();
+    $('btn-play').click();
+    check('partie lancee, on s arrete avant de jouer', screen() === 'screen-round');
+    const snap = JSON.parse(w.localStorage.getItem('timesup_partie_en_cours'));
+    check('aucun tour marque en cours', snap.state.turnActive === false);
+    log('SCENARIO 5 TERMINE (app coupee entre deux tours)');
+  } catch (e) { log('EXCEPTION: ' + e.message); }
+});
+</script>
+</body>
+</html>

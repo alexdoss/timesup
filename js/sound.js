@@ -1,38 +1,64 @@
 // ===== SOUND MODULE =====
 // Sons générés à la volée par le navigateur (aucun fichier audio, fonctionne hors ligne)
-// et vibration associée. Ne touche ni au DOM, ni aux règles du jeu.
+// et vibration. Les deux se règlent indépendamment.
+// Ne touche ni au DOM, ni aux règles du jeu.
 //
 // Limites connues : la vibration n'existe pas sur iOS, et le son y est muet
 // si l'interrupteur latéral est en mode silencieux.
 
-const STORAGE_KEY = 'timesup_son';
+const KEY_SON = 'timesup_son';
+const KEY_VIBRATION = 'timesup_vibration';
 
 let ctx = null;
-let enabled = true;
+let soundEnabled = true;
+let vibrationEnabled = true;
 
-try {
-  enabled = localStorage.getItem(STORAGE_KEY) !== 'off';
-} catch {
-  enabled = true;
-}
-
-export function isSoundEnabled() {
-  return enabled;
-}
-
-export function setSoundEnabled(value) {
-  enabled = !!value;
+function readPreference(key) {
   try {
-    localStorage.setItem(STORAGE_KEY, enabled ? 'on' : 'off');
+    return localStorage.getItem(key) !== 'off';
+  } catch {
+    return true;
+  }
+}
+
+function writePreference(key, value) {
+  try {
+    localStorage.setItem(key, value ? 'on' : 'off');
   } catch {
     // préférence non mémorisée, sans conséquence sur la partie
   }
 }
 
+soundEnabled = readPreference(KEY_SON);
+vibrationEnabled = readPreference(KEY_VIBRATION);
+
+export function isSoundEnabled() {
+  return soundEnabled;
+}
+
+export function setSoundEnabled(value) {
+  soundEnabled = !!value;
+  writePreference(KEY_SON, soundEnabled);
+}
+
+export function isVibrationEnabled() {
+  return vibrationEnabled;
+}
+
+export function setVibrationEnabled(value) {
+  vibrationEnabled = !!value;
+  writePreference(KEY_VIBRATION, vibrationEnabled);
+}
+
+// Absente sur iOS : le réglage est alors affiché mais désactivé.
+export function isVibrationSupported() {
+  return typeof navigator.vibrate === 'function';
+}
+
 // À appeler depuis un geste utilisateur (un clic) : les navigateurs refusent
 // de démarrer l'audio autrement.
 export function unlockAudio() {
-  if (!enabled) return;
+  if (!soundEnabled) return;
   try {
     if (!ctx) {
       const AudioCtx = window.AudioContext || window.webkitAudioContext;
@@ -67,6 +93,7 @@ function tone({ freq, freq2, type = 'sine', dur, gain = 0.25, when = 0 }) {
 }
 
 function vibrate(pattern) {
+  if (!vibrationEnabled) return;
   try {
     if (navigator.vibrate) navigator.vibrate(pattern);
   } catch {
@@ -76,17 +103,19 @@ function vibrate(pattern) {
 
 // Tic sec du décompte, joué à chaque seconde sous les 5 secondes restantes.
 export function playTick() {
-  if (!enabled) return;
-  unlockAudio();
-  tone({ freq: 1250, type: 'triangle', dur: 0.045, gain: 0.22 });
+  if (soundEnabled) {
+    unlockAudio();
+    tone({ freq: 1250, type: 'triangle', dur: 0.045, gain: 0.22 });
+  }
   vibrate(20);
 }
 
 // Buzzer de fin de tour : deux notes graves descendantes.
 export function playBuzzer() {
-  if (!enabled) return;
-  unlockAudio();
-  tone({ freq: 210, type: 'sawtooth', dur: 0.30, gain: 0.22 });
-  tone({ freq: 155, type: 'sawtooth', dur: 0.55, gain: 0.22, when: 0.28 });
+  if (soundEnabled) {
+    unlockAudio();
+    tone({ freq: 210, type: 'sawtooth', dur: 0.30, gain: 0.22 });
+    tone({ freq: 155, type: 'sawtooth', dur: 0.55, gain: 0.22, when: 0.28 });
+  }
   vibrate([300, 120, 300]);
 }

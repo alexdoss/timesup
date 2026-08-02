@@ -20,6 +20,7 @@
 
     <!-- ÉCRAN ACCUEIL -->
     <div id="screen-home" class="screen active">
+      <button id="btn-settings" class="btn-close" title="Paramètres">⚙️</button>
       <div class="home-content">
         <div class="logo-wrap">
           <svg class="logo-mark" viewBox="0 0 100 130" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
@@ -49,6 +50,34 @@
       <div class="config-form">
         <div id="custom-themes-list" class="custom-themes-list"></div>
         <button id="btn-create-theme" class="btn btn-primary">✨ Créer un thème avec l'IA</button>
+      </div>
+    </div>
+
+    <!-- ÉCRAN PARAMÈTRES -->
+    <div id="screen-settings" class="screen">
+      <button id="btn-settings-back" class="btn-back">←</button>
+      <div class="wizard-header">
+        <h2>⚙️ Paramètres</h2>
+        <p class="wizard-hint">Ces réglages s'appliquent à toutes les parties, sur cet appareil.</p>
+      </div>
+      <div class="config-form">
+        <div class="config-section">
+          <span class="field-label">Son</span>
+          <div class="pillgroup">
+            <button type="button" class="pill active" data-sound="on">Activé</button>
+            <button type="button" class="pill" data-sound="off">Coupé</button>
+          </div>
+          <p class="wizard-hint">Un tic à chaque seconde des 5 dernières, un buzzer en fin de tour.</p>
+        </div>
+
+        <div class="config-section">
+          <span class="field-label">Vibration</span>
+          <div class="pillgroup">
+            <button type="button" class="pill active" data-vibration="on">Activée</button>
+            <button type="button" class="pill" data-vibration="off">Coupée</button>
+          </div>
+          <p id="vibration-hint" class="wizard-hint"></p>
+        </div>
       </div>
     </div>
 
@@ -247,15 +276,6 @@
           </select>
         </div>
 
-        <div class="config-section">
-          <span class="field-label">Son et vibration</span>
-          <div class="pillgroup">
-            <button type="button" class="pill active" data-sound="on">Activés</button>
-            <button type="button" class="pill" data-sound="off">Coupés</button>
-          </div>
-          <p class="wizard-hint">Tic pendant les 5 dernières secondes, buzzer en fin de tour. La vibration n'existe pas sur iPhone.</p>
-        </div>
-
         <div id="pass-replace-section" class="config-section">
           <span class="field-label">Carte passée</span>
           <select id="pass-replace" class="config-select">
@@ -367,6 +387,7 @@
           </div>
           <button id="btn-resume-turn" class="btn btn-primary">▶️ Reprendre</button>
           <button id="btn-quit-game" class="btn btn-secondary">🏠 Quitter et reprendre plus tard</button>
+          <button id="btn-pause-settings" class="btn-link">⚙️ Paramètres</button>
           <button id="btn-abandon-game" class="btn-link">🗑️ Abandonner la partie</button>
         </div>
         <div id="pause-countdown" class="pause-countdown" style="display:none"></div>

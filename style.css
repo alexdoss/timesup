@@ -571,6 +571,18 @@ body {
   font-size: 3.5rem;
 }
 
+/* Réglage indisponible sur l'appareil (vibration sur iOS) */
+.pill:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+/* La roue dentée de l'accueil : repérable sans concurrencer « Nouvelle partie » */
+#btn-settings {
+  color: var(--muted-strong);
+  background: rgba(255, 255, 255, 0.13);
+}
+
 /* ===== PAUSE ===== */
 /* Le bouton est à l'opposé des boutons d'action, pour éviter les fausses manipulations */
 .btn-pause {

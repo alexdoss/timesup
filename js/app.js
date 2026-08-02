@@ -3,15 +3,16 @@
 
 import { loadThemes } from './themes.js';
 import { game, ROUNDS, resetGame, buildDeck, startNewRound, getCurrentCard, cardFound, cardPassed, switchTeam, isRoundOver, isGameOver, nextRound, getCardsRemaining, addPlayer, removePlayer, assignTeamsRoundRobin, getCurrentPlayer, advancePlayer, getActiveRound, setPlayerTeam, syncChosenTeams, canPass } from './game.js';
-import { showScreen, updateTimer, showCard, updateRoundScreen, updateTurnInfo, updateGameHeader, showTurnResult, showRoundEnd, showFinalScreen, renderThemeButtons, renderPlayerList, updateCurrentPlayer, renderPlayerStats, renderRoundsSelector, renderAssignMode, applyTeamAccent, showResumeOption, renderSoundSetting, showPauseOverlay, showPauseCountdown, hidePause } from './ui.js';
+import { showScreen, updateTimer, showCard, updateRoundScreen, updateTurnInfo, updateGameHeader, showTurnResult, showRoundEnd, showFinalScreen, renderThemeButtons, renderPlayerList, updateCurrentPlayer, renderPlayerStats, renderRoundsSelector, renderAssignMode, applyTeamAccent, showResumeOption, renderSoundSetting, renderVibrationSetting, showPauseOverlay, showPauseCountdown, hidePause } from './ui.js';
 import { getCustomThemes, saveCustomTheme, deleteCustomTheme, generateWithAI } from './library.js';
 import { saveGame, loadSavedGame, clearSavedGame, restoreInto } from './persistence.js';
-import { playTick, playBuzzer, unlockAudio, isSoundEnabled, setSoundEnabled } from './sound.js';
+import { playTick, playBuzzer, unlockAudio, isSoundEnabled, setSoundEnabled, isVibrationEnabled, setVibrationEnabled, isVibrationSupported } from './sound.js';
 
 let THEMES = {};
 let aiGeneratedWords = [];
 let pendingResume = null;
 let resumeCountdown = null;
+let settingsReturn = 'home';   // d'où on a ouvert les paramètres, pour savoir où revenir
 
 // ===== INIT =====
 async function init() {
@@ -27,7 +28,7 @@ async function init() {
   renderThemeButtons(THEMES, game.selectedThemes, container);
 
   refreshResumeOption();
-  renderSoundSetting(isSoundEnabled());
+  renderFeedbackSettings();
   setupListeners();
 }
 
@@ -275,13 +276,22 @@ function setupListeners() {
     game.passReplace = e.target.value;
   });
 
-  // Son et vibration (préférence mémorisée d'une partie à l'autre)
+  // Son et vibration : deux préférences distinctes, mémorisées d'une partie à l'autre
   document.querySelectorAll('[data-sound]').forEach(pill => {
     pill.addEventListener('click', () => {
       const on = pill.dataset.sound === 'on';
       setSoundEnabled(on);
       renderSoundSetting(on);
       if (on) unlockAudio();
+    });
+  });
+
+  document.querySelectorAll('[data-vibration]').forEach(pill => {
+    pill.addEventListener('click', () => {
+      if (!isVibrationSupported()) return;
+      const on = pill.dataset.vibration === 'on';
+      setVibrationEnabled(on);
+      renderVibrationSetting(on, true);
     });
   });
 
@@ -313,6 +323,11 @@ function setupListeners() {
   document.getElementById('btn-resume-turn').addEventListener('click', startResumeCountdown);
   document.getElementById('btn-quit-game').addEventListener('click', quitToHome);
   document.getElementById('btn-abandon-game').addEventListener('click', abandonGame);
+
+  // Paramètres — accessibles depuis l'accueil et depuis la pause
+  document.getElementById('btn-settings').addEventListener('click', () => openSettings('home'));
+  document.getElementById('btn-pause-settings').addEventListener('click', () => openSettings('pause'));
+  document.getElementById('btn-settings-back').addEventListener('click', closeSettings);
 
   // Next turn
   document.getElementById('btn-next-turn').addEventListener('click', onNextTurn);
@@ -652,6 +667,30 @@ function updatePassButton() {
   const allowed = canPass();
   btn.disabled = !allowed;
   btn.style.opacity = allowed ? '1' : '0.35';
+}
+
+// ===== PARAMÈTRES =====
+// Réglages de l'appareil, valables pour toutes les parties : ils ne font pas
+// partie de la configuration d'une partie et sont accessibles à tout moment.
+function renderFeedbackSettings() {
+  renderSoundSetting(isSoundEnabled());
+  renderVibrationSetting(isVibrationEnabled(), isVibrationSupported());
+}
+
+function openSettings(from) {
+  settingsReturn = from;
+  renderFeedbackSettings();
+  showScreen('screen-settings');
+}
+
+function closeSettings() {
+  if (settingsReturn === 'pause') {
+    // On retourne au jeu, toujours en pause
+    showScreen('screen-game');
+    showPauseOverlay(`${getRoundLabel()} · il reste ${game.timeLeft} s`, game.teams);
+  } else {
+    showScreen('screen-home');
+  }
 }
 
 // ===== PAUSE =====

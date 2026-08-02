@@ -234,6 +234,20 @@ export function renderSoundSetting(enabled) {
   });
 }
 
+export function renderVibrationSetting(enabled, supported) {
+  document.querySelectorAll('[data-vibration]').forEach(pill => {
+    pill.classList.toggle('active', supported && (pill.dataset.vibration === 'on') === enabled);
+    pill.disabled = !supported;
+  });
+
+  const hint = document.getElementById('vibration-hint');
+  if (hint) {
+    hint.textContent = supported
+      ? "Une impulsion à chaque seconde du décompte, trois secousses en fin de tour."
+      : "Cet appareil ne gère pas la vibration. Les iPhone, notamment, ne la proposent pas aux applications web.";
+  }
+}
+
 export function updateCurrentPlayer(playerName) {
   document.getElementById('current-player').textContent =
     playerName ? `🎤 ${playerName} fait deviner` : '';

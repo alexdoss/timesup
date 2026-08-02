@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Rush — diagnostic vibration</title>
+<style>
+  :root { --primary:#6D28D9; --bg:#0F172A; --surface:#1E293B; --border:#334155; --text:#F8FAFC; --muted:#94A3B8; --ok:#22C55E; --ko:#EF4444; }
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{font-family:system-ui,sans-serif;background:var(--bg);color:var(--text);padding:20px 16px 60px;max-width:560px;margin:0 auto}
+  h1{font-size:1.25rem;margin-bottom:4px}
+  .sub{color:var(--muted);font-size:.86rem;margin-bottom:20px;line-height:1.5}
+  h2{font-size:.95rem;margin:22px 0 8px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em}
+  table{width:100%;border-collapse:collapse;font-size:.85rem;background:var(--surface);border-radius:10px;overflow:hidden}
+  td{padding:9px 12px;border-bottom:1px solid var(--border);vertical-align:top}
+  td:first-child{color:var(--muted);white-space:nowrap;width:45%}
+  tr:last-child td{border-bottom:none}
+  .ok{color:var(--ok);font-weight:600}
+  .ko{color:var(--ko);font-weight:600}
+  button{width:100%;font-family:inherit;font-size:.95rem;font-weight:600;color:#fff;background:var(--primary);border:none;border-radius:10px;padding:15px;margin-bottom:9px;cursor:pointer}
+  button:active{transform:scale(.98)}
+  #journal{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:12px;font-size:.8rem;line-height:1.7;min-height:80px;white-space:pre-wrap;word-break:break-word}
+  .note{margin-top:22px;font-size:.82rem;color:var(--muted);line-height:1.6;border-left:3px solid var(--primary);padding-left:12px}
+</style>
+</head>
+<body>
+
+<h1>Diagnostic vibration</h1>
+<p class="sub">Page de test temporaire. Appuie sur les boutons dans l'ordre et note lesquels tu sens réellement.</p>
+
+<h2>Ce que dit le navigateur</h2>
+<table id="infos"></table>
+
+<h2>Tests</h2>
+<button onclick="essai('appui direct — 300 ms', 300)">1 · Vibrer 300 ms (appui direct)</button>
+<button onclick="essai('appui direct — 1000 ms', 1000)">2 · Vibrer 1 seconde (le plus franc)</button>
+<button onclick="essai('motif 3 secousses', [300,120,300])">3 · Motif 300-120-300 (fin de tour)</button>
+<button onclick="essai('tic court — 20 ms', 20)">4 · Tic de 20 ms (celui du décompte)</button>
+<button onclick="essai('tic moyen — 60 ms', 60)">5 · Tic de 60 ms</button>
+<button onclick="differe()">6 · Vibrer dans 3 s (test hors appui)</button>
+
+<h2>Journal</h2>
+<div id="journal">En attente…</div>
+
+<p class="note">
+  Le test 6 est le plus important : dans le jeu, la vibration est déclenchée par le chrono,
+  pas par ton doigt. Si les tests 1 à 5 fonctionnent mais pas le 6, c'est le navigateur qui
+  bloque les vibrations non déclenchées par un appui — et je devrai changer d'approche.
+</p>
+
+<script>
+const J = document.getElementById('journal');
+let lignes = [];
+function log(s) {
+  lignes.unshift(new Date().toLocaleTimeString('fr-FR') + ' — ' + s);
+  J.textContent = lignes.slice(0, 12).join('\n');
+}
+
+function ligne(cle, valeur, etat) {
+  const cls = etat === true ? 'ok' : etat === false ? 'ko' : '';
+  return '<tr><td>' + cle + '</td><td class="' + cls + '">' + valeur + '</td></tr>';
+}
+
+const aVibrate = typeof navigator.vibrate === 'function';
+const pwa = window.matchMedia('(display-mode: standalone)').matches;
+
+document.getElementById('infos').innerHTML =
+  ligne('API vibration', aVibrate ? 'présente' : 'ABSENTE', aVibrate) +
+  ligne('Contexte sécurisé (HTTPS)', window.isSecureContext ? 'oui' : 'NON', window.isSecureContext) +
+  ligne('Lancée comme application', pwa ? 'oui (installée)' : 'non (onglet navigateur)') +
+  ligne('Page visible', document.visibilityState) +
+  ligne('Navigateur', navigator.userAgent);
+
+function essai(nom, motif) {
+  if (!aVibrate) { log('❌ ' + nom + ' : API absente, rien envoyé'); return; }
+  let r;
+  try { r = navigator.vibrate(motif); }
+  catch (e) { log('❌ ' + nom + ' : erreur ' + e.message); return; }
+  log((r ? '✅' : '⚠️') + ' ' + nom + ' → la fonction a répondu ' + r +
+      (r ? ' (accepté par le navigateur)' : ' (REFUSÉ par le navigateur)'));
+}
+
+function differe() {
+  if (!aVibrate) { log('❌ API absente'); return; }
+  log('⏳ vibration programmée dans 3 s — pose le téléphone et ne touche plus l\'écran');
+  setTimeout(() => essai('déclenchée par minuteur — 1000 ms', 1000), 3000);
+}
+</script>
+</body>
+</html>

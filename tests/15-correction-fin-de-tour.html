@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head><meta charset="utf-8"><title>Test Rush — correction en fin de tour</title></head>
+<body>
+<pre id="log">demarrage...</pre>
+<iframe id="f" src="/" style="width:420px;height:900px;border:1px solid #ccc"></iframe>
+<script>
+const out = [];
+function log(s) { out.push(s); document.getElementById('log').textContent = out.join('\n'); }
+function check(name, cond) { log((cond ? 'PASS' : 'FAIL') + ' -- ' + name); }
+const wait = ms => new Promise(r => setTimeout(r, ms));
+
+document.getElementById('f').addEventListener('load', async () => {
+  const f = document.getElementById('f'), d = f.contentDocument, w = f.contentWindow;
+  w.onerror = (m, s, l) => log('ERREUR APP: ' + m + ' @' + s + ':' + l);
+  const $ = id => d.getElementById(id);
+  const ecran = () => [...d.querySelectorAll('.screen')].find(s => s.classList.contains('active'))?.id;
+  const etat = () => JSON.parse(w.localStorage.getItem('timesup_partie_en_cours')).state;
+  const comptees = () => [...d.querySelectorAll('#turn-found-list li .player-name')].map(e => e.textContent);
+  const nonComptees = () => [...d.querySelectorAll('#turn-missed-list li .player-name')].map(e => e.textContent);
+  const restantes = () => { const e = etat(); return e.deck.length - e.currentCardIndex; };
+  const ligne = (liste, mot) => [...d.querySelectorAll('#' + liste + ' li')]
+    .find(li => li.querySelector('.player-name').textContent === mot);
+
+  try {
+    w.localStorage.removeItem('timesup_partie_en_cours');
+    await wait(1200);
+
+    $('btn-start').click();
+    $('btn-next-mode').click();
+    d.querySelectorAll('#theme-selector .btn-theme')[0].click();
+    $('btn-next-step').click();
+    d.querySelector('[data-mode="simple"]').click();
+    $('btn-next-players').click();
+    $('btn-next-rounds').click();
+    $('btn-play').click();
+    $('btn-start-turn').click();
+    check('tour lance', ecran() === 'screen-game');
+
+    // --- 3 trouvees, 2 passees, 1 carte a l'ecran au buzzer ---
+    const trouvees = [], passees = [];
+    for (let i = 0; i < 3; i++) { trouvees.push($('card-word').textContent); $('btn-found').click(); }
+    for (let i = 0; i < 2; i++) { passees.push($('card-word').textContent); $('btn-pass').click(); }
+    const auBuzzer = $('card-word').textContent;
+    const equipe = etat().turnTeam;
+
+    let n = 0;
+    while (ecran() !== 'screen-turn-end' && n < 60) { await wait(1000); n++; }
+    check('le tour se termine sur le recapitulatif', ecran() === 'screen-turn-end');
+    check('le titre indique la fin du chrono', $('turn-end-title').textContent.includes('Temps écoulé'));
+    check('le score du tour est annonce', $('turn-result').textContent.includes('3 carte'));
+    check('une consigne explique la correction', $('turn-fix-hint').style.display !== 'none');
+
+    // --- Contenu des deux tiroirs ---
+    check('le tiroir des comptees est propose', $('turn-found-drawer').style.display !== 'none');
+    check('il annonce son nombre', $('turn-found-summary').textContent.includes('(3)'));
+    check('il liste les cartes validees', JSON.stringify(comptees()) === JSON.stringify(trouvees));
+    check('le tiroir des non comptees est propose', $('turn-missed-drawer').style.display !== 'none');
+    check('il annonce son nombre', $('turn-missed-summary').textContent.includes('(3)'));
+    check('les cartes passees y figurent', passees.every(m => nonComptees().includes(m)));
+    check('la carte affichee au buzzer y figure aussi', nonComptees().includes(auBuzzer));
+    check('les tiroirs sont fermes par defaut', !$('turn-found-drawer').open && !$('turn-missed-drawer').open);
+    check('le score de l equipe est bien de 3', etat().teams[equipe].score === 3);
+    const resteAvant = restantes();
+
+    // --- Retirer une carte comptee par erreur ---
+    ligne('turn-found-list', trouvees[0]).querySelector('button').click();
+    check('la carte quitte les comptees', !comptees().includes(trouvees[0]));
+    check('elle rejoint les non comptees', nonComptees().includes(trouvees[0]));
+    check('le score du tour recule', $('turn-result').textContent.includes('2 carte'));
+    check('le score de l equipe recule', etat().teams[equipe].score === 2);
+    check('les compteurs des tiroirs suivent',
+          $('turn-found-summary').textContent.includes('(2)') && $('turn-missed-summary').textContent.includes('(4)'));
+    check('la carte est remise en jeu', restantes() === resteAvant + 1);
+
+    // --- La reprendre : on revient a l etat initial ---
+    ligne('turn-missed-list', trouvees[0]).querySelector('button').click();
+    check('la carte revient dans les comptees', comptees().includes(trouvees[0]));
+    check('le score du tour remonte', $('turn-result').textContent.includes('3 carte'));
+    check('le score de l equipe remonte', etat().teams[equipe].score === 3);
+    check('elle ressort du paquet', restantes() === resteAvant);
+
+    // --- Rattraper une carte oubliee ---
+    ligne('turn-missed-list', auBuzzer).querySelector('button').click();
+    check('la carte oubliee est comptee', comptees().includes(auBuzzer));
+    check('le score du tour monte a 4', $('turn-result').textContent.includes('4 carte'));
+    check('le score de l equipe monte a 4', etat().teams[equipe].score === 4);
+    check('elle ne sera pas rejouee', restantes() === resteAvant - 1);
+    check('elle a quitte les non comptees', !nonComptees().includes(auBuzzer));
+
+    // --- La correction survit au passage au tour suivant ---
+    $('btn-next-turn').click();
+    check('on enchaine sur le tour suivant', ecran() === 'screen-round');
+    check('le score corrige est conserve', etat().teams[equipe].score === 4);
+    check('l equipe adverse n a pas ete touchee', etat().teams[1 - equipe].score === 0);
+
+    // --- Paquet epuise : le recapitulatif est propose malgre tout ---
+    $('btn-start-turn').click();
+    let clics = 0;
+    while (ecran() === 'screen-game' && clics < 200) { $('btn-found').click(); clics++; }
+    check('le tour s arrete quand le paquet est vide', ecran() === 'screen-turn-end');
+    log('       titre : "' + $('turn-end-title').textContent + '"');
+    check('le titre le dit clairement', $('turn-end-title').textContent.includes('Plus de cartes'));
+    check('les cartes du tour restent corrigeables', comptees().length > 0);
+
+    // retirer une carte doit rouvrir la manche : il reste une carte a jouer
+    const derniere = comptees()[0];
+    ligne('turn-found-list', derniere).querySelector('button').click();
+    check('la carte retiree revient dans le paquet', restantes() === 1);
+    $('btn-next-turn').click();
+    check('la manche continue au lieu de se cloturer', ecran() === 'screen-round');
+
+    log('SCENARIO 15 TERMINE');
+  } catch (e) { log('EXCEPTION: ' + e.message + '\n' + e.stack); }
+});
+</script>
+</body>
+</html>

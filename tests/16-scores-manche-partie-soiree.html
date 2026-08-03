@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head><meta charset="utf-8"><title>Test Rush — scores manche / partie / soiree</title></head>
+<body>
+<pre id="log">demarrage...</pre>
+<iframe id="f" src="/" style="width:420px;height:900px;border:1px solid #ccc"></iframe>
+<script>
+const out = [];
+function log(s) { out.push(s); document.getElementById('log').textContent = out.join('\n'); }
+function check(name, cond) { log((cond ? 'PASS' : 'FAIL') + ' -- ' + name); }
+const wait = ms => new Promise(r => setTimeout(r, ms));
+
+document.getElementById('f').addEventListener('load', async () => {
+  const f = document.getElementById('f'), d = f.contentDocument, w = f.contentWindow;
+  w.onerror = (m, s, l) => log('ERREUR APP: ' + m + ' @' + s + ':' + l);
+  const $ = id => d.getElementById(id);
+  const ecran = () => [...d.querySelectorAll('.screen')].find(s => s.classList.contains('active'))?.id;
+  const sauvegarde = () => JSON.parse(w.localStorage.getItem('timesup_partie_en_cours') || 'null');
+
+  // L'equipe qui commence est tiree au sort : elle marque tous les points de ce test
+  let marqueur = 0;
+  const val = id => parseInt($(id).textContent, 10);
+  const manche = () => val(`end-team${marqueur + 1}-round`);
+  const totalPartie = () => val(`end-team${marqueur + 1}-score`);
+  const perdant = suffixe => val(`end-team${2 - marqueur}-${suffixe}`);
+
+  // Vide le paquet d'une traite : un seul tour suffit quand on ne perd pas de temps
+  async function jouerLaManche() {
+    $('btn-start-turn').click();
+    let clics = 0;
+    while (ecran() === 'screen-game' && clics < 300) { $('btn-found').click(); clics++; }
+    $('btn-next-turn').click();
+  }
+
+  try {
+    w.localStorage.removeItem('timesup_partie_en_cours');
+    await wait(1200);
+
+    // ===== PARTIE 1 =====
+    $('btn-start').click();
+    $('btn-next-mode').click();
+    d.querySelectorAll('#theme-selector .btn-theme')[0].click();
+    $('btn-next-step').click();
+    d.querySelector('[data-mode="simple"]').click();
+    $('btn-next-players').click();
+    $('btn-next-rounds').click();
+    $('btn-play').click();
+    marqueur = sauvegarde().state.startingTeam;
+
+    await jouerLaManche();
+    check('fin de la manche 1', ecran() === 'screen-round-end');
+    const paquet = manche();
+    log('       cartes du paquet : ' + paquet);
+    check('la manche 1 a bien ete jouee', paquet > 0);
+    check('le score de la manche est affiche', manche() === paquet);
+    check('le total de la partie aussi', totalPartie() === paquet);
+    check('l equipe adverse est a zero', perdant('round') === 0 && perdant('score') === 0);
+    check('le titre nomme la manche', $('round-end-title').textContent.includes('1/3'));
+
+    $('btn-next-round').click();
+    await jouerLaManche();
+    check('fin de la manche 2', ecran() === 'screen-round-end');
+    check('la manche 2 compte ses propres points', manche() === paquet);
+    check('le total de la partie cumule les deux manches', totalPartie() === paquet * 2);
+    check('manche et total sont bien distincts', manche() !== totalPartie());
+
+    $('btn-next-round').click();
+    await jouerLaManche();
+    check('fin de la manche 3', ecran() === 'screen-round-end');
+    check('le total atteint trois manches', totalPartie() === paquet * 3);
+
+    // ===== FIN DE LA PREMIERE PARTIE =====
+    $('btn-next-round').click();
+    check('ecran de fin de partie', ecran() === 'screen-final');
+    check('le score de la partie est affiche',
+          val(`final-team${marqueur + 1}-score`) === paquet * 3);
+    check('aucun cumul de soiree a la premiere partie', $('session-row').style.display === 'none');
+    check('un vainqueur est annonce', $('winner').textContent.includes('gagne'));
+    check('on peut rejouer avec les memes joueurs', !!$('btn-replay'));
+    check('on peut aussi repartir de zero', !!$('btn-restart'));
+
+    // ===== PARTIE 2, MEMES JOUEURS =====
+    $('btn-replay').click();
+    check('la partie suivante demarre directement', ecran() === 'screen-round');
+    const etat = sauvegarde().state;
+    check('les scores de partie repartent a zero', etat.teams[0].score === 0 && etat.teams[1].score === 0);
+    check('la partie precedente est mise de cote', etat.sessionScores[marqueur] === paquet * 3);
+    check('une partie est comptabilisee', etat.gamesPlayed === 1);
+    check('on repart bien de la manche 1', etat.currentRound === 0);
+
+    marqueur = sauvegarde().state.startingTeam;
+    await jouerLaManche();
+    check('la manche 1 de la partie 2 est isolee', manche() === paquet);
+    check('le total de la partie 2 ne reprend pas la partie 1', totalPartie() === paquet);
+
+    $('btn-next-round').click();
+    await jouerLaManche();
+    $('btn-next-round').click();
+    await jouerLaManche();
+    $('btn-next-round').click();
+    check('fin de la deuxieme partie', ecran() === 'screen-final');
+
+    // ===== CUMUL DE SOIREE =====
+    check('le cumul de soiree apparait', $('session-row').style.display !== 'none');
+    log('       libelle : "' + $('session-label').textContent + '"');
+    check('il annonce le nombre de parties', $('session-label').textContent.includes('2 parties'));
+    check('le score de la partie en cours reste distinct',
+          val(`final-team${marqueur + 1}-score`) === paquet * 3);
+    check('le cumul additionne les deux parties',
+          val(`session-team${marqueur + 1}-score`) === paquet * 6);
+
+    // ===== NOUVELLE PARTIE : LE CUMUL S ARRETE =====
+    $('btn-restart').click();
+    check('retour a l accueil', ecran() === 'screen-home');
+
+    log('SCENARIO 16 TERMINE');
+  } catch (e) { log('EXCEPTION: ' + e.message + '\n' + e.stack); }
+});
+</script>
+</body>
+</html>

@@ -2,7 +2,7 @@
 // Orchestre les modules et gère les événements
 
 import { loadThemes } from './themes.js';
-import { game, ROUNDS, resetGame, buildDeck, startNewRound, getCurrentCard, cardFound, cardPassed, switchTeam, isRoundOver, isGameOver, nextRound, getCardsRemaining, addPlayer, removePlayer, assignTeamsRoundRobin, getCurrentPlayer, advancePlayer, getActiveRound, setPlayerTeam, syncChosenTeams, canPass, getPlannedTeamSizes } from './game.js';
+import { game, ROUNDS, resetGame, replayGame, buildDeck, startNewRound, getCurrentCard, cardFound, cardPassed, switchTeam, isRoundOver, isGameOver, nextRound, getCardsRemaining, addPlayer, removePlayer, assignTeamsRoundRobin, getCurrentPlayer, advancePlayer, getActiveRound, setPlayerTeam, syncChosenTeams, canPass, getPlannedTeamSizes, beginTurn, closeTurn, uncountCard, countCard, getRoundScores, getSessionScores } from './game.js';
 import { showScreen, updateTimer, showCard, updateRoundScreen, updateTurnInfo, updateGameHeader, showTurnResult, showRoundEnd, showFinalScreen, renderThemeButtons, renderPlayerList, updateCurrentPlayer, renderPlayerStats, renderRoundsSelector, renderAssignMode, applyTeamAccent, showResumeOption, renderSoundSetting, renderRules, showPauseOverlay, showPauseCountdown, hidePause, showPuppetConfirm, setRoundsNextEnabled, renderThemeEditor, showThemeEditError, renderCustomThemes } from './ui.js';
 import { getCustomThemes, saveCustomTheme, deleteCustomTheme, generateWithAI, getQuota } from './library.js';
 import { saveGame, loadSavedGame, clearSavedGame, restoreInto } from './persistence.js';
@@ -15,6 +15,8 @@ let resumeCountdown = null;
 let settingsReturn = 'home';   // d'où on a ouvert les paramètres, pour savoir où revenir
 let pausedAuto = false;        // la pause en cours vient-elle d'un passage en arrière-plan
 let puppetAnswer = null;       // réponse à la question d'effectif en mode simple (null / true / false)
+let turnEndTitle = '';         // titre du récapitulatif de tour (temps écoulé / plus de cartes)
+let turnEndLabel = '';         // qui vient de jouer, conservé pour les re-rendus après correction
 let editingThemeId = null;     // thème maison ouvert dans la fiche d'édition
 
 // ===== INIT =====
@@ -375,7 +377,14 @@ function setupListeners() {
   // Next turn
   document.getElementById('btn-next-turn').addEventListener('click', onNextTurn);
 
-  // Restart
+  // Rejouer avec les mêmes joueurs : mêmes équipes, mêmes réglages, le cumul continue
+  document.getElementById('btn-replay').addEventListener('click', () => {
+    replayGame();
+    buildDeck(THEMES);
+    beginRound();
+  });
+
+  // Nouvelle partie : retour à l'accueil, le cumul de la soirée s'arrête là
   document.getElementById('btn-restart').addEventListener('click', () => {
     refreshResumeOption();
     showScreen('screen-home');
@@ -671,10 +680,7 @@ function showRoundScreen() {
 }
 
 function startTurn() {
-  game.turnScore = 0;
-  game.passCount = 0;
-  game.timeLeft = game.turnTime;
-  game.turnActive = true;
+  beginTurn();
   unlockAudio();   // le clic sur « Lancer le tour » est le geste qui autorise l'audio
   saveGame(game);
   runTurn();
@@ -711,7 +717,9 @@ function runTurn() {
 function displayCurrentCard() {
   const word = getCurrentCard();
   if (!word) {
-    endRound();
+    // Paquet épuisé : on passe quand même par le récapitulatif du tour, sinon
+    // le dernier tour de chaque manche serait le seul non corrigeable.
+    endTurn(true);
     return;
   }
   showCard(word, getCardsRemaining());
@@ -851,19 +859,49 @@ function abandonGame() {
   showScreen('screen-home');
 }
 
-function endTurn() {
+// paquetVide : le tour s'arrête faute de cartes, pas faute de temps
+function endTurn(paquetVide = false) {
   stopTimer();
-  game.turnActive = false;
-  if (game.nominativeMode) {
-    const player = getCurrentPlayer();
-    showTurnResult(`${player} (${game.teams[game.currentTeam].name})`, game.turnScore);
-    advancePlayer();
-  } else {
-    showTurnResult(game.teams[game.currentTeam].name, game.turnScore);
-  }
+  closeTurn();
+
+  turnEndTitle = paquetVide ? '🃏 Plus de cartes !' : '⏰ Temps écoulé !';
+  const teamName = game.teams[game.turnTeam].name;
+  turnEndLabel = game.nominativeMode && game.turnPlayer
+    ? `${game.turnPlayer} (${teamName})`
+    : teamName;
+
+  if (game.nominativeMode) advancePlayer();
   switchTeam();
   saveGame(game);
+  renderTurnEnd();
   showScreen('screen-turn-end');
+}
+
+// Récapitulatif du tour, rejoué à chaque correction pour que le score suive
+function renderTurnEnd() {
+  showTurnResult(
+    {
+      title: turnEndTitle,
+      teamName: turnEndLabel,
+      score: game.turnScore,
+      found: game.turnFound || [],
+      missed: game.turnMissed || []
+    },
+    onUncountCard,
+    onCountCard
+  );
+}
+
+function onUncountCard(word) {
+  if (!uncountCard(word)) return;
+  saveGame(game);
+  renderTurnEnd();
+}
+
+function onCountCard(word) {
+  if (!countCard(word)) return;
+  saveGame(game);
+  renderTurnEnd();
 }
 
 function onNextTurn() {
@@ -878,14 +916,18 @@ function endRound() {
   stopTimer();
   game.turnActive = false;
   saveGame(game);
-  showRoundEnd(`${game.currentRound + 1}/${game.activeRounds.length}`, game.teams);
+  showRoundEnd(`${game.currentRound + 1}/${game.activeRounds.length}`, game.teams, getRoundScores());
 
   const btnNext = document.getElementById('btn-next-round');
   if (isGameOver()) {
     btnNext.textContent = "Voir les résultats 🏆";
     btnNext.onclick = () => {
       clearSavedGame();
-      showFinalScreen(game.teams);
+      // Le cumul de la soirée n'est affiché qu'à partir de la deuxième partie
+      const session = game.gamesPlayed > 0
+        ? { totals: getSessionScores(), parties: game.gamesPlayed + 1 }
+        : null;
+      showFinalScreen(game.teams, session);
       if (game.nominativeMode) {
         renderPlayerStats(game.playerStats, game.teams);
       } else {

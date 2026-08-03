@@ -37,6 +37,13 @@ export const game = {
   deck: [],
   currentCardIndex: 0,
   turnScore: 0,
+  turnFound: [],           // cartes comptées pendant le tour, corrigeables à la fin
+  turnMissed: [],          // cartes vues mais non comptées (passées, ou à l'écran au buzzer)
+  turnTeam: 0,             // équipe qui joue le tour en cours
+  turnPlayer: null,        // joueur qui fait deviner (mode nominatif)
+  roundStartScores: [0, 0],// scores au début de la manche, pour isoler le score de la manche
+  sessionScores: [0, 0],   // total des parties déjà terminées avec les mêmes équipes
+  gamesPlayed: 0,          // nombre de parties déjà terminées dans la série en cours
   timerInterval: null,
   timeLeft: 0,
   turnActive: false        // un tour est en cours (sert à reprendre une partie interrompue en plein tour)
@@ -51,7 +58,8 @@ export function shuffle(arr) {
   return a;
 }
 
-export function resetGame() {
+// keepSession : conserve le cumul de la série en cours (« Rejouer avec les mêmes joueurs »).
+export function resetGame({ keepSession = false } = {}) {
   game.teams[0].score = 0;
   game.teams[1].score = 0;
   game.teams[0].currentPlayerIndex = 0;
@@ -61,11 +69,31 @@ export function resetGame() {
   game.startingTeam = Math.random() < 0.5 ? 0 : 1;
   game.currentTeam = game.startingTeam;
   game.turnActive = false;
+  game.turnFound = [];
+  game.turnMissed = [];
+  game.turnTeam = game.startingTeam;
+  game.turnPlayer = null;
+  game.roundStartScores = [0, 0];
+  if (!keepSession) {
+    game.sessionScores = [0, 0];
+    game.gamesPlayed = 0;
+  }
   // Reset player stats
   game.playerStats = {};
   game.players.forEach(p => {
     game.playerStats[p] = { found: 0 };
   });
+}
+
+// Nouvelle partie avec les mêmes équipes : le score de la partie qui s'achève
+// rejoint le cumul de la série, puis tout le reste repart de zéro.
+export function replayGame() {
+  game.sessionScores = [
+    (game.sessionScores[0] || 0) + game.teams[0].score,
+    (game.sessionScores[1] || 0) + game.teams[1].score
+  ];
+  game.gamesPlayed = (game.gamesPlayed || 0) + 1;
+  resetGame({ keepSession: true });
 }
 
 export function addPlayer(name) {
@@ -170,6 +198,18 @@ export function buildDeck(themes) {
 export function startNewRound() {
   game.deck = shuffle([...game.masterDeck]);
   game.currentCardIndex = 0;
+  // Repère pour isoler ce qui sera marqué pendant cette manche
+  game.roundStartScores = game.teams.map(team => team.score);
+}
+
+// Points marqués depuis le début de la manche en cours
+export function getRoundScores() {
+  return game.teams.map((team, index) => team.score - (game.roundStartScores?.[index] || 0));
+}
+
+// Cumul de la série en cours, partie courante comprise
+export function getSessionScores() {
+  return game.teams.map((team, index) => (game.sessionScores?.[index] || 0) + team.score);
 }
 
 export function getCurrentCard() {
@@ -177,19 +217,86 @@ export function getCurrentCard() {
   return game.deck[game.currentCardIndex];
 }
 
-export function cardFound() {
-  game.teams[game.currentTeam].score++;
+// ===== TOUR DE JEU =====
+// L'équipe et le joueur du tour sont figés à son ouverture : à la fin du tour
+// l'équipe active a déjà changé, et c'est bien celle qui a joué qu'on corrige.
+
+export function beginTurn() {
+  game.turnScore = 0;
+  game.passCount = 0;
+  game.turnFound = [];
+  game.turnMissed = [];
+  game.turnTeam = game.currentTeam;
+  game.turnPlayer = getCurrentPlayer();
+  game.timeLeft = game.turnTime;
+  game.turnActive = true;
+}
+
+// Clôture du tour : la carte restée à l'écran a été vue, elle est rattrapable.
+export function closeTurn() {
+  game.turnActive = false;
+  rememberMissed(getCurrentCard());
+}
+
+function creditTurn(word) {
+  game.teams[game.turnTeam].score++;
   game.turnScore++;
-  // Track player stats
-  const player = getCurrentPlayer();
-  if (player && game.playerStats[player]) {
-    game.playerStats[player].found++;
+  if (game.turnPlayer && game.playerStats[game.turnPlayer]) {
+    game.playerStats[game.turnPlayer].found++;
   }
+  game.turnFound.push(word);
+}
+
+function debitTurn() {
+  const team = game.teams[game.turnTeam];
+  if (team) team.score = Math.max(0, team.score - 1);
+  game.turnScore = Math.max(0, game.turnScore - 1);
+  if (game.turnPlayer && game.playerStats[game.turnPlayer]) {
+    game.playerStats[game.turnPlayer].found = Math.max(0, game.playerStats[game.turnPlayer].found - 1);
+  }
+}
+
+function rememberMissed(word) {
+  if (!word) return;
+  if (game.turnMissed.includes(word) || game.turnFound.includes(word)) return;
+  game.turnMissed.push(word);
+}
+
+// Retire une carte de ce qu'il reste à jouer, sans toucher à l'historique déjà consommé.
+function removeFromDeck(word) {
+  const position = game.deck.indexOf(word, game.currentCardIndex);
+  if (position !== -1) game.deck.splice(position, 1);
+}
+
+export function cardFound() {
+  creditTurn(game.deck[game.currentCardIndex]);
   game.currentCardIndex++;
+}
+
+// Correction en fin de tour — le paquet suit toujours la vérité :
+// une carte décomptée redevient à jouer, une carte rattrapée en sort.
+export function uncountCard(word) {
+  const position = game.turnFound.indexOf(word);
+  if (position === -1) return false;
+  game.turnFound.splice(position, 1);
+  debitTurn();
+  game.turnMissed.push(word);
+  game.deck.push(word);
+  return true;
+}
+
+export function countCard(word) {
+  const position = game.turnMissed.indexOf(word);
+  if (position === -1) return false;
+  game.turnMissed.splice(position, 1);
+  creditTurn(word);
+  removeFromDeck(word);
+  return true;
 }
 
 export function cardPassed() {
   const skippedCard = game.deck[game.currentCardIndex];
+  rememberMissed(skippedCard);
   if (game.passReplace === 'random') {
     // Remove card and insert at random position after currentCardIndex
     game.deck.splice(game.currentCardIndex, 1);

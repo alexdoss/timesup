@@ -484,8 +484,18 @@
     <div id="screen-turn-end" class="screen">
       <button class="btn-close" onclick="confirmQuit()">✕</button>
       <div class="turn-end-content">
-        <h2>⏰ Temps écoulé !</h2>
+        <h2 id="turn-end-title">⏰ Temps écoulé !</h2>
         <p id="turn-result"></p>
+        <p id="turn-fix-hint" class="wizard-hint">Une erreur de comptage ? Ouvrez la liste concernée pour la corriger.</p>
+        <details id="turn-found-drawer" class="drawer">
+          <summary id="turn-found-summary">✅ Cartes comptées</summary>
+          <ul id="turn-found-list" class="player-list"></ul>
+        </details>
+        <details id="turn-missed-drawer" class="drawer">
+          <summary id="turn-missed-summary">↩️ Cartes non comptées</summary>
+          <p class="wizard-hint">Cartes passées, ou affichée au moment du buzzer.</p>
+          <ul id="turn-missed-list" class="player-list"></ul>
+        </details>
         <button id="btn-next-turn" class="btn btn-primary">Tour suivant ▶️</button>
       </div>
     </div>
@@ -495,16 +505,27 @@
       <button class="btn-close" onclick="confirmQuit()">✕</button>
       <div class="round-end-content">
         <h2 id="round-end-title">Fin de la manche 1</h2>
-        <div class="score-board big">
-          <div class="score-team">
-            <span id="end-team1-name">Équipe 1</span>
-            <span id="end-team1-score" class="score">0</span>
-          </div>
-          <div class="score-team">
-            <span id="end-team2-name">Équipe 2</span>
-            <span id="end-team2-score" class="score">0</span>
-          </div>
-        </div>
+        <table class="score-table">
+          <thead>
+            <tr>
+              <th></th>
+              <th id="end-team1-name">Équipe 1</th>
+              <th id="end-team2-name">Équipe 2</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <th scope="row">Cette manche</th>
+              <td id="end-team1-round" class="score">0</td>
+              <td id="end-team2-round" class="score">0</td>
+            </tr>
+            <tr class="score-total">
+              <th scope="row">Total partie</th>
+              <td id="end-team1-score" class="score">0</td>
+              <td id="end-team2-score" class="score">0</td>
+            </tr>
+          </tbody>
+        </table>
         <button id="btn-next-round" class="btn btn-primary">Manche suivante ▶️</button>
       </div>
     </div>
@@ -514,18 +535,30 @@
       <div class="final-content">
         <h2>🏆 Fin de la partie !</h2>
         <div id="winner" class="winner"></div>
-        <div class="score-board big">
-          <div class="score-team">
-            <span id="final-team1-name">Équipe 1</span>
-            <span id="final-team1-score" class="score">0</span>
-          </div>
-          <div class="score-team">
-            <span id="final-team2-name">Équipe 2</span>
-            <span id="final-team2-score" class="score">0</span>
-          </div>
-        </div>
+        <table class="score-table">
+          <thead>
+            <tr>
+              <th></th>
+              <th id="final-team1-name">Équipe 1</th>
+              <th id="final-team2-name">Équipe 2</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <th scope="row">Cette partie</th>
+              <td id="final-team1-score" class="score">0</td>
+              <td id="final-team2-score" class="score">0</td>
+            </tr>
+            <tr id="session-row" class="score-total" style="display:none">
+              <th scope="row" id="session-label">Soirée</th>
+              <td id="session-team1-score" class="score">0</td>
+              <td id="session-team2-score" class="score">0</td>
+            </tr>
+          </tbody>
+        </table>
         <div id="player-stats" class="player-stats"></div>
-        <button id="btn-restart" class="btn btn-primary">Rejouer 🔄</button>
+        <button id="btn-replay" class="btn btn-primary">🔄 Rejouer avec les mêmes joueurs</button>
+        <button id="btn-restart" class="btn btn-secondary">Nouvelle partie</button>
       </div>
     </div>
 

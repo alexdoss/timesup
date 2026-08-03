@@ -91,24 +91,83 @@ export function hidePause() {
   document.getElementById('pause-overlay').style.display = 'none';
 }
 
-export function showTurnResult(teamName, score) {
-  document.getElementById('turn-result').textContent =
-    `${teamName} a trouvé ${score} carte(s) !`;
+// Une ligne de carte corrigeable : le mot, et le bouton qui le fait changer de tiroir.
+function buildCardRow(word, bouton, onAction) {
+  const item = document.createElement('li');
+
+  const nom = document.createElement('span');
+  nom.className = 'player-name';
+  nom.textContent = word;
+
+  const action = document.createElement('button');
+  action.type = 'button';
+  action.className = bouton.cssClass;
+  action.textContent = bouton.icon;
+  action.title = bouton.title;
+  action.addEventListener('click', () => onAction(word));
+
+  item.appendChild(nom);
+  item.appendChild(action);
+  return item;
 }
 
-export function showRoundEnd(roundNum, teams) {
+// Remplit un tiroir et le masque s'il est vide : un tiroir vide n'apprend rien.
+function fillDrawer(prefix, label, words, bouton, onAction) {
+  const drawer = document.getElementById(`${prefix}-drawer`);
+  const summary = document.getElementById(`${prefix}-summary`);
+  const list = document.getElementById(`${prefix}-list`);
+  if (!drawer || !summary || !list) return;
+
+  list.innerHTML = '';
+  words.forEach(word => list.appendChild(buildCardRow(word, bouton, onAction)));
+  summary.textContent = `${label} (${words.length})`;
+  drawer.style.display = words.length ? '' : 'none';
+  if (!words.length) drawer.open = false;
+}
+
+// title    : « Temps écoulé » ou « plus de cartes »
+// onRemove : la carte n'aurait pas dû être comptée — onAdd : elle aurait dû l'être
+export function showTurnResult({ title, teamName, score, found, missed }, onRemove, onAdd) {
+  document.getElementById('turn-end-title').textContent = title;
+  document.getElementById('turn-result').textContent =
+    `${teamName} a trouvé ${score} carte(s) !`;
+
+  fillDrawer('turn-found', '✅ Cartes comptées', found,
+    { icon: '✕', cssClass: 'btn-remove', title: 'Retirer cette carte du score' }, onRemove);
+  fillDrawer('turn-missed', '↩️ Cartes non comptées', missed,
+    { icon: '＋', cssClass: 'btn-remove btn-recount', title: 'Compter cette carte' }, onAdd);
+
+  const hint = document.getElementById('turn-fix-hint');
+  if (hint) hint.style.display = found.length || missed.length ? '' : 'none';
+}
+
+export function showRoundEnd(roundNum, teams, roundScores) {
   document.getElementById('round-end-title').textContent = `Fin de la manche ${roundNum}`;
   document.getElementById('end-team1-name').textContent = teams[0].name;
   document.getElementById('end-team2-name').textContent = teams[1].name;
+  document.getElementById('end-team1-round').textContent = roundScores[0];
+  document.getElementById('end-team2-round').textContent = roundScores[1];
   document.getElementById('end-team1-score').textContent = teams[0].score;
   document.getElementById('end-team2-score').textContent = teams[1].score;
 }
 
-export function showFinalScreen(teams) {
+// session : { totals, parties } quand plusieurs parties s'enchaînent, sinon null
+export function showFinalScreen(teams, session = null) {
   document.getElementById('final-team1-name').textContent = teams[0].name;
   document.getElementById('final-team2-name').textContent = teams[1].name;
   document.getElementById('final-team1-score').textContent = teams[0].score;
   document.getElementById('final-team2-score').textContent = teams[1].score;
+
+  // La ligne de cumul n'a de sens qu'à partir de la deuxième partie
+  const row = document.getElementById('session-row');
+  if (row) {
+    row.style.display = session ? '' : 'none';
+    if (session) {
+      document.getElementById('session-label').textContent = `Soirée (${session.parties} parties)`;
+      document.getElementById('session-team1-score').textContent = session.totals[0];
+      document.getElementById('session-team2-score').textContent = session.totals[1];
+    }
+  }
 
   const diff = teams[0].score - teams[1].score;
   let winnerText;

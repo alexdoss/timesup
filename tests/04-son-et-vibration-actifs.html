@@ -35,11 +35,9 @@ document.getElementById('f').addEventListener('load', async () => {
     $('btn-settings').click();
     check('parametres ouverts depuis l accueil', screen() === 'screen-settings');
     check('le reglage son est dans les parametres', $('screen-settings').querySelectorAll('[data-sound]').length === 2);
-    check('le reglage vibration est un reglage separe', $('screen-settings').querySelectorAll('[data-vibration]').length === 2);
+    check('plus aucun reglage de vibration', d.querySelectorAll('[data-vibration]').length === 0);
     check('son active par defaut', d.querySelector('[data-sound="on"]').classList.contains('active'));
     check('option son coupe non selectionnee', !d.querySelector('[data-sound="off"]').classList.contains('active'));
-    check('vibration activee par defaut', d.querySelector('[data-vibration="on"]').classList.contains('active'));
-    check('les pilules vibration sont actionnables', !d.querySelector('[data-vibration="on"]').disabled);
     $('btn-settings-back').click();
     check('retour a l accueil depuis les parametres', screen() === 'screen-home');
 

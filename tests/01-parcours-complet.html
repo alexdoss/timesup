@@ -50,7 +50,11 @@ f.addEventListener('load', async () => {
     check('la carte a change apres 2 trouvees', $('card-word').textContent !== mot1);
 
     const snap = JSON.parse(w.localStorage.getItem('timesup_partie_en_cours'));
-    check('score sauvegarde = 2', snap.state.teams[0].score === 2);
+    // L'equipe qui ouvre est tiree au sort : on verifie celle qui joue, pas la premiere
+    check('l equipe qui commence est bien tiree au sort', [0, 1].includes(snap.state.startingTeam));
+    check('la manche s ouvre sur l equipe tiree au sort', snap.state.currentTeam === snap.state.startingTeam);
+    check('score sauvegarde = 2', snap.state.teams[snap.state.currentTeam].score === 2);
+    check('l autre equipe est a 0', snap.state.teams[1 - snap.state.currentTeam].score === 0);
     check('position dans le paquet sauvegardee = 2', snap.state.currentCardIndex === 2);
     check('selectedThemes serialise en tableau', Array.isArray(snap.state.selectedThemes));
     check('timerInterval absent de la sauvegarde', !('timerInterval' in snap.state));

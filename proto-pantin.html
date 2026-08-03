@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Rush — proto : confirmation « 3 joueurs par équipe »</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <!-- On réutilise la vraie feuille de style de l'app : les maquettes sont fidèles au rendu réel -->
+  <link rel="stylesheet" href="style.css">
+  <style>
+    body { user-select: auto; padding: 28px 16px 64px; }
+
+    .proto-intro { max-width: 760px; margin: 0 auto 32px; text-align: center; }
+    .proto-intro h1 { font-size: 1.5rem; margin-bottom: 10px; }
+    .proto-intro p { color: var(--muted); font-size: 0.95rem; line-height: 1.55; }
+    .proto-intro strong { color: var(--text); }
+
+    .proto-grid {
+      display: flex; flex-wrap: wrap; gap: 26px;
+      justify-content: center; align-items: flex-start;
+    }
+
+    .frame { width: 360px; max-width: 100%; }
+    .frame-title {
+      display: flex; align-items: baseline; gap: 8px;
+      margin-bottom: 10px; padding-left: 4px;
+    }
+    .frame-title b { font-size: 1.05rem; }
+    .frame-title span { font-size: 0.8rem; color: var(--muted); }
+    .frame[data-v="actuel"] .frame-title b { color: var(--muted-strong); }
+
+    .phone {
+      border: 1px solid var(--border); border-radius: var(--r-xl);
+      background: var(--panel); padding: 24px 20px 28px;
+      box-shadow: var(--shadow);
+    }
+    .phone .config-form { margin: 0 auto; }
+    .frame[data-v="actuel"] .phone { border-style: dashed; opacity: 0.9; }
+
+    .frame-note {
+      margin-top: 12px; padding: 0 4px;
+      font-size: 0.85rem; color: var(--muted); line-height: 1.5;
+    }
+
+    /* --- Variante A : case à cocher --- */
+    .proto-check {
+      display: flex; align-items: center; gap: 12px;
+      width: 100%; text-align: left;
+      background: var(--surface); border: 1.5px solid var(--line);
+      border-radius: var(--r-md); padding: 14px 16px;
+      color: var(--text); font-family: inherit; font-size: 0.9rem; font-weight: 500;
+      cursor: pointer; transition: all 0.2s;
+    }
+    .proto-check .box {
+      flex: 0 0 22px; height: 22px; border-radius: var(--r-xs);
+      border: 2px solid var(--muted); display: flex;
+      align-items: center; justify-content: center;
+      font-size: 0.8rem; color: #fff; transition: all 0.2s;
+    }
+    .proto-check.active { border-color: var(--success); background: var(--success-soft); }
+    .proto-check.active .box { border-color: var(--success); background: var(--success); }
+    .proto-link {
+      background: none; border: none; color: var(--muted);
+      font-family: inherit; font-size: 0.85rem; text-decoration: underline;
+      cursor: pointer; padding: 4px; align-self: center;
+    }
+
+    /* --- Variante B : deux boutons pleine largeur --- */
+    .proto-choice { display: flex; flex-direction: column; gap: 8px; }
+    .proto-choice button {
+      width: 100%; max-width: none; justify-content: flex-start;
+      font-size: 0.9rem; padding: 14px 16px; box-shadow: none;
+    }
+    .proto-yes { background: var(--success-soft); color: var(--success); border: 1.5px solid rgba(34, 197, 94, 0.35); }
+    .proto-yes.active { background: var(--success); color: #fff; border-color: var(--success); }
+    .proto-no { background: transparent; color: var(--muted); border: 1.5px solid var(--line); }
+
+    /* --- Variante C : pilules rendues visiblement cliquables --- */
+    .frame[data-v="c"] .pillgroup { background: transparent; padding: 0; gap: 8px; }
+    .frame[data-v="c"] .pill {
+      border: 1.5px solid var(--line); background: var(--surface);
+      color: var(--muted-strong);
+    }
+    .frame[data-v="c"] .pill.active {
+      background: var(--brand); border-color: var(--brand); color: #fff;
+    }
+
+    .proto-reset {
+      display: block; margin: 40px auto 0;
+      background: var(--surface); color: var(--muted-strong);
+      border: 1px solid var(--line); border-radius: var(--r-md);
+      padding: 12px 22px; font-family: inherit; font-size: 0.9rem; cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="proto-intro">
+    <h1>Étape « Manches », partie sans les noms des joueurs</h1>
+    <p>
+      Dans chaque maquette, tape sur <strong>🕺 Faire bouger un partenaire</strong> :
+      c'est ce qui déclenche la question d'effectif. Regarde ce que tu comprends —
+      et surtout, ce que tu as envie de faire — juste après le tap.<br>
+      Le bouton <strong>Suivant</strong> reste bloqué tant que la réponse manque, dans les quatre cas.
+    </p>
+  </div>
+
+  <div class="proto-grid">
+
+    <!-- ============ AUJOURD'HUI ============ -->
+    <section class="frame" data-v="actuel">
+      <div class="frame-title"><b>Aujourd'hui</b><span>ce que voit le joueur</span></div>
+      <div class="phone">
+        <div class="wizard-header">
+          <span class="wizard-step">Étape 4/5</span>
+          <h2>Manches</h2>
+        </div>
+        <div class="config-form">
+          <div class="rounds-tags">
+            <span class="round-tag">💬 Description libre</span>
+            <span class="round-tag">🔤 Un mot</span>
+            <span class="round-tag">🎭 Mime</span>
+          </div>
+          <p class="wizard-hint" style="margin:8px 0 6px">Optionnelles :</p>
+          <div class="rounds-pills">
+            <button type="button" class="round-pill">🗿 Pose figée</button>
+            <button type="button" class="round-pill" data-puppet-pill>🕺 Faire bouger un partenaire</button>
+          </div>
+
+          <div class="config-section" data-confirm hidden>
+            <span class="field-label">Chaque équipe compte-t-elle au moins 3 joueurs ?</span>
+            <p class="wizard-hint">« Faire bouger un partenaire » demande un joueur qui manipule, un partenaire qui sert de pantin, et au moins un qui devine.</p>
+            <div class="pillgroup">
+              <button type="button" class="pill" data-answer="oui">Oui</button>
+              <button type="button" class="pill" data-answer="non">Non</button>
+            </div>
+          </div>
+
+          <button type="button" class="btn btn-primary" data-next>Suivant ▶️</button>
+        </div>
+      </div>
+      <p class="frame-note">Les deux pilules sont grises tant qu'on n'a rien choisi : rien ne dit qu'elles attendent un clic.</p>
+    </section>
+
+    <!-- ============ VARIANTE A ============ -->
+    <section class="frame" data-v="a">
+      <div class="frame-title"><b>A · La case à cocher</b><span>recommandée</span></div>
+      <div class="phone">
+        <div class="wizard-header">
+          <span class="wizard-step">Étape 4/5</span>
+          <h2>Manches</h2>
+        </div>
+        <div class="config-form">
+          <div class="rounds-tags">
+            <span class="round-tag">💬 Description libre</span>
+            <span class="round-tag">🔤 Un mot</span>
+            <span class="round-tag">🎭 Mime</span>
+          </div>
+          <p class="wizard-hint" style="margin:8px 0 6px">Optionnelles :</p>
+          <div class="rounds-pills">
+            <button type="button" class="round-pill">🗿 Pose figée</button>
+            <button type="button" class="round-pill" data-puppet-pill>🕺 Faire bouger un partenaire</button>
+          </div>
+
+          <div class="config-section" data-confirm hidden>
+            <p class="wizard-hint">« Faire bouger un partenaire » demande un joueur qui manipule, un partenaire qui sert de pantin, et au moins un qui devine.</p>
+            <button type="button" class="proto-check" data-answer="toggle">
+              <span class="box">✓</span>
+              <span>Oui, chaque équipe compte au moins 3 joueurs</span>
+            </button>
+            <button type="button" class="proto-link" data-answer="non">Retirer cette manche</button>
+          </div>
+
+          <button type="button" class="btn btn-primary" data-next>Suivant ▶️</button>
+        </div>
+      </div>
+      <p class="frame-note">Une case vide, tout le monde sait que ça se coche. Plus aucun élément gris ambigu. Le « Non » devient un lien discret pour ne coincer personne.</p>
+    </section>
+
+    <!-- ============ VARIANTE B ============ -->
+    <section class="frame" data-v="b">
+      <div class="frame-title"><b>B · Deux vrais boutons</b><span>choix explicite</span></div>
+      <div class="phone">
+        <div class="wizard-header">
+          <span class="wizard-step">Étape 4/5</span>
+          <h2>Manches</h2>
+        </div>
+        <div class="config-form">
+          <div class="rounds-tags">
+            <span class="round-tag">💬 Description libre</span>
+            <span class="round-tag">🔤 Un mot</span>
+            <span class="round-tag">🎭 Mime</span>
+          </div>
+          <p class="wizard-hint" style="margin:8px 0 6px">Optionnelles :</p>
+          <div class="rounds-pills">
+            <button type="button" class="round-pill">🗿 Pose figée</button>
+            <button type="button" class="round-pill" data-puppet-pill>🕺 Faire bouger un partenaire</button>
+          </div>
+
+          <div class="config-section" data-confirm hidden>
+            <span class="field-label">Chaque équipe compte-t-elle au moins 3 joueurs ?</span>
+            <p class="wizard-hint">Un joueur qui manipule, un partenaire qui sert de pantin, et au moins un qui devine.</p>
+            <div class="proto-choice">
+              <button type="button" class="btn proto-yes" data-answer="oui">✅ Oui, on est au moins 3 par équipe</button>
+              <button type="button" class="btn proto-no" data-answer="non">✖️ Non, retirer cette manche</button>
+            </div>
+          </div>
+
+          <button type="button" class="btn btn-primary" data-next>Suivant ▶️</button>
+        </div>
+      </div>
+      <p class="frame-note">Les deux issues sont écrites en toutes lettres, rien à deviner. En contrepartie ça prend de la hauteur, et ce style de bouton n'existe nulle part ailleurs dans le wizard.</p>
+    </section>
+
+    <!-- ============ VARIANTE C ============ -->
+    <section class="frame" data-v="c">
+      <div class="frame-title"><b>C · Pilules contrastées</b><span>retouche minimale</span></div>
+      <div class="phone">
+        <div class="wizard-header">
+          <span class="wizard-step">Étape 4/5</span>
+          <h2>Manches</h2>
+        </div>
+        <div class="config-form">
+          <div class="rounds-tags">
+            <span class="round-tag">💬 Description libre</span>
+            <span class="round-tag">🔤 Un mot</span>
+            <span class="round-tag">🎭 Mime</span>
+          </div>
+          <p class="wizard-hint" style="margin:8px 0 6px">Optionnelles :</p>
+          <div class="rounds-pills">
+            <button type="button" class="round-pill">🗿 Pose figée</button>
+            <button type="button" class="round-pill" data-puppet-pill>🕺 Faire bouger un partenaire</button>
+          </div>
+
+          <div class="config-section" data-confirm hidden>
+            <span class="field-label">Chaque équipe compte-t-elle au moins 3 joueurs ?</span>
+            <p class="wizard-hint">« Faire bouger un partenaire » demande un joueur qui manipule, un partenaire qui sert de pantin, et au moins un qui devine.</p>
+            <div class="pillgroup">
+              <button type="button" class="pill" data-answer="oui">Oui</button>
+              <button type="button" class="pill" data-answer="non">Non</button>
+            </div>
+          </div>
+
+          <button type="button" class="btn btn-primary" data-next>Suivant ▶️</button>
+        </div>
+      </div>
+      <p class="frame-note">Même composant qu'aujourd'hui, mais les pilules non sélectionnées prennent un contour et un texte lisible. Le doute « est-ce déjà coché ? » subsiste.</p>
+    </section>
+
+  </div>
+
+  <button type="button" class="proto-reset" onclick="location.reload()">↺ Tout remettre à zéro</button>
+
+<script>
+// Chaque maquette suit la même règle que l'app : la question n'apparaît que si la
+// manche pantin est sélectionnée, et « Suivant » attend une réponse positive.
+document.querySelectorAll('.frame').forEach(frame => {
+  const pill = frame.querySelector('[data-puppet-pill]');
+  const bloc = frame.querySelector('[data-confirm]');
+  const next = frame.querySelector('[data-next]');
+  let reponse = null;   // null = pas de réponse, true = oui
+
+  function majAffichage() {
+    const besoin = pill.classList.contains('active');
+    bloc.hidden = !besoin;
+    next.disabled = besoin && reponse !== true;
+    frame.querySelectorAll('[data-answer]').forEach(el => {
+      if (el.dataset.answer === 'oui' || el.dataset.answer === 'toggle') {
+        el.classList.toggle('active', reponse === true);
+      }
+    });
+  }
+
+  pill.addEventListener('click', () => {
+    pill.classList.toggle('active');
+    reponse = null;
+    majAffichage();
+  });
+
+  frame.querySelectorAll('[data-answer]').forEach(el => {
+    el.addEventListener('click', () => {
+      const action = el.dataset.answer;
+      if (action === 'oui') {
+        reponse = true;
+      } else if (action === 'toggle') {
+        reponse = reponse === true ? null : true;
+      } else {
+        // Non : on retire la manche, sinon le joueur reste bloqué sans issue
+        reponse = null;
+        pill.classList.remove('active');
+      }
+      majAffichage();
+    });
+  });
+
+  // Les autres pastilles optionnelles restent de simples bascules
+  frame.querySelectorAll('.round-pill:not([data-puppet-pill])').forEach(p => {
+    p.addEventListener('click', () => p.classList.toggle('active'));
+  });
+
+  majAffichage();
+});
+</script>
+</body>
+</html>

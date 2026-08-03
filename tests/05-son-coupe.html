@@ -36,8 +36,7 @@ document.getElementById('f').addEventListener('load', async () => {
     check('son coupe selectionne', d.querySelector('[data-sound="off"]').classList.contains('active'));
     check('son active deselectionne', !d.querySelector('[data-sound="on"]').classList.contains('active'));
     check('preference son enregistree', w.localStorage.getItem('timesup_son') === 'off');
-    check('la vibration reste activee (reglage independant)', d.querySelector('[data-vibration="on"]').classList.contains('active'));
-    check('la preference vibration n a pas ete touchee', w.localStorage.getItem('timesup_vibration') === null);
+    check('aucune preference de vibration n est ecrite', w.localStorage.getItem('timesup_vibration') === null);
     $('btn-settings-back').click();
     check('retour a l accueil', screen() === 'screen-home');
 

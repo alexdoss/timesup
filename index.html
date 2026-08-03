@@ -37,6 +37,47 @@
         </div>
         <button id="btn-start" class="btn btn-primary">Nouvelle partie 🎮</button>
         <button id="btn-library" class="btn btn-secondary">📚 Bibliothèque de cartes</button>
+        <button id="btn-rules" class="btn btn-secondary">📖 Règles du jeu</button>
+      </div>
+    </div>
+
+    <!-- ÉCRAN RÈGLES DU JEU -->
+    <div id="screen-rules" class="screen">
+      <button class="btn-close" onclick="showScreen('screen-home')">✕</button>
+      <div class="wizard-header">
+        <h2>📖 Règles du jeu</h2>
+      </div>
+      <div class="rules">
+        <section>
+          <h3>Objectif</h3>
+          <p>Par équipes, faites deviner un maximum de cartes à vos coéquipiers avant la fin du chrono. L'équipe qui cumule le plus de points sur l'ensemble des manches remporte la partie.</p>
+        </section>
+
+        <section>
+          <h3>Déroulement d'un tour</h3>
+          <p>Chaque tour, un·e joueur·se pioche des cartes et les fait deviner à son équipe selon la règle de la manche en cours. Une carte devinée = un point pour l'équipe. Le tour se termine quand le chrono est écoulé.</p>
+        </section>
+
+        <section>
+          <h3>Les manches</h3>
+          <ul id="rules-rounds" class="rules-list"></ul>
+          <p class="rules-note">Les trois premières sont toujours jouées. Les suivantes sont optionnelles : vous les choisissez à la création de la partie.</p>
+        </section>
+
+        <section>
+          <h3>Passer une carte</h3>
+          <p>Selon les réglages choisis à la création de la partie, passer une carte peut être interdit, illimité, ou limité à un nombre de passages précis par tour.</p>
+        </section>
+
+        <section>
+          <h3>Score</h3>
+          <p>Chaque carte trouvée rapporte un point à l'équipe. Les scores de chaque manche s'additionnent : l'équipe en tête au total à la fin de la dernière manche gagne la partie.</p>
+        </section>
+
+        <section>
+          <h3>Plusieurs parties de suite</h3>
+          <p>En choisissant « Rejouer avec les mêmes joueurs » à la fin d'une partie, le score se cumulera au fil des parties, tant que les joueurs ne changent pas.</p>
+        </section>
       </div>
     </div>
 
@@ -68,16 +109,7 @@
             <button type="button" class="pill active" data-sound="on">Activé</button>
             <button type="button" class="pill" data-sound="off">Coupé</button>
           </div>
-          <p class="wizard-hint">Un tic à chaque seconde des 5 dernières, un buzzer en fin de tour.</p>
-        </div>
-
-        <div class="config-section">
-          <span class="field-label">Vibration</span>
-          <div class="pillgroup">
-            <button type="button" class="pill active" data-vibration="on">Activée</button>
-            <button type="button" class="pill" data-vibration="off">Coupée</button>
-          </div>
-          <p id="vibration-hint" class="wizard-hint"></p>
+          <p class="wizard-hint">Un tic à chaque seconde des 5 dernières, un buzzer en fin de tour. Le téléphone vibre en même temps, quand il sait le faire.</p>
         </div>
       </div>
     </div>

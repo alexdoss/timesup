@@ -280,24 +280,28 @@ export function renderAssignMode(mode) {
   }
 }
 
+// La liste des manches est construite depuis le moteur : la page de règles
+// ne peut pas se désynchroniser si une manche est ajoutée ou renommée.
+export function renderRules(rounds) {
+  const liste = document.getElementById('rules-rounds');
+  if (!liste) return;
+
+  liste.innerHTML = '';
+  rounds.forEach(round => {
+    const item = document.createElement('li');
+    const nom = document.createElement('strong');
+    nom.textContent = `${round.icon} ${round.name}`;
+    const desc = document.createElement('span');
+    desc.textContent = ` — ${round.desc}`;
+    item.append(nom, desc);
+    liste.appendChild(item);
+  });
+}
+
 export function renderSoundSetting(enabled) {
   document.querySelectorAll('[data-sound]').forEach(pill => {
     pill.classList.toggle('active', (pill.dataset.sound === 'on') === enabled);
   });
-}
-
-export function renderVibrationSetting(enabled, supported) {
-  document.querySelectorAll('[data-vibration]').forEach(pill => {
-    pill.classList.toggle('active', supported && (pill.dataset.vibration === 'on') === enabled);
-    pill.disabled = !supported;
-  });
-
-  const hint = document.getElementById('vibration-hint');
-  if (hint) {
-    hint.textContent = supported
-      ? "Une impulsion à chaque seconde du décompte, trois secousses en fin de tour."
-      : "Cet appareil ne gère pas la vibration. Les iPhone, notamment, ne la proposent pas aux applications web.";
-  }
 }
 
 export function updateCurrentPlayer(playerName) {

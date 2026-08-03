@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head><meta charset="utf-8"><title>Test Rush — equipe qui commence</title></head>
+<body>
+<pre id="log">demarrage...</pre>
+<div id="hote"></div>
+<script type="module">
+import { game, resetGame, nextRound } from '/js/game.js';
+
+const out = [];
+function log(s) { out.push(s); document.getElementById('log').textContent = out.join('\n'); }
+function check(name, cond) { log((cond ? 'PASS' : 'FAIL') + ' -- ' + name); }
+const wait = ms => new Promise(r => setTimeout(r, ms));
+
+try {
+  // ===== MOTEUR : le tirage au sort lui-meme =====
+  const TIRAGES = 400;
+  const compte = [0, 0];
+  let toujoursCoherent = true;
+  let valeurValide = true;
+
+  for (let i = 0; i < TIRAGES; i++) {
+    resetGame();
+    if (game.startingTeam !== 0 && game.startingTeam !== 1) valeurValide = false;
+    else compte[game.startingTeam]++;
+    if (game.currentTeam !== game.startingTeam) toujoursCoherent = false;
+  }
+
+  log('       tirages : equipe 1 = ' + compte[0] + ', equipe 2 = ' + compte[1] + ' sur ' + TIRAGES);
+  check('le tirage ne sort que des equipes existantes', valeurValide);
+  check('l equipe 1 peut commencer', compte[0] > 0);
+  check('l equipe 2 peut commencer', compte[1] > 0);
+  // Marge tres large : on detecte un tirage biaise ou fige, pas une deviation statistique
+  check('aucune equipe n est favorisee', compte[0] > TIRAGES * 0.35 && compte[1] > TIRAGES * 0.35);
+  check('la partie s ouvre sur l equipe tiree', toujoursCoherent);
+
+  // ===== MOTEUR : les manches suivantes =====
+  game.startingTeam = 1;
+  game.currentTeam = 0;   // l'equipe 1 vient de jouer le dernier tour de la manche
+  game.currentRound = 0;
+  nextRound();
+  check('la manche 2 rouvre sur l equipe tiree', game.currentTeam === 1);
+  check('le compteur de manche avance', game.currentRound === 1);
+
+  game.startingTeam = 0;
+  game.currentTeam = 1;
+  nextRound();
+  check('et ce quelle que soit l equipe tiree', game.currentTeam === 0);
+
+  // ===== BOUT EN BOUT : ce que voit le joueur =====
+  localStorage.removeItem('timesup_partie_en_cours');
+
+  const f = document.createElement('iframe');
+  f.style.cssText = 'width:420px;height:900px;border:1px solid #ccc';
+  const charge = new Promise(r => f.addEventListener('load', r));
+  f.src = '/';
+  document.getElementById('hote').appendChild(f);
+  await charge;
+
+  const d = f.contentDocument, w = f.contentWindow;
+  w.onerror = (m, s, l) => log('ERREUR APP: ' + m + ' @' + s + ':' + l);
+  const $ = id => d.getElementById(id);
+  const ecran = () => [...d.querySelectorAll('.screen')].find(s => s.classList.contains('active'))?.id;
+
+  await wait(1200);
+
+  $('btn-start').click();
+  $('btn-next-mode').click();
+  d.querySelectorAll('#theme-selector .btn-theme')[0].click();
+  $('btn-next-step').click();
+  d.querySelector('[data-mode="simple"]').click();
+  $('btn-next-players').click();
+  $('btn-next-rounds').click();
+  $('btn-play').click();
+  check('debut de manche', ecran() === 'screen-round');
+
+  const etat = JSON.parse(w.localStorage.getItem('timesup_partie_en_cours')).state;
+  const nomAttendu = etat.teams[etat.currentTeam].name;
+  log('       equipe tiree : ' + etat.startingTeam + ' (' + nomAttendu + ')');
+
+  check('l equipe tiree est sauvegardee', etat.startingTeam === 0 || etat.startingTeam === 1);
+  check('le premier tour revient a l equipe tiree', etat.currentTeam === etat.startingTeam);
+  check('l ecran annonce cette equipe', $('current-team-turn').textContent.includes(nomAttendu));
+
+  $('btn-start-turn').click();
+  check('le bandeau de jeu affiche la meme equipe', $('game-team-label').textContent === nomAttendu);
+
+  log('SCENARIO 06 TERMINE');
+} catch (e) {
+  log('EXCEPTION: ' + e.message + '\n' + e.stack);
+}
+</script>
+</body>
+</html>

@@ -24,6 +24,7 @@ export const game = {
   selectedThemes: new Set(),
   activeRounds: [0, 1, 2],
   assignMode: 'random',
+  startingTeam: 0,         // équipe tirée au sort au lancement, qui ouvre chaque manche
   currentTeam: 0,
   currentRound: 0,
   turnTime: 40,
@@ -56,7 +57,9 @@ export function resetGame() {
   game.teams[0].currentPlayerIndex = 0;
   game.teams[1].currentPlayerIndex = 0;
   game.currentRound = 0;
-  game.currentTeam = 0;
+  // Tirage au sort : sans ça l'équipe 1 ouvrait systématiquement la partie
+  game.startingTeam = Math.random() < 0.5 ? 0 : 1;
+  game.currentTeam = game.startingTeam;
   game.turnActive = false;
   // Reset player stats
   game.playerStats = {};
@@ -221,7 +224,8 @@ export function isGameOver() {
 
 export function nextRound() {
   game.currentRound++;
-  game.currentTeam = 0;
+  // L'équipe tirée au sort ouvre aussi les manches suivantes
+  game.currentTeam = game.startingTeam;
 }
 
 export function getCardsRemaining() {

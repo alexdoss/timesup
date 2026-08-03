@@ -3,10 +3,10 @@
 
 import { loadThemes } from './themes.js';
 import { game, ROUNDS, resetGame, buildDeck, startNewRound, getCurrentCard, cardFound, cardPassed, switchTeam, isRoundOver, isGameOver, nextRound, getCardsRemaining, addPlayer, removePlayer, assignTeamsRoundRobin, getCurrentPlayer, advancePlayer, getActiveRound, setPlayerTeam, syncChosenTeams, canPass, getPlannedTeamSizes } from './game.js';
-import { showScreen, updateTimer, showCard, updateRoundScreen, updateTurnInfo, updateGameHeader, showTurnResult, showRoundEnd, showFinalScreen, renderThemeButtons, renderPlayerList, updateCurrentPlayer, renderPlayerStats, renderRoundsSelector, renderAssignMode, applyTeamAccent, showResumeOption, renderSoundSetting, renderVibrationSetting, showPauseOverlay, showPauseCountdown, hidePause, showPuppetConfirm, setRoundsNextEnabled, renderThemeEditor, showThemeEditError, renderCustomThemes } from './ui.js';
+import { showScreen, updateTimer, showCard, updateRoundScreen, updateTurnInfo, updateGameHeader, showTurnResult, showRoundEnd, showFinalScreen, renderThemeButtons, renderPlayerList, updateCurrentPlayer, renderPlayerStats, renderRoundsSelector, renderAssignMode, applyTeamAccent, showResumeOption, renderSoundSetting, renderRules, showPauseOverlay, showPauseCountdown, hidePause, showPuppetConfirm, setRoundsNextEnabled, renderThemeEditor, showThemeEditError, renderCustomThemes } from './ui.js';
 import { getCustomThemes, saveCustomTheme, deleteCustomTheme, generateWithAI, getQuota } from './library.js';
 import { saveGame, loadSavedGame, clearSavedGame, restoreInto } from './persistence.js';
-import { playTick, playBuzzer, unlockAudio, isSoundEnabled, setSoundEnabled, isVibrationEnabled, setVibrationEnabled, isVibrationSupported } from './sound.js';
+import { playTick, playBuzzer, unlockAudio, isSoundEnabled, setSoundEnabled } from './sound.js';
 
 let THEMES = {};
 let aiGeneratedWords = [];
@@ -325,22 +325,15 @@ function setupListeners() {
     game.passReplace = e.target.value;
   });
 
-  // Son et vibration : deux préférences distinctes, mémorisées d'une partie à l'autre
+  // Son : préférence mémorisée d'une partie à l'autre. La vibration l'accompagne
+  // toujours, sans réglage : elle n'existe pas sur iOS et un bouton sans effet
+  // sur la moitié des téléphones embrouille plus qu'il n'aide.
   document.querySelectorAll('[data-sound]').forEach(pill => {
     pill.addEventListener('click', () => {
       const on = pill.dataset.sound === 'on';
       setSoundEnabled(on);
       renderSoundSetting(on);
       if (on) unlockAudio();
-    });
-  });
-
-  document.querySelectorAll('[data-vibration]').forEach(pill => {
-    pill.addEventListener('click', () => {
-      if (!isVibrationSupported()) return;
-      const on = pill.dataset.vibration === 'on';
-      setVibrationEnabled(on);
-      renderVibrationSetting(on, true);
     });
   });
 
@@ -386,6 +379,12 @@ function setupListeners() {
   document.getElementById('btn-restart').addEventListener('click', () => {
     refreshResumeOption();
     showScreen('screen-home');
+  });
+
+  // ===== RÈGLES DU JEU =====
+  document.getElementById('btn-rules').addEventListener('click', () => {
+    renderRules(ROUNDS);
+    showScreen('screen-rules');
   });
 
   // ===== LIBRARY =====
@@ -744,7 +743,6 @@ function updatePassButton() {
 // partie de la configuration d'une partie et sont accessibles à tout moment.
 function renderFeedbackSettings() {
   renderSoundSetting(isSoundEnabled());
-  renderVibrationSetting(isVibrationEnabled(), isVibrationSupported());
 }
 
 function openSettings(from) {

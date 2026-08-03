@@ -31,7 +31,7 @@ $SCENARIOS = @(
   @{ f = '03b-reprise-entre-tours.html';           b = 20000; p = 'c' }
   @{ f = '04-son-et-vibration-actifs.html';        b = 70000; p = 'd' }
   @{ f = '05-son-coupe.html';                      b = 70000; p = 'e' }
-  @{ f = '06-vibration-coupee.html';               b = 70000; p = 'f' }
+  @{ f = '06-equipe-qui-commence.html';            b = 15000; p = 'f' }
   @{ f = '07-pause-manuelle.html';                 b = 60000; p = 'g' }
   @{ f = '08-pause-automatique.html';              b = 60000; p = 'h' }
   @{ f = '09-manche-pantin-mode-simple.html';      b = 20000; p = 'i' }
@@ -39,6 +39,7 @@ $SCENARIOS = @(
   @{ f = '11-quota-ia-et-fiche-theme.html';        b = 20000; p = 'k' }
   @{ f = '12-fonction-serveur.html';               b = 15000; p = 'l' }
   @{ f = '13-theme-manuel.html';                   b = 15000; p = 'm' }
+  @{ f = '14-regles-du-jeu.html';                  b = 15000; p = 'n' }
 )
 
 function Resolve-Chrome {

@@ -417,6 +417,27 @@ body {
   color: #fff;
 }
 
+/* Confirmation d'effectif (manche pantin, partie sans les noms) : seul groupe de
+   l'app où rien n'est présélectionné. Contour et texte lisible pour qu'on voie
+   tout de suite que les deux réponses attendent un clic. */
+#puppet-confirm .pillgroup {
+  background: transparent;
+  padding: 0;
+  gap: 8px;
+}
+
+#puppet-confirm .pill {
+  border: 1.5px solid var(--line);
+  background: var(--surface);
+  color: var(--muted-strong);
+}
+
+#puppet-confirm .pill.active {
+  background: var(--brand);
+  border-color: var(--brand);
+  color: #fff;
+}
+
 /* ===== ROUNDS — OPTION A (tags + pills) ===== */
 .rounds-tags {
   display: flex;
@@ -585,6 +606,60 @@ body {
 #btn-settings {
   color: var(--muted-strong);
   background: rgba(255, 255, 255, 0.13);
+}
+
+/* ===== RÈGLES DU JEU ===== */
+.rules {
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+  width: 100%;
+  max-width: 420px;
+  text-align: left;
+  padding-bottom: 24px;
+}
+
+.rules h3 {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--brand);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 8px;
+}
+
+.rules p {
+  font-size: 0.95rem;
+  line-height: 1.6;
+  color: var(--muted-strong);
+}
+
+.rules-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.rules-list li {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  padding: 12px 14px;
+  font-size: 0.9rem;
+  line-height: 1.5;
+  color: var(--muted-strong);
+}
+
+.rules-list strong {
+  color: var(--text);
+  font-weight: 700;
+}
+
+.rules-note {
+  margin-top: 10px;
+  font-size: 0.85rem;
+  color: var(--muted);
 }
 
 /* ===== PAUSE ===== */

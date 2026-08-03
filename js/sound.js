@@ -1,17 +1,16 @@
 // ===== SOUND MODULE =====
-// Sons générés à la volée par le navigateur (aucun fichier audio, fonctionne hors ligne)
-// et vibration. Les deux se règlent indépendamment.
+// Sons générés à la volée par le navigateur (aucun fichier audio, fonctionne hors ligne),
+// accompagnés d'une vibration quand l'appareil sait le faire.
 // Ne touche ni au DOM, ni aux règles du jeu.
 //
 // Limites connues : la vibration n'existe pas sur iOS, et le son y est muet
-// si l'interrupteur latéral est en mode silencieux.
+// si l'interrupteur latéral est en mode silencieux. La vibration n'est donc pas
+// réglable — un bouton sans effet sur la moitié des téléphones induit en erreur.
 
 const KEY_SON = 'timesup_son';
-const KEY_VIBRATION = 'timesup_vibration';
 
 let ctx = null;
 let soundEnabled = true;
-let vibrationEnabled = true;
 
 function readPreference(key) {
   try {
@@ -30,7 +29,6 @@ function writePreference(key, value) {
 }
 
 soundEnabled = readPreference(KEY_SON);
-vibrationEnabled = readPreference(KEY_VIBRATION);
 
 export function isSoundEnabled() {
   return soundEnabled;
@@ -39,20 +37,6 @@ export function isSoundEnabled() {
 export function setSoundEnabled(value) {
   soundEnabled = !!value;
   writePreference(KEY_SON, soundEnabled);
-}
-
-export function isVibrationEnabled() {
-  return vibrationEnabled;
-}
-
-export function setVibrationEnabled(value) {
-  vibrationEnabled = !!value;
-  writePreference(KEY_VIBRATION, vibrationEnabled);
-}
-
-// Absente sur iOS : le réglage est alors affiché mais désactivé.
-export function isVibrationSupported() {
-  return typeof navigator.vibrate === 'function';
 }
 
 // À appeler depuis un geste utilisateur (un clic) : les navigateurs refusent
@@ -93,7 +77,6 @@ function tone({ freq, freq2, type = 'sine', dur, gain = 0.25, when = 0 }) {
 }
 
 function vibrate(pattern) {
-  if (!vibrationEnabled) return;
   try {
     if (navigator.vibrate) navigator.vibrate(pattern);
   } catch {

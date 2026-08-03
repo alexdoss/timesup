@@ -37,7 +37,7 @@ document.getElementById('f').addEventListener('load', async () => {
 
     // --- 4 joueurs = 2 par equipe : la manche doit etre verrouillee ---
     let pantin = pilule('bouger');
-    check('la manche pantin est verrouillee a 2 joueurs par equipe', pantin.disabled);
+    check('la manche pantin est affichee mais verrouillee', !!pantin && pantin.disabled);
     check('la pose figee reste disponible', !pilule('Pose').disabled);
     check('une explication est affichee', note().style.display !== 'none');
     log('       note : "' + note().textContent + '"');

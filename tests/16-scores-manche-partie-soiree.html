@@ -88,7 +88,12 @@ document.getElementById('f').addEventListener('load', async () => {
     check('une partie est comptabilisee', etat.gamesPlayed === 1);
     check('on repart bien de la manche 1', etat.currentRound === 0);
 
+    // L'equipe qui commence est retiree au sort : la partie 2 peut changer de marqueur
+    const marqueur1 = marqueur;
     marqueur = sauvegarde().state.startingTeam;
+    const marqueur2 = marqueur;
+    log('       marqueur partie 1 : ' + marqueur1 + ' / partie 2 : ' + marqueur2);
+
     await jouerLaManche();
     check('la manche 1 de la partie 2 est isolee', manche() === paquet);
     check('le total de la partie 2 ne reprend pas la partie 1', totalPartie() === paquet);
@@ -105,9 +110,19 @@ document.getElementById('f').addEventListener('load', async () => {
     log('       libelle : "' + $('session-label').textContent + '"');
     check('il annonce le nombre de parties', $('session-label').textContent.includes('2 parties'));
     check('le score de la partie en cours reste distinct',
-          val(`final-team${marqueur + 1}-score`) === paquet * 3);
+          val(`final-team${marqueur2 + 1}-score`) === paquet * 3);
+    check('la partie 2 seule ne montre pas le cumul',
+          val(`final-team${marqueur2 + 1}-score`) !== val(`session-team${marqueur2 + 1}-score`)
+          || marqueur1 !== marqueur2);
+
+    // Chaque partie a rapporte un paquet complet a l'equipe qui l'a ouverte
+    const attendu = [0, 0];
+    attendu[marqueur1] += paquet * 3;
+    attendu[marqueur2] += paquet * 3;
     check('le cumul additionne les deux parties',
-          val(`session-team${marqueur + 1}-score`) === paquet * 6);
+          val('session-team1-score') === attendu[0] && val('session-team2-score') === attendu[1]);
+    check('le total de la soiree vaut bien six manches',
+          val('session-team1-score') + val('session-team2-score') === paquet * 6);
 
     // ===== NOUVELLE PARTIE : LE CUMUL S ARRETE =====
     $('btn-restart').click();

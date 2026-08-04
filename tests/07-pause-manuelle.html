@@ -122,12 +122,20 @@ document.getElementById('f').addEventListener('load', async () => {
     check('l option abandonner est presente', !!$('btn-abandon-game'));
     check('l abandon est discret (btn-link)', $('btn-abandon-game').classList.contains('btn-link'));
 
-    w.confirm = () => false;
     $('btn-abandon-game').click();
+    check('une confirmation est demandee', $('dialog-overlay').style.display !== 'none');
+    check('elle previent de la perte des scores', $('dialog-message').textContent.includes('perdus'));
+    check('l action destructrice est signalee', $('dialog-confirm').classList.contains('btn-danger'));
+    check('une sortie de secours est proposee', $('dialog-cancel').style.display !== 'none');
+
+    $('dialog-cancel').click();
+    await wait(0);
+    check('abandon annule : la boite se referme', $('dialog-overlay').style.display === 'none');
     check('abandon annule : on reste en pause', voile() && sauvegarde() !== null);
 
-    w.confirm = () => true;
     $('btn-abandon-game').click();
+    $('dialog-confirm').click();
+    await wait(0);
     check('abandon confirme : retour a l accueil', screen() === 'screen-home');
     check('abandon confirme : la partie est effacee', w.localStorage.getItem('timesup_partie_en_cours') === null);
     check('abandon confirme : le bloc Reprendre disparait', $('resume-block').style.display === 'none');

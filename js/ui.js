@@ -334,7 +334,7 @@ export function renderAssignMode(mode) {
   const note = document.getElementById('assign-mode-note');
   if (note) {
     note.textContent = mode === 'chosen'
-      ? "Tapez sur l'équipe d'un joueur pour la changer."
+      ? "Tape sur l'équipe d'un joueur pour la changer."
       : "Répartition automatique, un joueur sur deux, dans l'ordre d'ajout.";
   }
 }
@@ -354,6 +354,49 @@ export function renderRules(rounds) {
     desc.textContent = ` — ${round.desc}`;
     item.append(nom, desc);
     liste.appendChild(item);
+  });
+}
+
+// ===== BOÎTE DE DIALOGUE =====
+// Remplace alert() et confirm() : ceux du navigateur sortent du design, et sur
+// iPhone ils affichent l'adresse du site en titre, ce qui inquiète les joueurs.
+// Renvoie une promesse : true si l'action est confirmée, false sinon.
+export function showDialog({ title, message, confirmLabel = 'OK', cancelLabel = null, danger = false }) {
+  const overlay = document.getElementById('dialog-overlay');
+  const btnOk = document.getElementById('dialog-confirm');
+  const btnCancel = document.getElementById('dialog-cancel');
+  if (!overlay || !btnOk || !btnCancel) return Promise.resolve(true);
+
+  document.getElementById('dialog-title').textContent = title;
+  document.getElementById('dialog-message').textContent = message || '';
+  btnOk.textContent = confirmLabel;
+  btnOk.className = danger ? 'btn btn-danger' : 'btn btn-primary';
+  btnCancel.textContent = cancelLabel || 'Annuler';
+  btnCancel.style.display = cancelLabel ? '' : 'none';
+  overlay.style.display = '';
+
+  return new Promise(resolve => {
+    function fermer(reponse) {
+      overlay.style.display = 'none';
+      btnOk.onclick = null;
+      btnCancel.onclick = null;
+      overlay.onclick = null;
+      document.removeEventListener('keydown', surTouche);
+      resolve(reponse);
+    }
+    function surTouche(event) {
+      if (event.key === 'Escape') fermer(false);
+      else if (event.key === 'Enter') fermer(true);
+    }
+
+    btnOk.onclick = () => fermer(true);
+    btnCancel.onclick = () => fermer(false);
+    // Toucher à côté annule — mais seulement quand annuler est une issue proposée
+    overlay.onclick = event => {
+      if (event.target === overlay && cancelLabel) fermer(false);
+    };
+    document.addEventListener('keydown', surTouche);
+    btnOk.focus();
   });
 }
 

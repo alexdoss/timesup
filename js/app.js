@@ -3,7 +3,7 @@
 
 import { loadThemes } from './themes.js';
 import { game, ROUNDS, resetGame, replayGame, buildDeck, startNewRound, getCurrentCard, cardFound, cardPassed, switchTeam, isRoundOver, isGameOver, nextRound, getCardsRemaining, addPlayer, removePlayer, assignTeamsRoundRobin, getCurrentPlayer, advancePlayer, getActiveRound, setPlayerTeam, syncChosenTeams, canPass, getPlannedTeamSizes, beginTurn, closeTurn, uncountCard, countCard, getRoundScores, getSessionScores } from './game.js';
-import { showScreen, updateTimer, showCard, updateRoundScreen, updateTurnInfo, updateGameHeader, showTurnResult, showRoundEnd, showFinalScreen, renderThemeButtons, renderPlayerList, updateCurrentPlayer, renderPlayerStats, renderRoundsSelector, renderAssignMode, applyTeamAccent, showResumeOption, renderSoundSetting, renderRules, showPauseOverlay, showPauseCountdown, hidePause, showPuppetConfirm, setRoundsNextEnabled, renderThemeEditor, showThemeEditError, renderCustomThemes } from './ui.js';
+import { showScreen, updateTimer, showCard, updateRoundScreen, updateTurnInfo, updateGameHeader, showTurnResult, showRoundEnd, showFinalScreen, renderThemeButtons, renderPlayerList, updateCurrentPlayer, renderPlayerStats, renderRoundsSelector, renderAssignMode, applyTeamAccent, showResumeOption, renderSoundSetting, renderRules, showPauseOverlay, showPauseCountdown, hidePause, showPuppetConfirm, setRoundsNextEnabled, renderThemeEditor, showThemeEditError, renderCustomThemes, showDialog } from './ui.js';
 import { getCustomThemes, saveCustomTheme, deleteCustomTheme, generateWithAI, getQuota } from './library.js';
 import { saveGame, loadSavedGame, clearSavedGame, restoreInto } from './persistence.js';
 import { playTick, playBuzzer, unlockAudio, isSoundEnabled, setSoundEnabled } from './sound.js';
@@ -173,7 +173,11 @@ function setupListeners() {
   // Themes → Players (step)
   document.getElementById('btn-next-step').addEventListener('click', () => {
     if (game.selectedThemes.size === 0) {
-      alert("Sélectionne au moins un thème !");
+      showDialog({
+        title: 'Aucun thème sélectionné',
+        message: "Choisis au moins un thème : c'est lui qui fournit les cartes de la partie.",
+        confirmLabel: 'Compris'
+      });
       return;
     }
     showScreen('screen-players');
@@ -234,7 +238,11 @@ function setupListeners() {
   // Players → Rounds (step 3)
   document.getElementById('btn-next-players').addEventListener('click', () => {
     if (game.nominativeMode && game.players.length < 4) {
-      alert("Il faut au moins 4 joueurs !");
+      showDialog({
+        title: 'Pas assez de joueurs',
+        message: "Il faut au moins 4 joueurs pour jouer avec les noms. Sinon, passe en mode sans les noms.",
+        confirmLabel: 'Compris'
+      });
       return;
     }
     if (!game.nominativeMode) {
@@ -524,7 +532,14 @@ function startCustomCardsEntry() {
   collectActiveRounds();
   syncTeamNamesFromInputs();
   if (game.nominativeMode) {
-    if (game.players.length < 4) { alert("Il faut au moins 4 joueurs !"); return; }
+    if (game.players.length < 4) {
+      showDialog({
+        title: 'Pas assez de joueurs',
+        message: "Il faut au moins 4 joueurs pour jouer avec les noms. Sinon, passe en mode sans les noms.",
+        confirmLabel: 'Compris'
+      });
+      return;
+    }
     customEntry.playerList = [...game.players];
   } else {
     customEntry.playerList = null; // simple mode: unbounded
@@ -591,11 +606,17 @@ function addCustomCard() {
   const input = document.getElementById('custom-card-input');
   const raw = input.value.trim();
   if (!raw) return;
-  if (raw.length < 2) { alert("Trop court"); return; }
+  if (raw.length < 2) {
+    showDialog({ title: 'Carte trop courte', message: 'Une carte doit faire au moins 2 caractères.', confirmLabel: 'Compris' });
+    return;
+  }
   if (customEntry.currentCards.length >= customEntry.currentTarget) return;
   const norm = raw.toLocaleLowerCase();
   const allExisting = [...game.customCards, ...customEntry.currentCards].map(c => c.toLocaleLowerCase());
-  if (allExisting.includes(norm)) { alert("Cette carte existe déjà"); return; }
+  if (allExisting.includes(norm)) {
+    showDialog({ title: 'Carte en double', message: 'Cette carte a déjà été saisie pour cette partie.', confirmLabel: 'Compris' });
+    return;
+  }
   customEntry.currentCards.push(raw);
   input.value = '';
   input.focus();
@@ -654,7 +675,11 @@ function startGame() {
     if (game.assignMode === 'chosen') syncChosenTeams();
     else assignTeamsRoundRobin();
     if (game.teams.some(team => team.players.length === 0)) {
-      alert("Chaque équipe doit avoir au moins un joueur.");
+      showDialog({
+        title: 'Une équipe est vide',
+        message: "Chaque équipe doit compter au moins un joueur. Change l'équipe d'un joueur avant de lancer.",
+        confirmLabel: 'Compris'
+      });
       return;
     }
   }
@@ -847,8 +872,15 @@ function quitToHome() {
 }
 
 // Arrêter pour de bon : la partie est effacée, rien ne sera proposé à l'accueil.
-function abandonGame() {
-  if (!confirm("Abandonner la partie ? Les scores seront perdus.")) return;
+async function abandonGame() {
+  const confirme = await showDialog({
+    title: 'Abandonner la partie ?',
+    message: "Les scores seront perdus et la partie ne pourra plus être reprise.",
+    confirmLabel: 'Abandonner',
+    cancelLabel: 'Continuer à jouer',
+    danger: true
+  });
+  if (!confirme) return;
   stopTimer();
   clearInterval(resumeCountdown);
   resumeCountdown = null;
@@ -955,10 +987,19 @@ function renderCustomThemesList() {
   renderCustomThemes(getCustomThemes(), openThemeEditor, confirmDeleteTheme);
 }
 
-function confirmDeleteTheme(id) {
+async function confirmDeleteTheme(id) {
   const themes = getCustomThemes();
   if (!themes[id]) return;
-  if (!confirm(`Supprimer le thème "${themes[id].name}" et toutes ses cartes ?`)) return;
+
+  const theme = themes[id];
+  const confirme = await showDialog({
+    title: `Supprimer « ${theme.name} » ?`,
+    message: `Ses ${theme.words.length} carte(s) seront effacées définitivement. Cette action est irréversible.`,
+    confirmLabel: 'Supprimer',
+    cancelLabel: 'Garder ce thème',
+    danger: true
+  });
+  if (!confirme) return;
 
   deleteCustomTheme(id);
   delete THEMES[id];
@@ -1067,7 +1108,10 @@ async function handleGenerate() {
   const comment = document.getElementById('ai-comment').value.trim();
   const count = parseInt(document.querySelector('.btn-ai-count.active').dataset.count);
 
-  if (!themeName) { alert("Donne un nom au thème"); return; }
+  if (!themeName) {
+    showDialog({ title: 'Nom manquant', message: "Donne un nom à ton thème avant de lancer la génération.", confirmLabel: 'Compris' });
+    return;
+  }
 
   const statusEl = document.getElementById('ai-status');
   const previewEl = document.getElementById('ai-preview');
@@ -1110,16 +1154,24 @@ function handleSaveTheme() {
   game.selectedThemes.add(id);
   refreshThemeSelector();
 
-  alert(`Thème "${themeName}" sauvegardé ! Il apparaîtra dans la sélection de thèmes.`);
+  showDialog({
+    title: 'Thème enregistré',
+    message: `« ${themeName} » rejoint ta bibliothèque et apparaît dès maintenant dans la sélection des thèmes.`,
+    confirmLabel: 'Parfait'
+  });
   showScreen('screen-library');
   renderCustomThemesList();
 }
 
 // ===== QUIT (global for HTML onclick) =====
-window.confirmQuit = function() {
-  if (confirm("Quitter la partie ? Tu pourras la reprendre depuis l'accueil.")) {
-    quitToHome();
-  }
+window.confirmQuit = async function() {
+  const confirme = await showDialog({
+    title: 'Quitter la partie ?',
+    message: "Rien n'est perdu : tu pourras la reprendre depuis l'accueil, là où tu t'es arrêté.",
+    confirmLabel: 'Quitter',
+    cancelLabel: 'Continuer à jouer'
+  });
+  if (confirme) quitToHome();
 };
 
 window.showScreen = showScreen;

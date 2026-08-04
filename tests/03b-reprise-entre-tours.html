@@ -34,8 +34,12 @@ document.getElementById('f').addEventListener('load', async () => {
     check('chrono a 40 s (tour neuf)', $('timer').textContent === '40');
     check('paquet complet (30 cartes)', $('cards-left').textContent === '30');
 
-    w.confirm = () => true;
     w.confirmQuit();
+    check('une confirmation maison s ouvre', $('dialog-overlay').style.display !== 'none');
+    check('elle nomme l action', $('dialog-title').textContent.includes('Quitter la partie'));
+    check('elle rassure sur la reprise', $('dialog-message').textContent.includes('reprendre'));
+    $('dialog-confirm').click();
+    await wait(0);
     check('retour a l accueil apres avoir quitte', screen() === 'screen-home');
     check('la partie est conservee apres avoir quitte', w.localStorage.getItem('timesup_partie_en_cours') !== null);
     check('bloc Reprendre propose immediatement', $('resume-block').style.display !== 'none');

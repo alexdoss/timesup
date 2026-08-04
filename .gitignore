@@ -9,5 +9,11 @@ Thumbs.db
 .vercel/
 node_modules/
 
+# Identifiants d'environnement (Groq, stockage Upstash…).
+# Vercel les injecte lui-même dans les fonctions : aucun de ces fichiers ne doit
+# rejoindre le dépôt, même par accident.
+.env
+.env.*
+
 # Réglages Claude Code propres à cette machine (les commandes, elles, sont versionnées)
 .claude/settings.local.json

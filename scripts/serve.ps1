@@ -3,12 +3,20 @@
   serve.ps1 — sert l'app en local, pour la tester dans un navigateur.
 
   Les modules ES et le chargement des thèmes échouent en file:// : il faut un vrai
-  serveur HTTP. Celui-ci ne sert que des fichiers ; /api n'est pas disponible
-  (la génération IA a besoin de Vercel).
+  serveur HTTP.
+
+  En plus des fichiers, ce serveur imite /api/session — le point de rendez-vous des
+  téléphones pour la saisie partagée des cartes. C'est une imitation en mémoire,
+  suffisante pour jouer le parcours en local et pour les tests : la vraie
+  implémentation est api/session.js, qui tourne chez Vercel avec Upstash.
+  /api/generate, lui, n'est pas imité : la génération IA exige une vraie clé.
 
   Usage :
     pwsh -NoProfile -ExecutionPolicy Bypass -File scripts/serve.ps1
     → http://localhost:8080
+
+  Astuce pour essayer la saisie à plusieurs : ouvre l'app dans une fenêtre, et
+  /rejoindre.html dans une fenêtre de navigation privée (stockage séparé).
 #>
 param(
   [string]$Root = (Split-Path $PSScriptRoot -Parent),
@@ -25,16 +33,164 @@ $mime = @{
   '.ico'  = 'image/x-icon'
 }
 
+# ===== Imitation de /api/session, en memoire =====
+# Meme contrat que api/session.js, en beaucoup plus court : pas de plafond par
+# adresse, pas d'expiration reelle. Ne sert qu'au developpement et aux tests.
+$sessions = @{}
+$ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
+
+function New-Code {
+  -join (1..4 | ForEach-Object { $ALPHABET[(Get-Random -Maximum $ALPHABET.Length)] })
+}
+
+function New-Id { [guid]::NewGuid().ToString('N').Substring(0, 16) }
+
+function Get-VuePublique($s) {
+  $liste = @($s.joueurs.Keys | ForEach-Object {
+    $j = $s.joueurs[$_]
+    [ordered]@{ id = $_; prenom = $j.prenom; role = $j.role; nbCartes = @($j.cartes).Count; fini = $j.fini }
+  })
+  $total = 0; $liste | ForEach-Object { $total += $_.nbCartes }
+  [ordered]@{
+    cartesParJoueur = $s.cartesParJoueur
+    mode            = $s.mode
+    ouverte         = $s.ouverte
+    joueurs         = $liste
+    total           = $total
+    tousPrets       = ($liste.Count -gt 0 -and -not ($liste | Where-Object { -not $_.fini }))
+  }
+}
+
+function Invoke-FausseSession($corps) {
+  $action = [string]$corps.action
+
+  if ($action -eq 'creer') {
+    $n = [int]($corps.cartesParJoueur ?? 5)
+    $n = [Math]::Max(2, [Math]::Min(15, $n))
+    $code = New-Code
+    $sessions[$code] = @{
+      cartesParJoueur = $n
+      mode            = ($corps.mode -eq 'nominatif') ? 'nominatif' : 'simple'
+      jeton           = New-Id
+      ouverte         = $true
+      joueurs         = @{}
+    }
+    return @{ statut = 200; corps = [ordered]@{
+      code = $code; jeton = $sessions[$code].jeton; cartesParJoueur = $n
+      mode = $sessions[$code].mode; expireDans = 7200 } }
+  }
+
+  $code = ([string]$corps.code).ToUpper().Trim()
+  if ($code.Length -ne 4) { return @{ statut = 400; corps = @{ error = 'Code de partie invalide.' } } }
+  if (-not $sessions.ContainsKey($code)) {
+    return @{ statut = 404; corps = @{ error = "Aucune partie ne porte ce code. Verifie-le, ou demande-le a l'organisateur." } }
+  }
+  $s = $sessions[$code]
+
+  if ($action -in @('rejoindre', 'deposer') -and -not $s.ouverte) {
+    return @{ statut = 409; corps = @{ error = 'La partie a deja demarre sans toi.' } }
+  }
+
+  switch ($action) {
+    'etat' { return @{ statut = 200; corps = (Get-VuePublique $s) } }
+
+    'rejoindre' {
+      $role = ($corps.role -in @('organisateur', 'sansTel')) ? $corps.role : 'invite'
+      if ($role -ne 'invite' -and $corps.jeton -ne $s.jeton) {
+        return @{ statut = 403; corps = @{ error = "Action reservee a l'organisateur." } }
+      }
+      $prenom = ([string]$corps.prenom).Trim()
+      if ($prenom.Length -lt 1) { return @{ statut = 400; corps = @{ error = 'Indique ton prenom.' } } }
+      if ($prenom.Length -gt 20) { $prenom = $prenom.Substring(0, 20) }
+      $id = New-Id
+      $s.joueurs[$id] = @{ prenom = $prenom; role = $role; cartes = @(); fini = $false }
+      return @{ statut = 200; corps = [ordered]@{
+        idJoueur = $id; prenom = $prenom; cartesParJoueur = $s.cartesParJoueur; mode = $s.mode } }
+    }
+
+    'deposer' {
+      $id = [string]$corps.idJoueur
+      if (-not $s.joueurs.ContainsKey($id)) {
+        return @{ statut = 404; corps = @{ error = 'Tu as ete retire de cette partie. Rejoins-la a nouveau.' } }
+      }
+      $propres = @()
+      foreach ($brut in @($corps.cartes)) {
+        $mot = ([string]$brut).Trim()
+        if ($mot.Length -lt 2) { continue }
+        if ($mot.Length -gt 40) { $mot = $mot.Substring(0, 40) }
+        if ($propres -contains $mot) { continue }
+        $propres += $mot
+        if ($propres.Count -ge 20) { break }
+      }
+      $fini = [bool]$corps.fini -and $propres.Count -ge $s.cartesParJoueur
+      $s.joueurs[$id].cartes = $propres
+      $s.joueurs[$id].fini = $fini
+      return @{ statut = 200; corps = @{ nbCartes = $propres.Count; fini = $fini } }
+    }
+
+    'retirer' {
+      if ($corps.jeton -ne $s.jeton) { return @{ statut = 403; corps = @{ error = "Action reservee a l'organisateur." } } }
+      $id = [string]$corps.idJoueur
+      if (-not $s.joueurs.ContainsKey($id)) { return @{ statut = 404; corps = @{ error = 'Ce joueur ne fait pas partie de la session.' } } }
+      $s.joueurs.Remove($id)
+      return @{ statut = 200; corps = @{ ok = $true } }
+    }
+
+    'fermer' {
+      if ($corps.jeton -ne $s.jeton) { return @{ statut = 403; corps = @{ error = "Action reservee a l'organisateur." } } }
+      $enAttente = @($s.joueurs.Values | Where-Object { -not $_.fini } | ForEach-Object { $_.prenom })
+      if ($enAttente.Count -gt 0) {
+        return @{ statut = 409; corps = [ordered]@{ error = 'Des joueurs saisissent encore leurs cartes.'; enAttente = $enAttente } }
+      }
+      $cartes = @(); $s.joueurs.Values | ForEach-Object { $cartes += $_.cartes }
+      if ($cartes.Count -eq 0) { return @{ statut = 409; corps = @{ error = "Aucune carte n'a ete saisie." } } }
+      $s.ouverte = $false
+      $detail = @($s.joueurs.Values | ForEach-Object { [ordered]@{ prenom = $_.prenom; role = $_.role; nbCartes = @($_.cartes).Count } })
+      return @{ statut = 200; corps = [ordered]@{ cartes = $cartes; joueurs = $detail } }
+    }
+
+    default { return @{ statut = 400; corps = @{ error = 'Action inconnue.' } } }
+  }
+}
+
 $listener = [System.Net.HttpListener]::new()
 $listener.Prefixes.Add("http://localhost:$Port/")
 $listener.Start()
 Write-Output "Rush est servi sur http://localhost:$Port/  (Ctrl+C pour arreter)"
+Write-Output "  /api/session est imite en memoire (saisie partagee jouable en local)"
 
 while ($listener.IsListening) {
   try {
     $ctx = $listener.GetContext()
     $chemin = [Uri]::UnescapeDataString($ctx.Request.Url.AbsolutePath)
     if ($chemin -eq '/') { $chemin = '/index.html' }
+    if ($chemin -eq '/rejoindre') { $chemin = '/rejoindre.html' }
+
+    # La route de session, imitee en memoire
+    if ($chemin -eq '/api/session') {
+      $ctx.Response.ContentType = 'application/json; charset=utf-8'
+      if ($ctx.Request.HttpMethod -ne 'POST') {
+        $ctx.Response.StatusCode = 405
+        $sortie = '{"error":"Method not allowed"}'
+      } else {
+        $lecteur = [System.IO.StreamReader]::new($ctx.Request.InputStream, [System.Text.Encoding]::UTF8)
+        $brut = $lecteur.ReadToEnd()
+        $lecteur.Close()
+        try {
+          $reponse = Invoke-FausseSession ($brut | ConvertFrom-Json)
+          $ctx.Response.StatusCode = $reponse.statut
+          $sortie = $reponse.corps | ConvertTo-Json -Depth 6 -Compress
+        } catch {
+          $ctx.Response.StatusCode = 503
+          $sortie = '{"error":"Le service est momentanement indisponible."}'
+        }
+      }
+      $octets = [System.Text.Encoding]::UTF8.GetBytes($sortie)
+      $ctx.Response.OutputStream.Write($octets, 0, $octets.Length)
+      $ctx.Response.Close()
+      continue
+    }
+
     $fichier = Join-Path $Root ($chemin.TrimStart('/') -replace '/', '\')
 
     if (Test-Path $fichier -PathType Leaf) {

@@ -209,6 +209,24 @@
             <span class="mode-tile-desc">Chaque joueur saisit ses propres cartes en début de partie.</span>
           </button>
         </div>
+
+        <!-- Apparaît seulement pour les cartes perso : où chacun saisit-il ? -->
+        <div id="saisie-choice" class="config-section" style="display:none">
+          <span class="field-label">Comment saisir les cartes ?</span>
+          <div class="mode-choice">
+            <button type="button" class="mode-tile active" data-saisie="partagee">
+              <span class="mode-tile-icon">📱</span>
+              <span class="mode-tile-title">Chacun sur son téléphone</span>
+              <span class="mode-tile-desc">Tout le monde saisit en même temps, en scannant un QR code. Nécessite du réseau.</span>
+            </button>
+            <button type="button" class="mode-tile" data-saisie="sequentielle">
+              <span class="mode-tile-icon">🔁</span>
+              <span class="mode-tile-title">On se passe le téléphone</span>
+              <span class="mode-tile-desc">Chacun son tour sur cet appareil. Fonctionne sans réseau.</span>
+            </button>
+          </div>
+        </div>
+
         <button id="btn-next-mode" class="btn btn-primary">Suivant ▶️</button>
       </div>
     </div>
@@ -247,6 +265,9 @@
         </div>
         <div id="simple-custom-block" class="config-section" style="display:none">
           <p class="wizard-hint">Chaque joueur saisira ses cartes tour à tour au début de la partie.</p>
+        </div>
+        <div id="note-joueurs-partages" class="config-section" style="display:none">
+          <p class="wizard-hint">📱 Pas besoin de saisir les joueurs : chacun donnera son prénom en scannant le QR code. Tu répartiras les équipes juste après.</p>
         </div>
         <div class="config-section">
           <span class="field-label">Noms des équipes</span>
@@ -328,7 +349,7 @@
           </div>
         </label>
 
-        <label>
+        <label id="cards-count-field">
           <span id="cards-count-label">Nombre de cartes</span>
           <div id="cards-preset" class="timer-selector">
             <button class="btn-cards" data-cards="20">20</button>
@@ -410,6 +431,90 @@
         <div id="custom-batch-choice" style="display:none">
           <button id="btn-custom-done" class="btn btn-primary">✅ J'ai fini</button>
         </div>
+      </div>
+    </div>
+
+    <!-- OUVERTURE DE SESSION — dernier réglage avant d'afficher le QR -->
+    <div id="screen-session-ouvrir" class="screen">
+      <button class="btn-back" onclick="showScreen('screen-players')">←</button>
+      <button class="btn-close" onclick="showScreen('screen-home')">✕</button>
+      <div class="wizard-header">
+        <h2>Combien de cartes chacun ?</h2>
+        <p class="wizard-hint">Ce nombre sera demandé à chaque joueur. Il ne pourra plus changer une fois la session ouverte.</p>
+      </div>
+      <div class="config-form">
+        <div class="reglage-cartes">
+          <span class="field-label">Cartes par joueur</span>
+          <div class="stepper">
+            <button type="button" id="btn-cartes-moins" class="stepper-btn">−</button>
+            <span id="session-cartes-valeur" class="stepper-valeur">5</span>
+            <button type="button" id="btn-cartes-plus" class="stepper-btn">+</button>
+          </div>
+          <p id="session-cartes-estimation" class="wizard-hint"></p>
+        </div>
+        <button id="btn-ouvrir-session" class="btn btn-primary">Ouvrir la session ▶️</button>
+        <p class="wizard-hint">Le QR code s'affichera tout de suite. Tu pourras régler les manches et le chrono une fois que tout le monde aura saisi ses cartes — toi compris.</p>
+      </div>
+    </div>
+
+    <!-- ÉCRAN SESSION PARTAGÉE — l'organisateur attend que chacun saisisse -->
+    <div id="screen-session" class="screen">
+      <button class="btn-back" onclick="retourDepuisSession()">←</button>
+      <button class="btn-close" onclick="showScreen('screen-home')">✕</button>
+      <div class="wizard-header">
+        <h2>Rejoignez la partie</h2>
+        <p id="session-rappel" class="wizard-hint"></p>
+      </div>
+
+      <div id="session-qr" class="qr-bloc"></div>
+      <div id="session-code" class="code-session"></div>
+      <div id="session-adresse" class="adresse-session"></div>
+
+      <div class="config-form">
+        <button id="btn-mes-cartes" class="btn btn-secondary">✍️ Saisir mes cartes</button>
+        <div id="session-joueurs" class="connectes"></div>
+        <p id="session-compteur" class="wizard-hint"></p>
+        <button id="btn-session-lancer" class="btn btn-primary" disabled>Continuer la configuration ▶️</button>
+        <button id="btn-session-sanstel" class="btn-link">➕ Un joueur n'a pas de téléphone</button>
+        <button id="btn-session-abandon" class="btn-link">Finalement, on se passe le téléphone</button>
+      </div>
+    </div>
+
+    <!-- ÉCRAN SAISIE — organisateur, ou joueur sans téléphone sur son appareil -->
+    <div id="screen-saisie-locale" class="screen">
+      <button id="btn-saisie-retour" class="btn-back">←</button>
+      <div class="wizard-header">
+        <h2 id="saisie-titre">Tes cartes</h2>
+        <p id="saisie-note" class="wizard-hint"></p>
+      </div>
+      <div class="config-form">
+        <div id="saisie-bloc-prenom" class="config-section" style="display:none">
+          <span class="field-label">Son prénom</span>
+          <input type="text" id="saisie-prenom" placeholder="Prénom" maxlength="20" autocomplete="off">
+        </div>
+        <div class="jauge"><div id="saisie-jauge"></div></div>
+        <p id="saisie-compteur" class="wizard-hint"></p>
+        <div class="player-input-row">
+          <input type="text" id="saisie-carte" placeholder="Mot ou expression" maxlength="40" autocomplete="off">
+          <button id="btn-saisie-visibilite" class="btn btn-add" title="Voir/masquer" style="display:none">👁</button>
+          <button id="btn-saisie-ajouter" class="btn btn-add">+</button>
+        </div>
+        <p id="saisie-erreur" class="wizard-hint" style="min-height:18px"></p>
+        <ul id="saisie-liste" class="player-list"></ul>
+        <button id="btn-saisie-fini" class="btn btn-primary" disabled>✅ J'ai terminé</button>
+      </div>
+    </div>
+
+    <!-- ÉCRAN RÉPARTITION — mode nominatif, après la session -->
+    <div id="screen-repartition" class="screen">
+      <div class="wizard-header">
+        <h2>Répartir les équipes</h2>
+        <p class="wizard-hint">Les prénoms viennent des joueurs eux-mêmes. Tape sur une équipe pour la changer.</p>
+      </div>
+      <div class="config-form">
+        <div id="repartition-liste" class="equipes"></div>
+        <button id="btn-repartition-melanger" class="btn btn-secondary">🎲 Mélanger</button>
+        <button id="btn-repartition-jouer" class="btn btn-primary">C'est parti 🎮</button>
       </div>
     </div>
 

@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head><meta charset="utf-8"><title>Test Rush — fonction serveur /api/session</title></head>
+<body>
+<pre id="log">demarrage...</pre>
+<script type="module">
+const out = [];
+function log(s) { out.push(s); document.getElementById('log').textContent = out.join('\n'); }
+function check(name, cond) { log((cond ? 'PASS' : 'FAIL') + ' -- ' + name); }
+
+const URL_KV = 'https://kv.exemple/';
+
+// ===== Faux Redis en memoire : hachages, expiration, compteurs =====
+let magasin = {};        // cle -> { champs: {}, nombre: n }
+let expirations = {};
+let pannePermanente = false;
+
+function reinitialiser() { magasin = {}; expirations = {}; pannePermanente = false; }
+
+function executer(cmd) {
+  const [verbe, cle, ...reste] = cmd;
+  switch (verbe) {
+    case 'HSET': {
+      magasin[cle] = magasin[cle] || { champs: {} };
+      for (let i = 0; i < reste.length; i += 2) magasin[cle].champs[reste[i]] = reste[i + 1];
+      return 1;
+    }
+    case 'HGETALL': {
+      const e = magasin[cle];
+      if (!e || !e.champs) return [];
+      return Object.entries(e.champs).flat();     // tableau plat, comme Upstash
+    }
+    case 'HDEL': {
+      if (magasin[cle]?.champs) delete magasin[cle].champs[reste[0]];
+      return 1;
+    }
+    case 'EXISTS': return magasin[cle] ? 1 : 0;
+    case 'INCR': {
+      magasin[cle] = magasin[cle] || { nombre: 0 };
+      magasin[cle].nombre = (magasin[cle].nombre || 0) + 1;
+      return magasin[cle].nombre;
+    }
+    case 'EXPIRE': { expirations[cle] = reste[0]; return 1; }
+    default: return null;
+  }
+}
+
+window.__fauxFetch = async (url, options) => {
+  if (pannePermanente) throw new Error('service indisponible');
+  const commande = JSON.parse(options.body);
+  return { ok: true, json: async () => ({ result: executer(commande) }) };
+};
+
+// ===== Chargement du vrai fichier serveur =====
+let source = null;
+async function charger(env) {
+  if (!source) source = await (await fetch('/api/session.js')).text();
+  const shim = `const process = { env: ${JSON.stringify(env)} };\n`
+             + `const fetch = (...a) => window.__fauxFetch(...a);\n`;
+  const blob = new Blob([shim + source], { type: 'text/javascript' });
+  const url = URL.createObjectURL(blob);
+  const mod = await import(url);
+  URL.revokeObjectURL(url);
+  return mod.default;
+}
+
+function fausseRes() {
+  const r = { code: 0, body: null };
+  r.status = c => { r.code = c; return r; };
+  r.json = b => { r.body = b; return r; };
+  return r;
+}
+
+function fausseReq(corps, ip = '10.0.0.1', methode = 'POST') {
+  return { method: methode, headers: { 'x-forwarded-for': ip }, body: corps };
+}
+
+const ENV = { KV_REST_API_URL: URL_KV, KV_REST_API_TOKEN: 'jeton-test' };
+
+(async () => {
+  try {
+    const handler = await charger(ENV);
+    check('le module serveur se charge sans erreur de syntaxe', typeof handler === 'function');
+
+    async function appeler(corps, ip = '10.0.0.1') {
+      const res = fausseRes();
+      await handler(fausseReq(corps, ip), res);
+      return res;
+    }
+
+    // ===== Refus de base =====
+    let res = fausseRes();
+    await handler(fausseReq({ action: 'creer' }, '10.0.0.1', 'GET'), res);
+    check('une requete GET est refusee (405)', res.code === 405);
+
+    const sansStockage = await charger({});
+    res = fausseRes();
+    await sansStockage(fausseReq({ action: 'creer' }), res);
+    check('sans stockage configure : 503 explicite', res.code === 503);
+    check('le message oriente vers le repli', res.body.error.includes('on se passe le téléphone'));
+
+    res = await appeler({ action: 'nimporte-quoi', code: 'ABCD' });
+    check('un code inexistant renvoie 404', res.code === 404);
+
+    // ===== Creation =====
+    reinitialiser();
+    res = await appeler({ action: 'creer', cartesParJoueur: 5, mode: 'simple' });
+    check('la session est creee (200)', res.code === 200);
+    const code = res.body.code;
+    const jeton = res.body.jeton;
+    log('       code tire : ' + code);
+    check('le code fait 4 caracteres', code.length === 4);
+    check('le code evite les caracteres confondables', !/[O0I1]/.test(code));
+    check('un jeton d organisateur est remis', typeof jeton === 'string' && jeton.length > 8);
+    check('la duree de vie est de 2 heures', expirations['rush:session:' + code] === 7200);
+    check('le nombre de cartes est renvoye', res.body.cartesParJoueur === 5);
+
+    res = await appeler({ action: 'creer', cartesParJoueur: 999 });
+    check('un nombre de cartes aberrant est ramene dans les bornes', res.body.cartesParJoueur === 15);
+
+    // ===== Etat initial =====
+    res = await appeler({ action: 'etat', code });
+    check('la session est ouverte', res.code === 200 && res.body.ouverte === true);
+    check('elle est vide au depart', res.body.joueurs.length === 0 && res.body.total === 0);
+    check('on ne peut pas lancer une session vide', res.body.tousPrets === false);
+
+    res = await appeler({ action: 'etat', code: code.toLowerCase() });
+    check('le code est accepte en minuscules', res.code === 200);
+    res = await appeler({ action: 'etat', code: 'AB' });
+    check('un code trop court est refuse (400)', res.code === 400);
+
+    // ===== Un invite rejoint =====
+    res = await appeler({ action: 'rejoindre', code, prenom: '  Marc  ' });
+    check('Marc rejoint la partie', res.code === 200);
+    const idMarc = res.body.idJoueur;
+    check('son prenom est nettoye', res.body.prenom === 'Marc');
+    check('il apprend combien de cartes saisir', res.body.cartesParJoueur === 5);
+    check('un identifiant lui est attribue', typeof idMarc === 'string' && idMarc.length > 8);
+
+    res = await appeler({ action: 'rejoindre', code, prenom: '   ' });
+    check('un prenom vide est refuse (400)', res.code === 400);
+
+    res = await appeler({ action: 'rejoindre', code, prenom: 'Pirate', role: 'organisateur' });
+    check('on ne peut pas se declarer organisateur sans le jeton (403)', res.code === 403);
+
+    // ===== Depot de cartes =====
+    res = await appeler({ action: 'deposer', code, idJoueur: idMarc, cartes: ['Plage', 'Valise'], fini: false });
+    check('depot partiel accepte', res.code === 200 && res.body.nbCartes === 2);
+    check('il n est pas declare pret', res.body.fini === false);
+
+    res = await appeler({ action: 'etat', code });
+    check('l organisateur voit sa progression', res.body.joueurs[0].nbCartes === 2);
+    check('mais jamais ses cartes', !('cartes' in res.body.joueurs[0]));
+    check('le total suit', res.body.total === 2);
+
+    res = await appeler({ action: 'deposer', code, idJoueur: idMarc, cartes: ['Plage', 'plage', 'A', 'Valise', 'Parasol', 'Sable', 'Crème'], fini: true });
+    log('       cartes retenues : ' + res.body.nbCartes);
+    check('les doublons et les mots trop courts sont ecartes', res.body.nbCartes === 5);
+    check('Marc est declare pret', res.body.fini === true);
+
+    res = await appeler({ action: 'deposer', code, idJoueur: 'inconnu', cartes: ['X'] });
+    check('un joueur inconnu est rejete (404)', res.code === 404);
+
+    // ===== Un joueur qui n a pas fini bloque le lancement =====
+    res = await appeler({ action: 'rejoindre', code, prenom: 'Inès' });
+    const idInes = res.body.idJoueur;
+    await appeler({ action: 'deposer', code, idJoueur: idInes, cartes: ['Chat'], fini: false });
+
+    res = await appeler({ action: 'etat', code });
+    check('deux joueurs sont connectes', res.body.joueurs.length === 2);
+    check('tous prets est faux tant qu un saisit', res.body.tousPrets === false);
+
+    res = await appeler({ action: 'fermer', code, jeton });
+    log('       refus : ' + JSON.stringify(res.body));
+    check('fermer est refuse tant qu un joueur saisit (409)', res.code === 409);
+    check('le serveur dit qui on attend', res.body.enAttente.includes('Inès'));
+
+    // ===== Se declarer pret sans avoir le compte est ignore =====
+    res = await appeler({ action: 'deposer', code, idJoueur: idInes, cartes: ['Chat', 'Chien'], fini: true });
+    check('on ne peut pas se declarer pret sous le quota', res.body.fini === false);
+
+    // ===== Retrait d un joueur =====
+    res = await appeler({ action: 'retirer', code, idJoueur: idInes });
+    check('retirer sans le jeton est refuse (403)', res.code === 403);
+
+    res = await appeler({ action: 'retirer', code, idJoueur: idInes, jeton });
+    check('l organisateur peut retirer un joueur bloque', res.code === 200);
+
+    res = await appeler({ action: 'etat', code });
+    check('il disparait de la liste', res.body.joueurs.length === 1);
+    check('ses cartes ne comptent plus', res.body.total === 5);
+    check('la voie est de nouveau libre', res.body.tousPrets === true);
+
+    res = await appeler({ action: 'deposer', code, idJoueur: idInes, cartes: ['Chat'] });
+    check('un joueur retire est prevenu (404)', res.code === 404);
+    check('le message lui dit de rejoindre a nouveau', res.body.error.includes('Rejoins'));
+
+    // ===== L organisateur et le joueur sans telephone =====
+    res = await appeler({ action: 'rejoindre', code, prenom: 'Alex', role: 'organisateur', jeton });
+    check('l organisateur s inscrit avec son jeton', res.code === 200);
+    const idAlex = res.body.idJoueur;
+    await appeler({ action: 'deposer', code, idJoueur: idAlex, cartes: ['A1', 'A2', 'A3', 'A4', 'A5'], fini: true });
+
+    res = await appeler({ action: 'rejoindre', code, prenom: 'Jo', role: 'sansTel', jeton });
+    const idJo = res.body.idJoueur;
+    check('un joueur sans telephone est inscrit par l organisateur', res.code === 200);
+    await appeler({ action: 'deposer', code, idJoueur: idJo, cartes: ['J1', 'J2', 'J3', 'J4', 'J5'], fini: true });
+
+    res = await appeler({ action: 'etat', code });
+    check('les roles sont distingues', res.body.joueurs.filter(j => j.role === 'sansTel').length === 1);
+    check('trois joueurs au total', res.body.joueurs.length === 3);
+    check('tout le monde est pret', res.body.tousPrets === true);
+    check('le paquet annonce 15 cartes', res.body.total === 15);
+
+    // ===== Fermeture =====
+    res = await appeler({ action: 'fermer', code });
+    check('fermer sans le jeton est refuse (403)', res.code === 403);
+
+    res = await appeler({ action: 'fermer', code, jeton });
+    check('la fermeture reussit', res.code === 200);
+    check('les cartes descendent enfin', res.body.cartes.length === 15);
+    check('elles sont bien celles saisies', res.body.cartes.includes('Parasol') && res.body.cartes.includes('J1'));
+    check('la composition du paquet est detaillee', res.body.joueurs.length === 3);
+
+    res = await appeler({ action: 'etat', code });
+    check('la session est marquee fermee', res.body.ouverte === false);
+
+    res = await appeler({ action: 'rejoindre', code, prenom: 'Retardataire' });
+    check('un retardataire est econduit (409)', res.code === 409);
+    check('on lui explique pourquoi', res.body.error.includes('déjà démarré'));
+
+    res = await appeler({ action: 'deposer', code, idJoueur: idAlex, cartes: ['Triche'], fini: true });
+    check('plus personne ne peut modifier ses cartes (409)', res.code === 409);
+
+    // ===== Plafond de creation par adresse =====
+    reinitialiser();
+    for (let i = 0; i < 30; i++) await appeler({ action: 'creer' }, '10.0.0.9');
+    res = await appeler({ action: 'creer' }, '10.0.0.9');
+    check('la 31e session depuis la meme adresse est refusee (429)', res.code === 429);
+    res = await appeler({ action: 'creer' }, '10.0.0.10');
+    check('une autre adresse n est pas penalisee', res.code === 200);
+
+    // ===== Panne du stockage =====
+    reinitialiser();
+    res = await appeler({ action: 'creer' });
+    const codePanne = res.body.code;
+    pannePermanente = true;
+    res = await appeler({ action: 'etat', code: codePanne });
+    check('une panne du stockage renvoie 503, pas une erreur brute', res.code === 503);
+    check('le message reste comprehensible', res.body.error.includes('Réessaie'));
+
+    log('SCENARIO 18 TERMINE');
+  } catch (e) {
+    log('EXCEPTION: ' + e.message + '\n' + e.stack);
+  }
+})();
+</script>
+</body>
+</html>

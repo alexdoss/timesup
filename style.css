@@ -608,6 +608,148 @@ body {
   background: rgba(255, 255, 255, 0.13);
 }
 
+/* ===== SESSION DE SAISIE PARTAGÉE (côté organisateur) ===== */
+/* Le QR doit rester sombre sur fond blanc pour être lisible par un téléphone,
+   quelle que soit la couleur de l'app autour. */
+.qr-bloc {
+  background: #fff;
+  padding: 14px;
+  border-radius: var(--r-lg);
+  line-height: 0;
+  margin: 4px 0 12px;
+}
+
+.code-session {
+  font-size: 2rem;
+  font-weight: 800;
+  letter-spacing: 0.22em;
+  color: var(--secondary);
+}
+
+.adresse-session {
+  font-size: 0.82rem;
+  color: var(--muted);
+  margin-bottom: 4px;
+}
+
+.connectes {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 100%;
+}
+
+.connecte {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 11px 14px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--r-sm);
+  font-size: 0.9rem;
+}
+
+.connecte .qui { flex: 1; text-align: left; }
+.connecte .etat { font-size: 0.78rem; color: var(--muted); }
+.connecte.fini { border-color: rgba(34, 197, 94, 0.4); }
+.connecte.fini .etat { color: var(--success); }
+.connecte.vide { color: var(--muted-2); font-style: italic; justify-content: center; }
+.connecte .sans-tel { font-size: 0.7rem; color: var(--secondary); }
+
+.connecte .retirer-joueur {
+  background: none;
+  border: none;
+  color: var(--bad);
+  font-size: 1rem;
+  cursor: pointer;
+  padding: 0 2px;
+}
+
+/* Répartition des équipes */
+.equipes {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 100%;
+}
+
+.equipier {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 11px 14px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--r-sm);
+  font-size: 0.9rem;
+}
+
+.equipier span { flex: 1; text-align: left; }
+
+.equipier button {
+  border: none;
+  border-radius: 100px;
+  padding: 6px 14px;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: #fff;
+}
+
+/* ===== PAGE DES INVITÉS (rejoindre.html) ===== */
+.rejoindre-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+  max-width: 380px;
+  margin: auto;
+}
+
+.champ-code {
+  text-align: center;
+  font-size: 2rem !important;
+  font-weight: 800;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  padding-left: 0.3em !important;   /* compense l'espacement, qui décale le texte */
+}
+
+.grand-emoji {
+  font-size: 3.4rem;
+  margin-bottom: 10px;
+}
+
+/* Jauge de progression de la saisie */
+.jauge {
+  width: 100%;
+  height: 6px;
+  background: var(--surface);
+  border-radius: 100px;
+  overflow: hidden;
+  margin-bottom: 6px;
+}
+
+.jauge > div {
+  height: 100%;
+  width: 0;
+  background: var(--success);
+  transition: width 0.25s;
+}
+
+/* Où en est l'envoi vers l'organisateur — discret tant que tout va bien */
+.etat-envoi {
+  font-size: 0.8rem;
+  color: var(--muted-2);
+  min-height: 18px;
+  margin-bottom: 10px;
+}
+
+.etat-envoi.ok { color: var(--success); }
+.etat-envoi.horsligne { color: var(--warning); }
+
 /* ===== BOÎTE DE DIALOGUE ===== */
 .dialog-overlay {
   position: fixed;

@@ -1,0 +1,338 @@
+// ===== SESSION DE SAISIE PARTAGÉE =====
+// Point de rendez-vous entre le téléphone de l'organisateur et ceux des invités.
+// C'est la seule partie de Rush qui exige du réseau : sans stockage configuré,
+// la route répond 503 et l'app bascule sur la saisie « on se passe le téléphone ».
+//
+// Modèle de données — un hachage Redis par session, `rush:session:<CODE>` :
+//   champ "config"  → { creee, cartesParJoueur, mode, jeton, ouverte }
+//   champ "j:<id>"  → { prenom, role, cartes: [...], fini, maj }
+//
+// Un hachage plutôt qu'une seule valeur JSON : chaque joueur écrit dans SON champ.
+// Avec une valeur unique, deux invités qui valident en même temps liraient le même
+// état et le dernier écraserait le premier — une soirée entière perdrait des cartes.
+//
+// Ce fichier duplique volontairement une vingtaine de lignes de dialogue avec le
+// stockage, présentes aussi dans api/generate.js : chaque fonction serveur reste
+// autonome, ce qui permet de la charger et de la tester isolément.
+
+const DUREE_SESSION_S = 2 * 60 * 60;      // au-delà, la session s'efface d'elle-même
+const MAX_JOUEURS = 12;
+const MAX_CARTES = 20;                     // par joueur
+const LONGUEUR_CARTE_MAX = 40;
+const LONGUEUR_PRENOM_MAX = 20;
+const SESSIONS_PAR_IP_PAR_JOUR = 30;       // garde-fou contre la création en boucle
+
+// Alphabet sans caractères confondables (pas de O/0 ni de I/1) : le code est lu
+// à voix haute et recopié à la main.
+const ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+const LONGUEUR_CODE = 4;
+
+const KV_URL = process.env.KV_REST_API_URL;
+const KV_TOKEN = process.env.KV_REST_API_TOKEN;
+
+// ===== Dialogue avec le stockage =====
+
+async function commandeKV(commande) {
+  const reponse = await fetch(KV_URL, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${KV_TOKEN}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify(commande)
+  });
+  if (!reponse.ok) throw new Error(`KV ${reponse.status}`);
+  const { result } = await reponse.json();
+  return result;
+}
+
+function cleSession(code) {
+  return `rush:session:${code}`;
+}
+
+// Upstash renvoie HGETALL sous forme de tableau plat [champ, valeur, champ, valeur…]
+function enObjet(resultat) {
+  if (!resultat) return {};
+  if (!Array.isArray(resultat)) return resultat;
+  const objet = {};
+  for (let i = 0; i < resultat.length; i += 2) objet[resultat[i]] = resultat[i + 1];
+  return objet;
+}
+
+function analyser(valeur) {
+  try {
+    return typeof valeur === 'string' ? JSON.parse(valeur) : valeur;
+  } catch {
+    return null;
+  }
+}
+
+async function lireSession(code) {
+  const brut = enObjet(await commandeKV(['HGETALL', cleSession(code)]));
+  const config = analyser(brut.config);
+  if (!config) return null;
+
+  const joueurs = {};
+  Object.keys(brut)
+    .filter(champ => champ.startsWith('j:'))
+    .forEach(champ => {
+      const joueur = analyser(brut[champ]);
+      if (joueur) joueurs[champ.slice(2)] = joueur;
+    });
+
+  return { config, joueurs };
+}
+
+// ===== Petits utilitaires =====
+
+function jourCourant() {
+  return new Date().toISOString().slice(0, 10);
+}
+
+function adresseAppelant(req) {
+  const entete = req.headers['x-forwarded-for'] || '';
+  return entete.split(',')[0].trim() || 'inconnue';
+}
+
+function tirerCode() {
+  let code = '';
+  for (let i = 0; i < LONGUEUR_CODE; i++) {
+    code += ALPHABET[Math.floor(Math.random() * ALPHABET.length)];
+  }
+  return code;
+}
+
+function tirerIdentifiant() {
+  return (globalThis.crypto?.randomUUID?.() || `${Date.now()}-${Math.random()}`).replace(/-/g, '').slice(0, 16);
+}
+
+function nettoyerPrenom(valeur) {
+  return String(valeur ?? '').trim().slice(0, LONGUEUR_PRENOM_MAX);
+}
+
+// Les cartes viennent d'un téléphone qu'on ne contrôle pas : on borne tout.
+function nettoyerCartes(valeur) {
+  if (!Array.isArray(valeur)) return [];
+  const vues = new Set();
+  const propres = [];
+  for (const brut of valeur) {
+    const mot = String(brut ?? '').trim().slice(0, LONGUEUR_CARTE_MAX);
+    if (mot.length < 2) continue;
+    const repere = mot.toLocaleLowerCase();
+    if (vues.has(repere)) continue;
+    vues.add(repere);
+    propres.push(mot);
+    if (propres.length >= MAX_CARTES) break;
+  }
+  return propres;
+}
+
+// Vue publique d'un joueur : jamais ses cartes. L'organisateur voit qui a fini,
+// pas ce qui a été écrit — les cartes ne descendent qu'au lancement de la partie.
+function vuePublique(id, joueur) {
+  return {
+    id,
+    prenom: joueur.prenom,
+    role: joueur.role,
+    nbCartes: joueur.cartes.length,
+    fini: !!joueur.fini
+  };
+}
+
+async function garderPlafondCreation(req) {
+  const cle = `rush:sessions:${jourCourant()}:${adresseAppelant(req)}`;
+  try {
+    const compte = await commandeKV(['INCR', cle]);
+    if (compte === 1) await commandeKV(['EXPIRE', cle, 172800]);
+    return compte <= SESSIONS_PAR_IP_PAR_JOUR;
+  } catch {
+    return true;   // compteur indisponible : on laisse passer plutôt que de bloquer
+  }
+}
+
+// ===== Actions =====
+
+async function creer(req, res) {
+  const cartesParJoueur = Math.max(2, Math.min(15, parseInt(req.body.cartesParJoueur, 10) || 5));
+  const mode = req.body.mode === 'nominatif' ? 'nominatif' : 'simple';
+
+  if (!(await garderPlafondCreation(req))) {
+    return res.status(429).json({ error: "Trop de sessions ouvertes depuis cette connexion aujourd'hui." });
+  }
+
+  // On retire tant qu'on tombe sur un code déjà pris. Quatre caractères offrent
+  // un million de combinaisons : en pratique, le premier tirage suffit.
+  let code = null;
+  for (let essai = 0; essai < 6 && !code; essai++) {
+    const candidat = tirerCode();
+    const existe = await commandeKV(['EXISTS', cleSession(candidat)]);
+    if (!existe) code = candidat;
+  }
+  if (!code) {
+    return res.status(503).json({ error: "Impossible d'ouvrir une session pour le moment. Réessaie." });
+  }
+
+  const jeton = tirerIdentifiant();
+  const config = { creee: Date.now(), cartesParJoueur, mode, jeton, ouverte: true };
+
+  await commandeKV(['HSET', cleSession(code), 'config', JSON.stringify(config)]);
+  await commandeKV(['EXPIRE', cleSession(code), DUREE_SESSION_S]);
+
+  return res.status(200).json({
+    code,
+    jeton,
+    cartesParJoueur,
+    mode,
+    expireDans: DUREE_SESSION_S
+  });
+}
+
+async function rejoindre(req, res, session, code) {
+  const role = ['organisateur', 'sansTel'].includes(req.body.role) ? req.body.role : 'invite';
+
+  // Seul l'organisateur peut inscrire quelqu'un à sa place ou se déclarer lui-même
+  if (role !== 'invite' && req.body.jeton !== session.config.jeton) {
+    return res.status(403).json({ error: 'Action réservée à l\'organisateur.' });
+  }
+
+  const prenom = nettoyerPrenom(req.body.prenom);
+  if (prenom.length < 1) {
+    return res.status(400).json({ error: 'Indique ton prénom.' });
+  }
+  if (Object.keys(session.joueurs).length >= MAX_JOUEURS) {
+    return res.status(409).json({ error: `Cette partie est complète (${MAX_JOUEURS} joueurs).` });
+  }
+
+  const idJoueur = tirerIdentifiant();
+  const joueur = { prenom, role, cartes: [], fini: false, maj: Date.now() };
+  await commandeKV(['HSET', cleSession(code), `j:${idJoueur}`, JSON.stringify(joueur)]);
+
+  return res.status(200).json({
+    idJoueur,
+    prenom,
+    cartesParJoueur: session.config.cartesParJoueur,
+    mode: session.config.mode
+  });
+}
+
+async function deposer(req, res, session, code) {
+  const idJoueur = String(req.body.idJoueur || '');
+  const existant = session.joueurs[idJoueur];
+  if (!existant) {
+    return res.status(404).json({ error: "Tu as été retiré de cette partie. Rejoins-la à nouveau." });
+  }
+
+  const cartes = nettoyerCartes(req.body.cartes);
+  const fini = !!req.body.fini && cartes.length >= session.config.cartesParJoueur;
+
+  const joueur = { ...existant, cartes, fini, maj: Date.now() };
+  await commandeKV(['HSET', cleSession(code), `j:${idJoueur}`, JSON.stringify(joueur)]);
+
+  return res.status(200).json({ nbCartes: cartes.length, fini });
+}
+
+function etat(req, res, session) {
+  const joueurs = Object.entries(session.joueurs).map(([id, j]) => vuePublique(id, j));
+  return res.status(200).json({
+    cartesParJoueur: session.config.cartesParJoueur,
+    mode: session.config.mode,
+    ouverte: session.config.ouverte !== false,
+    joueurs,
+    total: joueurs.reduce((n, j) => n + j.nbCartes, 0),
+    tousPrets: joueurs.length > 0 && joueurs.every(j => j.fini)
+  });
+}
+
+async function retirer(req, res, session, code) {
+  if (req.body.jeton !== session.config.jeton) {
+    return res.status(403).json({ error: 'Action réservée à l\'organisateur.' });
+  }
+  const idJoueur = String(req.body.idJoueur || '');
+  if (!session.joueurs[idJoueur]) {
+    return res.status(404).json({ error: 'Ce joueur ne fait pas partie de la session.' });
+  }
+  await commandeKV(['HDEL', cleSession(code), `j:${idJoueur}`]);
+  return res.status(200).json({ ok: true });
+}
+
+// Fermeture : c'est le seul moment où les cartes descendent vers l'organisateur.
+async function fermer(req, res, session, code) {
+  if (req.body.jeton !== session.config.jeton) {
+    return res.status(403).json({ error: 'Action réservée à l\'organisateur.' });
+  }
+
+  const joueurs = Object.values(session.joueurs);
+  const enCours = joueurs.filter(j => !j.fini);
+  if (enCours.length > 0) {
+    return res.status(409).json({
+      error: 'Des joueurs saisissent encore leurs cartes.',
+      enAttente: enCours.map(j => j.prenom)
+    });
+  }
+
+  const cartes = [];
+  joueurs.forEach(j => cartes.push(...j.cartes));
+  if (cartes.length === 0) {
+    return res.status(409).json({ error: 'Aucune carte n\'a été saisie.' });
+  }
+
+  const config = { ...session.config, ouverte: false };
+  await commandeKV(['HSET', cleSession(code), 'config', JSON.stringify(config)]);
+
+  return res.status(200).json({
+    cartes,
+    joueurs: joueurs.map(j => ({ prenom: j.prenom, role: j.role, nbCartes: j.cartes.length }))
+  });
+}
+
+// ===== Point d'entrée =====
+
+export default async function handler(req, res) {
+  if (req.method !== 'POST') {
+    return res.status(405).json({ error: 'Method not allowed' });
+  }
+
+  if (!KV_URL || !KV_TOKEN) {
+    return res.status(503).json({
+      error: "La saisie à plusieurs téléphones n'est pas disponible. Passez par « on se passe le téléphone »."
+    });
+  }
+
+  const corps = req.body || {};
+  const action = corps.action;
+
+  try {
+    if (action === 'creer') return await creer(req, res);
+
+    const code = String(corps.code || '').toUpperCase().trim();
+    if (code.length !== LONGUEUR_CODE) {
+      return res.status(400).json({ error: 'Code de partie invalide.' });
+    }
+
+    const session = await lireSession(code);
+    if (!session) {
+      return res.status(404).json({ error: 'Aucune partie ne porte ce code. Vérifie-le, ou demande-le à l\'organisateur.' });
+    }
+
+    // Une session fermée reste lisible un moment : mieux vaut expliquer que
+    // la partie a démarré plutôt que de renvoyer « code inconnu ».
+    const modifie = ['rejoindre', 'deposer'].includes(action);
+    if (modifie && session.config.ouverte === false) {
+      return res.status(409).json({ error: 'La partie a déjà démarré sans toi.' });
+    }
+
+    switch (action) {
+      case 'etat':      return etat(req, res, session);
+      case 'rejoindre': return await rejoindre(req, res, session, code);
+      case 'deposer':   return await deposer(req, res, session, code);
+      case 'retirer':   return await retirer(req, res, session, code);
+      case 'fermer':    return await fermer(req, res, session, code);
+      default:          return res.status(400).json({ error: 'Action inconnue.' });
+    }
+  } catch (err) {
+    console.error('Session — erreur de stockage :', err.message);
+    return res.status(503).json({
+      error: "Le service est momentanément indisponible. Réessaie, ou passez par « on se passe le téléphone »."
+    });
+  }
+}

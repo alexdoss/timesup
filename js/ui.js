@@ -357,6 +357,162 @@ export function renderRules(rounds) {
   });
 }
 
+// ===== SESSION DE SAISIE PARTAGÉE =====
+
+// Le QR est dessiné une seule fois, à l'ouverture de la session.
+export function afficherInvitation(svgQr, code, adresse, rappel) {
+  const bloc = document.getElementById('session-qr');
+  bloc.innerHTML = '';
+  bloc.appendChild(svgQr);
+  document.getElementById('session-code').textContent = code;
+  document.getElementById('session-adresse').textContent = adresse;
+  document.getElementById('session-rappel').textContent = rappel;
+}
+
+// etat      : la réponse du serveur (qui a fini, jamais quoi)
+// onRetirer : l'organisateur retire un joueur qui ne finit pas
+export function renderSession(etat, onRetirer) {
+  const liste = document.getElementById('session-joueurs');
+  liste.innerHTML = '';
+
+  if (etat.joueurs.length === 0) {
+    const vide = document.createElement('div');
+    vide.className = 'connecte vide';
+    vide.textContent = "Personne n'a encore rejoint";
+    liste.appendChild(vide);
+  }
+
+  etat.joueurs.forEach(joueur => {
+    const ligne = document.createElement('div');
+    ligne.className = 'connecte' + (joueur.fini ? ' fini' : '');
+
+    const qui = document.createElement('span');
+    qui.className = 'qui';
+    qui.textContent = `${joueur.fini ? '●' : '○'} ${joueur.prenom} `;
+    if (joueur.role !== 'invite') {
+      const marque = document.createElement('span');
+      marque.className = 'sans-tel';
+      marque.textContent = joueur.role === 'organisateur' ? '· toi' : '· sans téléphone';
+      qui.appendChild(marque);
+    }
+
+    const compte = document.createElement('span');
+    compte.className = 'etat';
+    compte.textContent = joueur.fini
+      ? `${joueur.nbCartes} cartes ✓`
+      : `${joueur.nbCartes}/${etat.cartesParJoueur}…`;
+
+    ligne.append(qui, compte);
+
+    // Sortie de secours : un joueur qui ne finit pas bloquerait toute la soirée
+    if (!joueur.fini && joueur.role !== 'organisateur') {
+      const retirer = document.createElement('button');
+      retirer.type = 'button';
+      retirer.className = 'retirer-joueur';
+      retirer.textContent = '✕';
+      retirer.title = `Retirer ${joueur.prenom} de la partie`;
+      retirer.addEventListener('click', () => onRetirer(joueur));
+      ligne.appendChild(retirer);
+    }
+
+    liste.appendChild(ligne);
+  });
+
+  const finis = etat.joueurs.filter(j => j.fini).length;
+  document.getElementById('session-compteur').textContent =
+    `${etat.joueurs.length} joueur(s) · ${finis} ont fini · ${etat.total} carte(s)`;
+
+  // La configuration ne commence qu'une fois toutes les cartes saisies : le
+  // paquet doit être figé avant qu'on se mette d'accord sur le reste.
+  const enCours = etat.joueurs.filter(j => !j.fini);
+  const bouton = document.getElementById('btn-session-lancer');
+  bouton.disabled = etat.total === 0 || enCours.length > 0;
+
+  if (etat.joueurs.length === 0) {
+    bouton.textContent = 'En attente des joueurs…';
+  } else if (enCours.length === 1) {
+    bouton.textContent = `⏳ ${enCours[0].prenom} saisit ses cartes…`;
+  } else if (enCours.length > 1) {
+    bouton.textContent = `⏳ ${enCours.length} joueurs saisissent encore…`;
+  } else {
+    bouton.textContent = `Continuer la configuration ▶️ (${etat.total} cartes)`;
+  }
+}
+
+// Rappelle à l'organisateur où il en est de ses propres cartes
+export function renderBoutonMesCartes(cartes, cible, fini) {
+  const bouton = document.getElementById('btn-mes-cartes');
+  if (!bouton) return;
+  bouton.textContent = fini
+    ? `✍️ Mes cartes (${cartes}) ✓`
+    : cartes > 0
+      ? `✍️ Saisir mes cartes (${cartes}/${cible})`
+      : '✍️ Saisir mes cartes';
+}
+
+// Écran de saisie utilisé par l'organisateur et par le joueur sans téléphone.
+// masque : les cartes s'affichent en ••••, quand l'appareil n'appartient pas
+// à celui qui tape.
+export function renderSaisieLocale({ titre, note, cartes, cible, masque, demanderPrenom }, onRetirer) {
+  document.getElementById('saisie-titre').textContent = titre;
+  document.getElementById('saisie-note').textContent = note;
+  document.getElementById('saisie-bloc-prenom').style.display = demanderPrenom ? '' : 'none';
+  document.getElementById('btn-saisie-visibilite').style.display = masque ? '' : 'none';
+
+  const liste = document.getElementById('saisie-liste');
+  liste.innerHTML = '';
+  cartes.forEach((mot, index) => {
+    const ligne = document.createElement('li');
+    const texte = document.createElement('span');
+    texte.className = 'player-name';
+    texte.textContent = masque ? '••••••••' : mot;
+
+    const retirer = document.createElement('button');
+    retirer.type = 'button';
+    retirer.className = 'btn-remove';
+    retirer.textContent = '✕';
+    retirer.title = 'Retirer cette carte';
+    retirer.addEventListener('click', () => onRetirer(index));
+
+    ligne.append(texte, retirer);
+    liste.appendChild(ligne);
+  });
+
+  document.getElementById('saisie-compteur').textContent =
+    cartes.length >= cible ? `${cartes.length} cartes — c'est bon !` : `${cartes.length} / ${cible} cartes`;
+  document.getElementById('saisie-jauge').style.width =
+    Math.min(100, (cartes.length / cible) * 100) + '%';
+  document.getElementById('btn-saisie-fini').disabled = cartes.length < cible;
+}
+
+export function showSaisieError(message) {
+  const el = document.getElementById('saisie-erreur');
+  if (el) el.textContent = message || '';
+}
+
+// Répartition des équipes, en mode nominatif : les prénoms viennent des scans.
+export function renderRepartition(joueurs, teams, onBasculer) {
+  const bloc = document.getElementById('repartition-liste');
+  bloc.innerHTML = '';
+
+  joueurs.forEach(joueur => {
+    const ligne = document.createElement('div');
+    ligne.className = 'equipier';
+
+    const nom = document.createElement('span');
+    nom.textContent = joueur.prenom;
+
+    const bouton = document.createElement('button');
+    bouton.type = 'button';
+    bouton.textContent = teams[joueur.equipe].name;
+    bouton.style.background = teams[joueur.equipe].color;
+    bouton.addEventListener('click', () => onBasculer(joueur));
+
+    ligne.append(nom, bouton);
+    bloc.appendChild(ligne);
+  });
+}
+
 // ===== BOÎTE DE DIALOGUE =====
 // Remplace alert() et confirm() : ceux du navigateur sortent du design, et sur
 // iPhone ils affichent l'adresse du site en titre, ce qui inquiète les joueurs.

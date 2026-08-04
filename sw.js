@@ -1,4 +1,4 @@
-const CACHE_NAME = 'rush-v56';
+const CACHE_NAME = 'rush-v57';
 const ASSETS = [
   '/',
   '/index.html',
@@ -10,6 +10,11 @@ const ASSETS = [
   '/js/library.js',
   '/js/persistence.js',
   '/js/sound.js',
+  '/js/session.js',
+  '/js/qr.js',
+  '/js/vendor/qrcode.js',
+  '/rejoindre.html',
+  '/js/rejoindre.js',
   '/themes/personnalites.json',
   '/themes/monde-fantastique.json',
   '/themes/animaux-insectes.json',

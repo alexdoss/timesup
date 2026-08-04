@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head><meta charset="utf-8"><title>Test Rush — page des invités</title></head>
+<body>
+<pre id="log">demarrage...</pre>
+<div id="hote"></div>
+<script>
+const out = [];
+function log(s) { out.push(s); document.getElementById('log').textContent = out.join('\n'); }
+function check(name, cond) { log((cond ? 'PASS' : 'FAIL') + ' -- ' + name); }
+const wait = ms => new Promise(r => setTimeout(r, ms));
+
+// Dialogue direct avec la route de session : c'est le role de l'organisateur
+async function api(action, donnees = {}) {
+  const r = await fetch('/api/session', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ action, ...donnees })
+  });
+  return { statut: r.status, corps: await r.json().catch(() => ({})) };
+}
+
+const f = document.createElement('iframe');
+f.style.cssText = 'width:420px;height:900px;border:1px solid #ccc';
+document.getElementById('hote').appendChild(f);
+
+// Un seul ecouteur de chargement, qui resout l'attente en cours
+let resoudre = null;
+f.addEventListener('load', () => { const r = resoudre; resoudre = null; if (r) r(); });
+const charger = url => new Promise(r => { resoudre = r; f.src = url; });
+const recharger = () => new Promise(r => { resoudre = r; f.contentWindow.location.reload(); });
+
+(async () => {
+  try {
+    const d = () => f.contentDocument;
+    const $ = id => d().getElementById(id);
+    const ecran = () => [...d().querySelectorAll('.screen')].find(s => s.classList.contains('active'))?.id;
+    const cartes = () => [...d().querySelectorAll('#liste-cartes .player-name')].map(e => e.textContent);
+    const saisir = (champ, valeur) => { $(champ).value = valeur; };
+
+    localStorage.removeItem('timesup_rejoint');
+
+    // ===== L'organisateur ouvre une session =====
+    let r = await api('creer', { cartesParJoueur: 3, mode: 'simple' });
+    check('la session est ouverte par l organisateur', r.statut === 200);
+    const code = r.corps.code, jeton = r.corps.jeton;
+    log('       code de la partie : ' + code);
+
+    // ===== Le QR mene directement au prenom =====
+    await charger('/rejoindre.html?c=' + code);
+    await wait(600);
+    check('le code de l adresse evite l ecran de saisie du code', ecran() === 'screen-prenom');
+    check('le code est rappele a l ecran', $('rappel-code').textContent === code);
+    check('la page ne charge pas le moteur de jeu', !d().getElementById('screen-game'));
+
+    $('btn-prenom').click();
+    await wait(200);
+    check('un prenom vide est refuse', ecran() === 'screen-prenom');
+    check('un message l explique', $('erreur-prenom').textContent.includes('prénom'));
+
+    saisir('champ-prenom', '  Marc  ');
+    $('btn-prenom').click();
+    await wait(500);
+    check('on passe a la saisie des cartes', ecran() === 'screen-cartes');
+    check('le titre reprend le prenom nettoye', $('titre-cartes').textContent.includes('Marc'));
+    check('le compteur annonce la consigne', $('compteur-cartes').textContent === '0 / 3 cartes');
+
+    // ===== Saisie et garde-fous =====
+    saisir('champ-carte', 'a');
+    $('btn-ajouter').click();
+    check('une carte d une lettre est refusee', $('erreur-carte').textContent.includes('2 caractères'));
+    check('rien n a ete ajoute', cartes().length === 0);
+
+    for (const mot of ['Plage', 'Valise']) { saisir('champ-carte', mot); $('btn-ajouter').click(); }
+    check('les cartes s ajoutent', JSON.stringify(cartes()) === JSON.stringify(['Plage', 'Valise']));
+    check('elles s affichent en clair', cartes()[0] === 'Plage');
+    check('le champ se vide apres ajout', $('champ-carte').value === '');
+    check('terminer reste bloque sous le quota', $('btn-terminer').disabled);
+
+    saisir('champ-carte', 'PLAGE');
+    $('btn-ajouter').click();
+    check('un doublon insensible a la casse est refuse', cartes().length === 2);
+    check('un message l explique', $('erreur-carte').textContent.includes('déjà'));
+
+    // ===== L'organisateur voit la progression, jamais les cartes =====
+    await wait(900);   // on laisse passer l'envoi differe
+    r = await api('etat', { code });
+    log('       vu par l organisateur : ' + JSON.stringify(r.corps.joueurs));
+    check('l organisateur voit le joueur', r.corps.joueurs.length === 1);
+    check('il voit son prenom', r.corps.joueurs[0].prenom === 'Marc');
+    check('il voit le nombre de cartes', r.corps.joueurs[0].nbCartes === 2);
+    check('il ne recoit jamais les cartes', !('cartes' in r.corps.joueurs[0]));
+    check('le joueur n est pas encore pret', r.corps.joueurs[0].fini === false);
+    check('donc la partie ne peut pas se lancer', r.corps.tousPrets === false);
+
+    // ===== Quota atteint =====
+    saisir('champ-carte', 'Parasol');
+    $('btn-ajouter').click();
+    check('la 3e carte complete la consigne', cartes().length === 3);
+    check('le compteur le signale', $('compteur-cartes').textContent.includes("c'est bon"));
+    check('terminer devient possible', !$('btn-terminer').disabled);
+
+    saisir('champ-carte', 'Sable');
+    $('btn-ajouter').click();
+    check('au-dela du quota, l ajout est refuse', cartes().length === 3);
+    check('le message dit combien on en demande', $('erreur-carte').textContent.includes('3'));
+
+    // ===== Validation =====
+    $('btn-terminer').click();
+    await wait(600);
+    check('l ecran de confirmation s affiche', ecran() === 'screen-envoye');
+    check('il annonce le bon total', $('total-envoye').textContent === '3');
+
+    r = await api('etat', { code });
+    check('l organisateur voit le joueur pret', r.corps.joueurs[0].fini === true);
+    check('la partie peut demarrer', r.corps.tousPrets === true);
+    check('le paquet compte 3 cartes', r.corps.total === 3);
+
+    // ===== Revenir modifier rebloque le lancement =====
+    $('btn-modifier').click();
+    await wait(600);
+    check('on revient sur la saisie', ecran() === 'screen-cartes');
+    r = await api('etat', { code });
+    check('le joueur repasse en saisie', r.corps.joueurs[0].fini === false);
+    check('le lancement est de nouveau bloque', r.corps.tousPrets === false);
+
+    r = await api('fermer', { code, jeton });
+    check('l organisateur ne peut pas fermer pendant ce temps', r.statut === 409);
+    check('le serveur dit qui il attend', r.corps.enAttente.includes('Marc'));
+
+    // ===== Reprise apres coupure =====
+    $('btn-terminer').click();
+    await wait(600);
+    await recharger();
+    await wait(900);
+    check('apres rechargement, la saisie est retrouvee', ecran() === 'screen-envoye');
+    check('les cartes sont conservees', $('total-envoye').textContent === '3');
+
+    // ===== Retire par l organisateur =====
+    r = await api('etat', { code });
+    const idMarc = r.corps.joueurs[0].id;
+    await api('retirer', { code, idJoueur: idMarc, jeton });
+    await recharger();
+    await wait(900);
+    log('       ecran apres retrait : ' + ecran());
+    check('le joueur retire revient a la saisie du prenom', ecran() === 'screen-prenom');
+
+    // ===== Partie deja lancee =====
+    saisir('champ-prenom', 'Marc');
+    $('btn-prenom').click();
+    await wait(500);
+    for (const mot of ['A1', 'A2', 'A3']) { saisir('champ-carte', mot); $('btn-ajouter').click(); }
+    $('btn-terminer').click();
+    await wait(700);
+    r = await api('fermer', { code, jeton });
+    check('la partie se lance une fois tout le monde pret', r.statut === 200);
+    check('les cartes descendent a l organisateur', r.corps.cartes.length === 3);
+
+    await recharger();
+    await wait(900);
+    check('un invite qui revient apprend que la partie a demarre', ecran() === 'screen-message');
+    check('le message est explicite', $('message-titre').textContent.includes('démarré'));
+
+    // ===== Code inconnu =====
+    localStorage.removeItem('timesup_rejoint');
+    await charger('/rejoindre.html?c=ZZZZ');
+    await wait(700);
+    check('un code inconnu affiche un message dedie', ecran() === 'screen-message');
+    check('le titre le nomme', $('message-titre').textContent.includes('Code inconnu'));
+    check('on peut ressaisir un code', $('btn-message').style.display !== 'none');
+    $('btn-message').click();
+    await wait(200);
+    check('le bouton ramene a la saisie du code', ecran() === 'screen-code');
+
+    // ===== Saisie manuelle du code =====
+    r = await api('creer', { cartesParJoueur: 2, mode: 'nominatif' });
+    const code2 = r.corps.code;
+    saisir('champ-code', 'AB');
+    $('btn-code').click();
+    await wait(200);
+    check('un code trop court est refuse cote page', $('erreur-code').textContent.includes('4 caractères'));
+
+    saisir('champ-code', code2.toLowerCase());
+    $('champ-code').dispatchEvent(new f.contentWindow.Event('input'));
+    check('le champ met le code en majuscules', $('champ-code').value === code2);
+    $('btn-code').click();
+    await wait(600);
+    check('le code saisi a la main fonctionne', ecran() === 'screen-prenom');
+    check('en mode nominatif, le prenom sert aussi aux equipes', $('note-prenom').textContent.includes('équipe'));
+
+    log('SCENARIO 19 TERMINE');
+  } catch (e) {
+    log('EXCEPTION: ' + e.message + '\n' + e.stack);
+  }
+})();
+</script>
+</body>
+</html>

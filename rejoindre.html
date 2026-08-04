@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="theme-color" content="#0F172A">
+  <title>Rush — rejoindre une partie</title>
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
+  <link rel="icon" href="icons/icon-192.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div id="app">
+
+    <!-- CODE DE LA PARTIE — affiché seulement si l'adresse n'en contient pas -->
+    <div id="screen-code" class="screen">
+      <div class="rejoindre-content">
+        <div class="logo-wrap">
+          <h1 class="title">RUSH</h1>
+        </div>
+        <p class="subtitle">Rejoindre une partie</p>
+        <div class="config-form">
+          <span class="field-label">Code de la partie</span>
+          <input type="text" id="champ-code" class="champ-code" placeholder="RU4B" maxlength="4"
+                 autocomplete="off" autocapitalize="characters" spellcheck="false">
+          <p id="erreur-code" class="wizard-hint"></p>
+          <button id="btn-code" class="btn btn-primary">Continuer ▶️</button>
+        </div>
+        <p class="wizard-hint" style="margin-top:18px">Le code est affiché sur le téléphone de l'organisateur.</p>
+      </div>
+    </div>
+
+    <!-- PRÉNOM -->
+    <div id="screen-prenom" class="screen">
+      <div class="rejoindre-content">
+        <div class="wizard-header">
+          <h2>Rejoindre la partie</h2>
+          <p class="wizard-hint">Partie <b id="rappel-code"></b></p>
+        </div>
+        <div class="config-form">
+          <span class="field-label">Ton prénom</span>
+          <input type="text" id="champ-prenom" placeholder="Ton prénom" maxlength="20" autocomplete="given-name">
+          <p id="erreur-prenom" class="wizard-hint"></p>
+          <button id="btn-prenom" class="btn btn-primary">Continuer ▶️</button>
+        </div>
+        <p id="note-prenom" class="wizard-hint" style="margin-top:18px"></p>
+      </div>
+    </div>
+
+    <!-- SAISIE DES CARTES -->
+    <div id="screen-cartes" class="screen">
+      <div class="rejoindre-content">
+        <div class="wizard-header">
+          <h2 id="titre-cartes">Tes cartes</h2>
+          <p class="wizard-hint">Personne d'autre ne les verra avant la partie.</p>
+        </div>
+
+        <div class="jauge"><div id="jauge-remplie"></div></div>
+        <p id="compteur-cartes" class="wizard-hint" style="margin-bottom:8px"></p>
+
+        <div class="config-form">
+          <div class="player-input-row">
+            <input type="text" id="champ-carte" placeholder="Mot ou expression" maxlength="40"
+                   autocomplete="off" enterkeyhint="done">
+            <button id="btn-ajouter" class="btn btn-add">+</button>
+          </div>
+          <p id="erreur-carte" class="wizard-hint" style="min-height:18px"></p>
+        </div>
+
+        <ul id="liste-cartes" class="player-list"></ul>
+        <p id="etat-envoi" class="etat-envoi"></p>
+        <button id="btn-terminer" class="btn btn-primary" disabled>✅ J'ai terminé</button>
+      </div>
+    </div>
+
+    <!-- CONFIRMATION -->
+    <div id="screen-envoye" class="screen">
+      <div class="rejoindre-content">
+        <div class="grand-emoji">✅</div>
+        <div class="wizard-header"><h2>C'est envoyé !</h2></div>
+        <p class="wizard-hint">
+          Tes <b id="total-envoye">0</b> cartes sont bien arrivées.<br>
+          Range ton téléphone, la partie va commencer.
+        </p>
+        <button id="btn-modifier" class="btn btn-secondary" style="margin-top:20px">Modifier mes cartes</button>
+        <p class="wizard-hint" style="margin-top:12px">Tant que tu modifies, l'organisateur ne peut pas lancer la partie.</p>
+      </div>
+    </div>
+
+    <!-- MESSAGE BLOQUANT (code inconnu, partie expirée, partie démarrée…) -->
+    <div id="screen-message" class="screen">
+      <div class="rejoindre-content">
+        <div class="grand-emoji" id="message-emoji">🔍</div>
+        <div class="wizard-header"><h2 id="message-titre"></h2></div>
+        <p id="message-texte" class="wizard-hint"></p>
+        <button id="btn-message" class="btn btn-primary" style="margin-top:20px">Réessayer</button>
+      </div>
+    </div>
+
+  </div>
+
+  <script type="module" src="js/rejoindre.js"></script>
+</body>
+</html>

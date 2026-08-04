@@ -1,0 +1,814 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Rush — maquette : cartes saisies en parallèle</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <!-- Vraie feuille de style de l'app : ce que tu vois est ce que ça donnera -->
+  <link rel="stylesheet" href="style.css">
+  <style>
+    body { user-select: auto; padding: 28px 16px 64px; }
+
+    .proto-intro { max-width: 860px; margin: 0 auto 22px; text-align: center; }
+    .proto-intro h1 { font-size: 1.5rem; margin-bottom: 10px; }
+    .proto-intro p { color: var(--muted); font-size: .95rem; line-height: 1.6; }
+    .proto-intro strong { color: var(--text); }
+
+    .bascule { display: flex; justify-content: center; gap: 8px; margin: 0 auto 26px; max-width: 420px; }
+    .bascule button {
+      flex: 1; padding: 11px 14px; border-radius: 100px; cursor: pointer;
+      font-family: inherit; font-size: .85rem; font-weight: 700;
+      border: 1.5px solid var(--line); background: var(--surface); color: var(--muted-strong);
+    }
+    .bascule button.actif { background: var(--brand); border-color: var(--brand); color: #fff; }
+
+    .scene { display: flex; flex-wrap: wrap; gap: 28px; justify-content: center; align-items: flex-start; }
+
+    .appareil { width: 360px; max-width: 100%; }
+    .appareil-titre { display: flex; align-items: baseline; gap: 8px; margin-bottom: 10px; padding-left: 4px; }
+    .appareil-titre b { font-size: 1.05rem; }
+    .appareil-titre span { font-size: .8rem; color: var(--muted); }
+
+    .telephone {
+      border: 1px solid var(--border); border-radius: var(--r-xl);
+      background: var(--panel); padding: 24px 20px 28px; box-shadow: var(--shadow);
+      min-height: 560px; display: flex; flex-direction: column; align-items: center;
+    }
+    .telephone .config-form { margin: 0 auto; }
+    .vue { display: none; width: 100%; flex-direction: column; align-items: center; }
+    .vue.active { display: flex; }
+    .invite .telephone { border-color: rgba(245,158,11,.4); }
+
+    /* --- Réglage du nombre de cartes --- */
+    .reglage-cartes {
+      width: 100%; background: var(--surface); border: 1px solid var(--line);
+      border-radius: var(--r-md); padding: 16px; margin-bottom: 14px; text-align: center;
+    }
+    .stepper { display: flex; align-items: center; justify-content: center; gap: 12px; margin: 12px 0 8px; }
+    .stepper-btn {
+      width: 44px; height: 44px; border-radius: 50%; border: 1.5px solid var(--line);
+      background: var(--panel); color: var(--text); font-size: 1.3rem; cursor: pointer; font-family: inherit;
+    }
+    .stepper-valeur { font-size: 2.2rem; font-weight: 800; min-width: 60px; }
+
+    /* --- Bloc QR --- */
+    .qr-bloc { background: #fff; padding: 14px; border-radius: var(--r-lg); line-height: 0; margin: 4px 0 12px; }
+    .code-session {
+      font-family: 'Outfit', monospace; font-size: 2rem; font-weight: 800;
+      letter-spacing: .22em; color: var(--secondary);
+    }
+    .adresse-session { font-size: .82rem; color: var(--muted); margin-bottom: 14px; }
+
+    /* --- Liste des joueurs connectés --- */
+    .connectes { width: 100%; display: flex; flex-direction: column; gap: 6px; margin-bottom: 12px; }
+    .connecte {
+      display: flex; align-items: center; gap: 10px; padding: 11px 14px;
+      background: var(--surface); border: 1px solid var(--line);
+      border-radius: var(--r-sm); font-size: .9rem;
+    }
+    .connecte .qui { flex: 1; text-align: left; }
+    .connecte .etat { font-size: .78rem; color: var(--muted); }
+    .connecte.fini { border-color: rgba(34,197,94,.4); }
+    .connecte.fini .etat { color: var(--success); }
+    .connecte.vide { color: var(--muted-2); font-style: italic; justify-content: center; }
+    .connecte .sans-tel { font-size: .7rem; color: var(--secondary); }
+    .connecte .retirer-joueur {
+      background: none; border: none; color: var(--bad);
+      font-size: 1rem; cursor: pointer; padding: 0 2px;
+    }
+
+    .compteur-global { font-size: .85rem; color: var(--muted); margin-bottom: 12px; }
+
+    /* --- Répartition des équipes --- */
+    .equipes { width: 100%; display: flex; flex-direction: column; gap: 6px; margin-bottom: 14px; }
+    .equipier {
+      display: flex; align-items: center; gap: 10px; padding: 11px 14px;
+      background: var(--surface); border: 1px solid var(--line);
+      border-radius: var(--r-sm); font-size: .9rem;
+    }
+    .equipier span { flex: 1; text-align: left; }
+    .equipier button {
+      border: none; border-radius: 100px; padding: 5px 12px; cursor: pointer;
+      font-family: inherit; font-size: .72rem; font-weight: 700; color: #fff;
+    }
+
+    /* --- Saisie --- */
+    .mes-cartes { width: 100%; display: flex; flex-direction: column; gap: 6px; margin: 10px 0 14px; }
+    .ma-carte {
+      display: flex; align-items: center; gap: 10px; padding: 10px 14px;
+      background: var(--surface); border: 1px solid var(--line);
+      border-radius: var(--r-sm); font-size: .9rem;
+    }
+    .ma-carte span { flex: 1; text-align: left; }
+    .ma-carte .masque { letter-spacing: .2em; color: var(--muted); }
+    .ma-carte button { background: none; border: none; color: var(--bad); font-size: 1.05rem; cursor: pointer; }
+
+    .jauge { width: 100%; height: 6px; background: var(--surface); border-radius: 100px; overflow: hidden; margin-bottom: 6px; }
+    .jauge > div { height: 100%; background: var(--success); width: 0; transition: width .25s; }
+
+    .gros-ok { font-size: 3.4rem; margin-bottom: 8px; }
+
+    .vitrine { display: flex; flex-wrap: wrap; gap: 20px; justify-content: center; margin-top: 44px; }
+    .vitrine .telephone { min-height: 0; width: 320px; padding: 26px 20px; }
+    .vitrine h2 { width: 100%; text-align: center; font-size: 1.1rem; margin-bottom: 4px; }
+
+    .note { max-width: 860px; margin: 34px auto 0; color: var(--muted); font-size: .88rem; line-height: 1.6; }
+    .note b { color: var(--text); }
+    .note ul { margin: 10px 0 0 18px; }
+    .note li { margin-bottom: 7px; }
+
+    .proto-reset {
+      display: block; margin: 32px auto 0; background: var(--surface); color: var(--muted-strong);
+      border: 1px solid var(--line); border-radius: var(--r-md); padding: 12px 22px;
+      font-family: inherit; font-size: .9rem; cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+
+<div class="proto-intro">
+  <h1>Cartes perso : chacun saisit sur son téléphone</h1>
+  <p>
+    Les deux téléphones sont <strong>reliés</strong> : ce que tu fais à droite apparaît à gauche.<br>
+    Suis le parcours de l'organisateur, puis fais <strong>📷 Simuler le scan</strong> côté invité.
+    Le QR code est réel.
+  </p>
+</div>
+
+<div class="bascule">
+  <button type="button" id="bt-simple" class="actif" onclick="setMode('simple')">Partie sans les noms</button>
+  <button type="button" id="bt-nominatif" onclick="setMode('nominatif')">Partie avec les noms</button>
+</div>
+
+<div class="scene">
+
+  <!-- ================= ORGANISATEUR ================= -->
+  <section class="appareil organisateur">
+    <div class="appareil-titre"><b>📱 Organisateur</b><span>celui qui lance la partie</span></div>
+    <div class="telephone">
+
+      <!-- 1 · choix du mode de saisie -->
+      <div class="vue active" data-vue="orga-mode">
+        <div class="wizard-header">
+          <span class="wizard-step">Étape 2/4</span>
+          <h2>Cartes perso</h2>
+        </div>
+        <p class="wizard-hint" style="margin-bottom:18px">Comment saisir les cartes ?</p>
+        <div class="config-form">
+          <button type="button" class="btn btn-primary" onclick="allerA('orga','orga-reglage')">📱 Chacun sur son téléphone</button>
+          <p class="wizard-hint" style="margin:-6px 0 10px">Tout le monde saisit en même temps. Nécessite du réseau.</p>
+          <button type="button" class="btn btn-secondary" onclick="allerA('orga','orga-sequentiel')">🔁 On se passe le téléphone</button>
+          <p class="wizard-hint" style="margin-top:-6px">Chacun son tour sur cet appareil. Fonctionne sans réseau.</p>
+        </div>
+      </div>
+
+      <!-- 2 · NOUVEAU : réglage avant ouverture -->
+      <div class="vue" data-vue="orga-reglage">
+        <div class="wizard-header">
+          <h2>Combien de cartes chacun ?</h2>
+          <p class="wizard-hint">Ce nombre sera demandé à chaque joueur. Il ne pourra plus changer une fois la session ouverte.</p>
+        </div>
+        <div class="reglage-cartes">
+          <span class="field-label">Cartes par joueur</span>
+          <div class="stepper">
+            <button type="button" class="stepper-btn" onclick="reglerCartes(-1)">−</button>
+            <span class="stepper-valeur" id="valeur-cartes">5</span>
+            <button type="button" class="stepper-btn" onclick="reglerCartes(1)">+</button>
+          </div>
+          <p class="wizard-hint" id="estimation">À 6 joueurs, le paquet fera environ 30 cartes.</p>
+        </div>
+        <button type="button" class="btn btn-primary" onclick="ouvrirSession()">Ouvrir la session ▶️</button>
+        <button type="button" class="btn-link" style="margin-top:10px" onclick="allerA('orga','orga-mode')">← Revenir au choix</button>
+      </div>
+
+      <!-- 3 · session ouverte -->
+      <div class="vue" data-vue="orga-session">
+        <div class="wizard-header">
+          <h2>Rejoignez la partie</h2>
+          <p class="wizard-hint" id="rappel-cartes">5 cartes chacun</p>
+        </div>
+        <div class="qr-bloc" id="qr-bloc"></div>
+        <div class="code-session">RU4B</div>
+        <div class="adresse-session">rush-timesup.vercel.app/rejoindre</div>
+
+        <!-- L'organisateur ne peut pas scanner son propre QR : il a son propre accès -->
+        <button type="button" class="btn btn-secondary" id="btn-mes-cartes" onclick="ouvrirMesCartes()">✍️ Saisir mes cartes</button>
+
+        <div class="connectes" id="connectes" style="margin-top:14px"></div>
+        <p class="compteur-global" id="compteur-global"></p>
+
+        <button type="button" class="btn btn-primary" id="btn-lancer" onclick="finSession()" disabled>Lancer la partie</button>
+        <button type="button" class="btn-link" style="margin-top:12px" onclick="allerA('orga','orga-sansTel')">
+          ➕ Un joueur n'a pas de téléphone
+        </button>
+        <button type="button" class="btn-link" onclick="allerA('orga','orga-sequentiel')">
+          Finalement, on se passe le téléphone
+        </button>
+      </div>
+
+      <!-- 3 bis · NOUVEAU : les cartes de l'organisateur, sur son propre téléphone -->
+      <div class="vue" data-vue="orga-mesCartes">
+        <div class="wizard-header">
+          <h2 id="mc-titre">Tes cartes</h2>
+          <p class="wizard-hint">C'est ton téléphone : tes cartes s'affichent en clair. Pendant ce temps, les autres continuent de saisir.</p>
+        </div>
+        <div class="config-form" id="mc-bloc-prenom" style="display:none">
+          <span class="field-label">Ton prénom</span>
+          <input type="text" id="mc-prenom" placeholder="Alex" maxlength="20" autocomplete="off">
+        </div>
+        <div class="jauge"><div id="mc-jauge"></div></div>
+        <p class="wizard-hint" id="mc-compteur" style="margin-bottom:6px">0 / 5 cartes</p>
+        <div class="config-form">
+          <div class="player-input-row">
+            <input type="text" id="mc-carte" placeholder="Mot ou expression" maxlength="40" autocomplete="off">
+            <button type="button" class="btn btn-add" onclick="ajouterMaCarte()">+</button>
+          </div>
+          <p class="wizard-hint" id="mc-erreur" style="min-height:18px"></p>
+        </div>
+        <div class="mes-cartes" id="mc-liste"></div>
+        <button type="button" class="btn btn-primary" id="mc-fini" onclick="finirMesCartes()" disabled>✅ J'ai terminé</button>
+        <button type="button" class="btn-link" style="margin-top:10px" onclick="allerA('orga','orga-session')">← Revenir à la session</button>
+      </div>
+
+      <!-- 4 · NOUVEAU : joueur sans téléphone -->
+      <div class="vue" data-vue="orga-sansTel">
+        <div class="wizard-header">
+          <h2>Saisie sur cet appareil</h2>
+          <p class="wizard-hint">Passe ton téléphone à ce joueur. Ses cartes sont masquées pendant qu'il tape.</p>
+        </div>
+        <div class="config-form">
+          <span class="field-label">Son prénom</span>
+          <input type="text" id="sanstel-prenom" placeholder="Jo" maxlength="20" autocomplete="off">
+          <div class="player-input-row">
+            <input type="password" id="sanstel-carte" placeholder="Sa carte" maxlength="40" autocomplete="off">
+            <button type="button" class="btn btn-add" onclick="ajouterSansTel()">+</button>
+          </div>
+        </div>
+        <div class="mes-cartes" id="sanstel-liste"></div>
+        <p class="wizard-hint" id="sanstel-compteur" style="margin-bottom:12px">0 / 5 cartes</p>
+        <button type="button" class="btn btn-primary" id="sanstel-fini" onclick="finirSansTel()" disabled>✅ Terminé, rends le téléphone</button>
+        <button type="button" class="btn-link" style="margin-top:10px" onclick="allerA('orga','orga-session')">← Annuler</button>
+      </div>
+
+      <!-- 5 · NOUVEAU : répartition (mode nominatif) -->
+      <div class="vue" data-vue="orga-equipes">
+        <div class="wizard-header">
+          <h2>Répartir les équipes</h2>
+          <p class="wizard-hint">Les prénoms viennent des joueurs eux-mêmes. Tape sur une équipe pour la changer.</p>
+        </div>
+        <div class="equipes" id="equipes"></div>
+        <button type="button" class="btn btn-secondary" style="margin-bottom:10px" onclick="melanger()">🎲 Mélanger</button>
+        <button type="button" class="btn btn-primary">C'est parti 🎮</button>
+      </div>
+
+      <!-- 6 · repli séquentiel (l'existant) -->
+      <div class="vue" data-vue="orga-sequentiel">
+        <div class="wizard-header"><h2>Saisisseur 1</h2></div>
+        <p class="wizard-hint" style="margin-bottom:16px">Passe le téléphone au premier joueur</p>
+        <div class="config-form">
+          <button type="button" class="btn btn-primary">C'est bon, à moi 👍</button>
+          <button type="button" class="btn-link" onclick="allerA('orga','orga-mode')">← Revenir au choix</button>
+        </div>
+        <p class="wizard-hint" style="margin-top:20px">L'écran actuel, inchangé.<br>Disponible en permanence.</p>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ================= INVITÉ ================= -->
+  <section class="appareil invite">
+    <div class="appareil-titre"><b>📲 Invité</b><span>le téléphone de Marc</span></div>
+    <div class="telephone">
+
+      <div class="vue active" data-vue="inv-avant">
+        <div class="wizard-header"><h2>📷</h2></div>
+        <p class="wizard-hint" style="margin-bottom:18px">
+          Marc va scanner le QR affiché à gauche.<br>
+          Ouvre d'abord la session côté organisateur.
+        </p>
+        <button type="button" class="btn btn-primary" id="btn-scan" onclick="scanner()" disabled>📷 Simuler le scan</button>
+      </div>
+
+      <div class="vue" data-vue="inv-prenom">
+        <div class="wizard-header">
+          <h2>Rejoindre la partie</h2>
+          <p class="wizard-hint">Partie <b>RU4B</b></p>
+        </div>
+        <div class="config-form">
+          <span class="field-label">Ton prénom</span>
+          <input type="text" id="inv-prenom-champ" placeholder="Marc" maxlength="20" autocomplete="off">
+          <button type="button" class="btn btn-primary" onclick="validerPrenom()">Continuer ▶️</button>
+        </div>
+        <p class="wizard-hint" id="inv-pourquoi" style="margin-top:18px"></p>
+      </div>
+
+      <div class="vue" data-vue="inv-cartes">
+        <div class="wizard-header">
+          <h2 id="inv-titre">Tes cartes</h2>
+          <p class="wizard-hint">Personne d'autre ne les verra avant la partie.</p>
+        </div>
+        <div class="jauge"><div id="inv-jauge"></div></div>
+        <p class="wizard-hint" id="inv-compteur" style="margin-bottom:6px">0 / 5 cartes</p>
+
+        <div class="config-form">
+          <div class="player-input-row">
+            <input type="text" id="inv-carte" placeholder="Mot ou expression" maxlength="40" autocomplete="off">
+            <button type="button" class="btn btn-add" onclick="ajouterCarte()">+</button>
+          </div>
+          <p class="wizard-hint" id="inv-erreur" style="min-height:18px"></p>
+        </div>
+
+        <div class="mes-cartes" id="inv-liste"></div>
+        <button type="button" class="btn btn-primary" id="inv-terminer" onclick="terminer()" disabled>✅ J'ai terminé</button>
+      </div>
+
+      <div class="vue" data-vue="inv-fini">
+        <div class="gros-ok">✅</div>
+        <div class="wizard-header"><h2>C'est envoyé !</h2></div>
+        <p class="wizard-hint" style="margin-bottom:18px">
+          Tes <b id="inv-total">5</b> cartes sont bien arrivées.<br>
+          Range ton téléphone, la partie va commencer.
+        </p>
+        <button type="button" class="btn btn-secondary" onclick="modifierMesCartes()">Modifier mes cartes</button>
+        <p class="wizard-hint" style="margin-top:12px">Tant que tu modifies, l'organisateur ne peut pas lancer la partie.</p>
+      </div>
+
+    </div>
+  </section>
+</div>
+
+<!-- ================= ÉCRANS D'ERREUR ================= -->
+<div class="vitrine">
+  <h2>Les cas qui tournent mal</h2>
+
+  <div class="telephone">
+    <div class="gros-ok">🔍</div>
+    <div class="wizard-header"><h2>Code inconnu</h2></div>
+    <p class="wizard-hint">
+      Aucune partie ne porte le code <b>RU4B</b>.<br>
+      Vérifie le code affiché chez l'organisateur.
+    </p>
+    <button type="button" class="btn btn-primary" style="margin-top:18px">Réessayer</button>
+  </div>
+
+  <div class="telephone">
+    <div class="gros-ok">⌛</div>
+    <div class="wizard-header"><h2>Partie expirée</h2></div>
+    <p class="wizard-hint">
+      Cette partie a été ouverte il y a plus de 2 heures.<br>
+      Demande à l'organisateur d'en relancer une.
+    </p>
+  </div>
+
+  <div class="telephone">
+    <div class="gros-ok">📡</div>
+    <div class="wizard-header"><h2>Pas de réseau</h2></div>
+    <p class="wizard-hint">
+      Impossible d'envoyer tes cartes.<br>
+      Elles restent sur ce téléphone : reconnecte-toi, elles partiront toutes seules.
+    </p>
+    <button type="button" class="btn btn-primary" style="margin-top:18px">Réessayer</button>
+  </div>
+</div>
+
+<div class="note">
+  <b>Les trois adaptations demandées :</b>
+  <ul>
+    <li><b>1 · Le nombre de cartes est réglé avant l'ouverture.</b> Nouvel écran dédié, avec une estimation du paquet obtenu. Une fois la session ouverte, le nombre est figé — sinon un joueur pourrait avoir saisi 5 cartes pendant qu'un autre en voit 8 demandées. Il est rappelé sous le titre de la session.</li>
+    <li><b>2 · En partie « avec les noms », l'étape de saisie des joueurs disparaît.</b> Les prénoms arrivent avec les scans. Un nouvel écran de <b>répartition</b> prend le relais après la session : l'organisateur voit qui a joué le jeu, mélange ou ajuste, et lance. Bascule en haut de page pour comparer les deux modes.</li>
+    <li><b>4 · L'organisateur saisit ses propres cartes.</b> Il ne peut pas scanner son propre QR : le bouton <b>✍️ Saisir mes cartes</b>, sur l'écran de session, lui ouvre exactement la même saisie qu'aux invités — en clair, puisque c'est son téléphone. Il apparaît dans la liste avec la mention <i>· toi</i>, et le bouton devient <b>✓</b> une fois terminé. Il peut le faire pendant que les autres saisissent, ou après.</li>
+    <li><b>3 · Le joueur sans téléphone est prévu.</b> Depuis la session, « ➕ Un joueur n'a pas de téléphone » ouvre la saisie masquée sur l'appareil de l'organisateur, pour cette personne seulement. Elle apparaît dans la liste avec la mention <i>sans téléphone</i>. Les autres continuent de saisir pendant ce temps.</li>
+  </ul>
+  <b style="display:block;margin-top:14px">Ce que la maquette montre aussi :</b>
+  <ul>
+    <li>L'organisateur voit <b>qui a fini</b>, jamais <b>quoi</b>.</li>
+    <li>L'invité voit ses cartes <b>en clair</b> — c'est son téléphone. Le joueur sans téléphone, lui, garde la saisie masquée.</li>
+    <li>Le repli « on se passe le téléphone » reste accessible depuis la session, si le réseau lâche.</li>
+    <li><b>5 · On ne peut pas lancer pendant qu'un joueur modifie ses cartes.</b> Le bouton se bloque et dit qui on attend. Si un invité revient sur « Modifier mes cartes » après avoir validé, il repasse en saisie et le lancement se rebloque aussitôt. Pour ne jamais coincer la soirée, un <b>✕</b> permet de retirer un joueur qui ne finit pas.</li>
+  </ul>
+</div>
+
+<button type="button" class="proto-reset" onclick="location.reload()">↺ Tout remettre à zéro</button>
+
+<!-- Même boîte de dialogue que l'app (styles repris de style.css) -->
+<div id="dialog-overlay" class="dialog-overlay" style="display:none">
+  <div class="dialog-panel" role="alertdialog" aria-modal="true">
+    <h3 id="dialog-title"></h3>
+    <p id="dialog-message"></p>
+    <div class="dialog-actions">
+      <button id="dialog-cancel" type="button" class="btn btn-secondary">Annuler</button>
+      <button id="dialog-confirm" type="button" class="btn btn-primary">OK</button>
+    </div>
+  </div>
+</div>
+
+<script type="module">
+import { creerQrSvg } from './js/qr.js';
+
+document.getElementById('qr-bloc')
+  .appendChild(creerQrSvg('https://rush-timesup.vercel.app/rejoindre?c=RU4B', { taille: 176 }));
+
+// ===== État partagé : ce que le « serveur » saurait =====
+let mode = 'simple';
+let cartesParJoueur = 5;
+let sessionOuverte = false;
+let joueurs = [];          // { prenom, cartes, fini, sansTel, equipe }
+let marc = null;
+let mesCartes = [];
+let cartesSansTel = [];
+let orga = null;           // l'organisateur, joueur comme les autres
+let cartesOrga = [];
+
+const COULEURS = ['#d6336c', '#33c26a'];
+
+window.allerA = (appareil, vue) => {
+  const racine = document.querySelector(appareil === 'orga' ? '.organisateur' : '.invite');
+  racine.querySelectorAll('.vue').forEach(v => v.classList.toggle('active', v.dataset.vue === vue));
+};
+
+window.setMode = m => {
+  mode = m;
+  document.getElementById('bt-simple').classList.toggle('actif', m === 'simple');
+  document.getElementById('bt-nominatif').classList.toggle('actif', m === 'nominatif');
+  document.getElementById('inv-pourquoi').textContent = m === 'nominatif'
+    ? "En partie avec les noms, ce prénom sert aussi à te placer dans une équipe : plus besoin que l'organisateur saisisse la liste."
+    : "Il sert uniquement à ce que l'organisateur sache qui a fini.";
+  rendreOrganisateur();
+};
+
+// ===== 1 · Réglage du nombre de cartes =====
+window.reglerCartes = delta => {
+  cartesParJoueur = Math.max(2, Math.min(15, cartesParJoueur + delta));
+  document.getElementById('valeur-cartes').textContent = cartesParJoueur;
+  document.getElementById('estimation').textContent =
+    `À 6 joueurs, le paquet fera environ ${cartesParJoueur * 6} cartes.`;
+  document.getElementById('rappel-cartes').textContent = `${cartesParJoueur} cartes chacun`;
+  majTout();
+};
+
+window.ouvrirSession = () => {
+  sessionOuverte = true;
+  // Un joueur a déjà rejoint avant Marc, pour que la liste ne soit pas vide
+  joueurs = [{ prenom: 'Inès', cartes: cartesParJoueur, fini: true, sansTel: false, equipe: 0 }];
+  document.getElementById('btn-scan').disabled = false;
+  majTout();
+  window.allerA('orga', 'orga-session');
+};
+
+// ===== 3 · Joueur sans téléphone =====
+window.ajouterSansTel = () => {
+  const champ = document.getElementById('sanstel-carte');
+  const mot = champ.value.trim();
+  if (mot.length < 2 || cartesSansTel.length >= cartesParJoueur) return;
+  cartesSansTel.push(mot);
+  champ.value = '';
+  champ.focus();
+  rendreSansTel();
+};
+
+function rendreSansTel() {
+  const liste = document.getElementById('sanstel-liste');
+  liste.innerHTML = '';
+  cartesSansTel.forEach((_, i) => {
+    const ligne = document.createElement('div');
+    ligne.className = 'ma-carte';
+    const masque = document.createElement('span');
+    masque.className = 'masque';
+    masque.textContent = '••••••••';
+    const retirer = document.createElement('button');
+    retirer.textContent = '✕';
+    retirer.onclick = () => { cartesSansTel.splice(i, 1); rendreSansTel(); };
+    ligne.append(masque, retirer);
+    liste.appendChild(ligne);
+  });
+  document.getElementById('sanstel-compteur').textContent = `${cartesSansTel.length} / ${cartesParJoueur} cartes`;
+  document.getElementById('sanstel-fini').disabled = cartesSansTel.length < cartesParJoueur;
+}
+
+window.finirSansTel = () => {
+  const prenom = document.getElementById('sanstel-prenom').value.trim() || 'Jo';
+  joueurs.push({ prenom, cartes: cartesSansTel.length, fini: true, sansTel: true, equipe: joueurs.length % 2 });
+  cartesSansTel = [];
+  document.getElementById('sanstel-prenom').value = '';
+  rendreSansTel();
+  majTout();
+  window.allerA('orga', 'orga-session');
+};
+
+// Reprise simplifiée de showDialog() de js/ui.js, pour que la maquette
+// se comporte exactement comme l'app.
+function demander({ title, message, confirmLabel = 'OK', cancelLabel = null }) {
+  const fond = document.getElementById('dialog-overlay');
+  const ok = document.getElementById('dialog-confirm');
+  const annuler = document.getElementById('dialog-cancel');
+
+  document.getElementById('dialog-title').textContent = title;
+  document.getElementById('dialog-message').textContent = message || '';
+  ok.textContent = confirmLabel;
+  annuler.textContent = cancelLabel || 'Annuler';
+  annuler.style.display = cancelLabel ? '' : 'none';
+  fond.style.display = '';
+
+  return new Promise(resolve => {
+    const fermer = reponse => {
+      fond.style.display = 'none';
+      ok.onclick = annuler.onclick = fond.onclick = null;
+      resolve(reponse);
+    };
+    ok.onclick = () => fermer(true);
+    annuler.onclick = () => fermer(false);
+    fond.onclick = e => { if (e.target === fond && cancelLabel) fermer(false); };
+  });
+}
+
+// ===== 2 · Fin de session → répartition en mode nominatif =====
+window.finSession = async () => {
+  // L'organisateur est un joueur comme les autres : on l'avertit s'il s'oublie,
+  // sans le bloquer — rien ne dit qu'il joue, il peut n'être qu'arbitre.
+  if (!orga) {
+    const continuer = await demander({
+      title: 'Tu n\'as pas saisi tes cartes',
+      message: "La partie peut démarrer sans, mais tes cartes manqueront au paquet et tu ne pourras plus les ajouter ensuite.",
+      confirmLabel: 'Lancer quand même',
+      cancelLabel: 'Saisir mes cartes'
+    });
+    if (!continuer) { window.ouvrirMesCartes(); return; }
+  }
+
+  if (mode === 'nominatif') {
+    rendreEquipes();
+    window.allerA('orga', 'orga-equipes');
+  } else {
+    const total = tous().reduce((n, j) => n + j.cartes, 0);
+    demander({
+      title: 'C\'est parti 🎮',
+      message: `La partie démarre avec ${total} cartes, saisies par ${tous().length} joueur(s).`,
+      confirmLabel: 'Super'
+    });
+  }
+};
+
+window.melanger = () => {
+  tous().forEach((j, i) => { j.equipe = i % 2; });
+  rendreEquipes();
+};
+
+function rendreEquipes() {
+  const bloc = document.getElementById('equipes');
+  bloc.innerHTML = '';
+  tous().forEach(j => {
+    const ligne = document.createElement('div');
+    ligne.className = 'equipier';
+    const nom = document.createElement('span');
+    nom.textContent = j.prenom;
+    const bouton = document.createElement('button');
+    bouton.textContent = `Équipe ${j.equipe + 1}`;
+    bouton.style.background = COULEURS[j.equipe];
+    bouton.onclick = () => { j.equipe = 1 - j.equipe; rendreEquipes(); };
+    ligne.append(nom, bouton);
+    bloc.appendChild(ligne);
+  });
+}
+
+// ===== 3 bis · Les cartes de l'organisateur =====
+// Il ne peut pas scanner son propre QR : il passe par un accès direct, mais
+// c'est exactement le même écran de saisie que les invités.
+window.ouvrirMesCartes = () => {
+  document.getElementById('mc-bloc-prenom').style.display = mode === 'nominatif' ? '' : 'none';
+  document.getElementById('mc-titre').textContent = orga ? `${orga.prenom}, tes cartes` : 'Tes cartes';
+  rendreMesCartes();
+  window.allerA('orga', 'orga-mesCartes');
+};
+
+window.ajouterMaCarte = () => {
+  const champ = document.getElementById('mc-carte');
+  const erreur = document.getElementById('mc-erreur');
+  const mot = champ.value.trim();
+  erreur.textContent = '';
+
+  if (mot.length < 2) { erreur.textContent = 'Une carte doit faire au moins 2 caractères.'; return; }
+  if (cartesOrga.some(m => m.toLowerCase() === mot.toLowerCase())) {
+    erreur.textContent = 'Tu as déjà saisi cette carte.'; return;
+  }
+  if (cartesOrga.length >= cartesParJoueur) { erreur.textContent = "C'est complet."; return; }
+  cartesOrga.push(mot);
+  champ.value = '';
+  champ.focus();
+  rendreMesCartes();
+  majTout();
+};
+
+document.getElementById('mc-carte').addEventListener('keypress', e => {
+  if (e.key === 'Enter') window.ajouterMaCarte();
+});
+
+function rendreMesCartes() {
+  const liste = document.getElementById('mc-liste');
+  liste.innerHTML = '';
+  cartesOrga.forEach((mot, i) => {
+    const ligne = document.createElement('div');
+    ligne.className = 'ma-carte';
+    const texte = document.createElement('span');
+    texte.textContent = mot;
+    const retirer = document.createElement('button');
+    retirer.textContent = '✕';
+    retirer.onclick = () => { cartesOrga.splice(i, 1); rendreMesCartes(); majTout(); };
+    ligne.append(texte, retirer);
+    liste.appendChild(ligne);
+  });
+
+  const n = cartesOrga.length;
+  document.getElementById('mc-compteur').textContent =
+    n >= cartesParJoueur ? `${n} cartes — c'est bon !` : `${n} / ${cartesParJoueur} cartes`;
+  document.getElementById('mc-jauge').style.width = Math.min(100, (n / cartesParJoueur) * 100) + '%';
+  document.getElementById('mc-fini').disabled = n < cartesParJoueur;
+}
+
+window.finirMesCartes = () => {
+  const prenom = mode === 'nominatif'
+    ? (document.getElementById('mc-prenom').value.trim() || 'Alex')
+    : 'Toi';
+  orga = { prenom, cartes: cartesOrga.length, fini: true, sansTel: false, organisateur: true, equipe: 0 };
+  majTout();
+  window.allerA('orga', 'orga-session');
+};
+
+// ===== Rendus =====
+function tous() {
+  const liste = [];
+  if (orga) liste.push(orga);
+  liste.push(...joueurs);
+  if (marc) liste.push(marc);
+  return liste;
+}
+
+function rendreOrganisateur() {
+  const liste = document.getElementById('connectes');
+  if (!liste) return;
+  liste.innerHTML = '';
+
+  if (!sessionOuverte || tous().length === 0) {
+    liste.innerHTML = '<div class="connecte vide">Personne n\'a encore rejoint</div>';
+  } else {
+    tous().forEach(j => {
+      const ligne = document.createElement('div');
+      ligne.className = 'connecte' + (j.fini ? ' fini' : '');
+      const qui = document.createElement('span');
+      qui.className = 'qui';
+      qui.textContent = `${j.fini ? '●' : '○'} ${j.prenom} `;
+      if (j.sansTel || j.organisateur) {
+        const marque = document.createElement('span');
+        marque.className = 'sans-tel';
+        marque.textContent = j.organisateur ? '· toi' : '· sans téléphone';
+        qui.appendChild(marque);
+      }
+      const etat = document.createElement('span');
+      etat.className = 'etat';
+      etat.textContent = j.fini ? `${j.cartes} cartes ✓` : `${j.cartes}/${cartesParJoueur}…`;
+      ligne.append(qui, etat);
+
+      // Sortie de secours : sans ça, un joueur parti aux toilettes bloquerait la soirée
+      if (!j.fini && !j.organisateur) {
+        const retirer = document.createElement('button');
+        retirer.className = 'retirer-joueur';
+        retirer.textContent = '✕';
+        retirer.title = `Retirer ${j.prenom} de la partie`;
+        retirer.onclick = () => retirerJoueur(j);
+        ligne.appendChild(retirer);
+      }
+
+      liste.appendChild(ligne);
+    });
+  }
+
+  const total = tous().reduce((n, j) => n + j.cartes, 0);
+  const finis = tous().filter(j => j.fini).length;
+  document.getElementById('compteur-global').textContent =
+    `${tous().length} joueur(s) · ${finis} ont fini · ${total} carte(s)`;
+
+  // Personne ne doit pouvoir lancer pendant qu'un joueur modifie encore ses cartes :
+  // le paquet changerait sous les pieds de la partie.
+  const enCours = tous().filter(j => !j.fini);
+  const bouton = document.getElementById('btn-lancer');
+  bouton.disabled = total === 0 || enCours.length > 0;
+
+  if (enCours.length === 1) {
+    bouton.textContent = `⏳ ${enCours[0].prenom} saisit ses cartes…`;
+  } else if (enCours.length > 1) {
+    bouton.textContent = `⏳ ${enCours.length} joueurs saisissent encore…`;
+  } else if (mode === 'nominatif') {
+    bouton.textContent = 'Répartir les équipes ▶️';
+  } else {
+    bouton.textContent = total === 0 ? 'Lancer la partie' : `Lancer la partie (${total} cartes)`;
+  }
+
+  // L'organisateur reste un joueur : on lui rappelle où il en est, sans le bloquer
+  const mien = document.getElementById('btn-mes-cartes');
+  if (mien) {
+    mien.textContent = orga
+      ? `✍️ Mes cartes (${cartesOrga.length}) ✓`
+      : cartesOrga.length
+        ? `✍️ Saisir mes cartes (${cartesOrga.length}/${cartesParJoueur})`
+        : '✍️ Saisir mes cartes';
+  }
+}
+
+function rendreInvite() {
+  const liste = document.getElementById('inv-liste');
+  liste.innerHTML = '';
+  mesCartes.forEach((mot, i) => {
+    const ligne = document.createElement('div');
+    ligne.className = 'ma-carte';
+    const texte = document.createElement('span');
+    texte.textContent = mot;
+    const retirer = document.createElement('button');
+    retirer.textContent = '✕';
+    retirer.onclick = () => { mesCartes.splice(i, 1); majTout(); };
+    ligne.append(texte, retirer);
+    liste.appendChild(ligne);
+  });
+
+  const n = mesCartes.length;
+  document.getElementById('inv-compteur').textContent =
+    n >= cartesParJoueur ? `${n} cartes — c'est bon !` : `${n} / ${cartesParJoueur} cartes`;
+  document.getElementById('inv-jauge').style.width = Math.min(100, (n / cartesParJoueur) * 100) + '%';
+  document.getElementById('inv-terminer').disabled = n < cartesParJoueur;
+}
+
+function majTout() {
+  if (marc) marc.cartes = mesCartes.length;
+  if (orga) orga.cartes = cartesOrga.length;
+  rendreInvite();
+  rendreOrganisateur();
+  rendreSansTel();
+}
+
+window.scanner = () => window.allerA('inv', 'inv-prenom');
+
+window.validerPrenom = () => {
+  const prenom = document.getElementById('inv-prenom-champ').value.trim() || 'Marc';
+  marc = { prenom, cartes: 0, fini: false, sansTel: false, equipe: 1 };
+  document.getElementById('inv-titre').textContent = `${prenom}, tes cartes`;
+  majTout();
+  window.allerA('inv', 'inv-cartes');
+};
+
+window.ajouterCarte = () => {
+  const champ = document.getElementById('inv-carte');
+  const erreur = document.getElementById('inv-erreur');
+  const mot = champ.value.trim();
+  erreur.textContent = '';
+
+  if (mot.length < 2) { erreur.textContent = 'Une carte doit faire au moins 2 caractères.'; return; }
+  if (mesCartes.some(m => m.toLowerCase() === mot.toLowerCase())) {
+    erreur.textContent = 'Tu as déjà saisi cette carte.'; return;
+  }
+  if (mesCartes.length >= cartesParJoueur) {
+    erreur.textContent = `L'organisateur en demande ${cartesParJoueur}, c'est complet.`; return;
+  }
+  mesCartes.push(mot);
+  champ.value = '';
+  champ.focus();
+  majTout();
+};
+
+document.getElementById('inv-carte').addEventListener('keypress', e => {
+  if (e.key === 'Enter') window.ajouterCarte();
+});
+
+window.terminer = () => {
+  marc.fini = true;
+  document.getElementById('inv-total').textContent = mesCartes.length;
+  majTout();
+  window.allerA('inv', 'inv-fini');
+};
+
+// Revenir modifier repasse le joueur en « saisie en cours » : le lancement se rebloque
+window.modifierMesCartes = () => {
+  marc.fini = false;
+  majTout();
+  window.allerA('inv', 'inv-cartes');
+};
+
+window.retirerJoueur = async joueur => {
+  const partir = await demander({
+    title: `Retirer ${joueur.prenom} ?`,
+    message: `Ses ${joueur.cartes} carte(s) déjà envoyées seront abandonnées. Il pourra rejoindre à nouveau avec le même code tant que la session est ouverte.`,
+    confirmLabel: 'Retirer',
+    cancelLabel: 'Attendre encore'
+  });
+  if (!partir) return;
+
+  if (joueur === marc) { marc = null; mesCartes = []; window.allerA('inv', 'inv-avant'); }
+  else joueurs = joueurs.filter(j => j !== joueur);
+  majTout();
+};
+
+window.setMode('simple');
+window.reglerCartes(0);
+</script>
+</body>
+</html>

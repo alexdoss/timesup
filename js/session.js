@@ -1,0 +1,112 @@
+// ===== SESSION DE SAISIE PARTAGÉE — CÔTÉ ORGANISATEUR =====
+// Dialogue avec /api/session. Ne touche ni au DOM, ni aux règles du jeu :
+// app.js s'en sert, ui.js affiche le résultat.
+//
+// L'état de la session (code, jeton) vit ici et nulle part ailleurs : c'est le
+// seul module qui sait comment parler au serveur.
+
+const ROUTE = '/api/session';
+
+// Deux secondes : assez court pour que l'organisateur voie les joueurs arriver,
+// assez long pour ne pas vider la batterie ni le quota du stockage.
+const PERIODE_RAFRAICHISSEMENT_MS = 2000;
+
+let courante = null;      // { code, jeton, cartesParJoueur, mode }
+let minuterie = null;
+
+export function sessionCourante() {
+  return courante;
+}
+
+export function oublierSession() {
+  arreterSuivi();
+  courante = null;
+}
+
+async function appeler(action, donnees = {}) {
+  const reponse = await fetch(ROUTE, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ action, ...donnees })
+  });
+
+  let corps = {};
+  try { corps = await reponse.json(); } catch { /* réponse vide */ }
+
+  if (!reponse.ok) {
+    const erreur = new Error(corps.error || 'Le service est indisponible.');
+    erreur.statut = reponse.status;
+    erreur.details = corps;
+    throw erreur;
+  }
+  return corps;
+}
+
+export async function ouvrirSession(cartesParJoueur, mode) {
+  const reponse = await appeler('creer', { cartesParJoueur, mode });
+  courante = {
+    code: reponse.code,
+    jeton: reponse.jeton,
+    cartesParJoueur: reponse.cartesParJoueur,
+    mode: reponse.mode
+  };
+  return courante;
+}
+
+// Adresse à encoder dans le QR code. Construite depuis l'adresse courante :
+// aucune configuration à maintenir entre le développement et la production.
+export function adresseInvitation(code = courante?.code) {
+  return `${window.location.origin}/rejoindre.html?c=${code}`;
+}
+
+export function adresseLisible() {
+  return `${window.location.host}/rejoindre`;
+}
+
+export function lireEtat() {
+  return appeler('etat', { code: courante.code });
+}
+
+// Un joueur qui n'a pas encore été inscrit n'a pas d'identifiant : c'est
+// l'inscription qui lui en donne un.
+
+// L'organisateur s'inscrit lui-même, ou inscrit un joueur qui n'a pas de téléphone.
+export function inscrire(prenom, role) {
+  return appeler('rejoindre', { code: courante.code, jeton: courante.jeton, prenom, role });
+}
+
+export function deposerCartes(idJoueur, cartes, fini) {
+  return appeler('deposer', { code: courante.code, idJoueur, cartes, fini });
+}
+
+export function retirerJoueur(idJoueur) {
+  return appeler('retirer', { code: courante.code, jeton: courante.jeton, idJoueur });
+}
+
+// Ferme la session et récupère enfin les cartes : c'est le seul appel qui les rapatrie.
+export function fermerSession() {
+  return appeler('fermer', { code: courante.code, jeton: courante.jeton });
+}
+
+// ===== Suivi en direct =====
+// On interroge le serveur à intervalle régulier plutôt que d'ouvrir une connexion
+// permanente : les fonctions de Vercel sont éphémères, elles ne savent pas
+// maintenir une connexion ouverte.
+
+export function suivre(surEtat, surErreur) {
+  arreterSuivi();
+  const tour = async () => {
+    try {
+      surEtat(await lireEtat());
+    } catch (err) {
+      if (surErreur) surErreur(err);
+    }
+  };
+  tour();
+  minuterie = setInterval(tour, PERIODE_RAFRAICHISSEMENT_MS);
+}
+
+export function arreterSuivi() {
+  clearInterval(minuterie);
+  minuterie = null;
+}

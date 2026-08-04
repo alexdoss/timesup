@@ -2,8 +2,14 @@
 // Orchestre les modules et gère les événements
 
 import { loadThemes } from './themes.js';
-import { game, ROUNDS, resetGame, replayGame, buildDeck, startNewRound, getCurrentCard, cardFound, cardPassed, switchTeam, isRoundOver, isGameOver, nextRound, getCardsRemaining, addPlayer, removePlayer, assignTeamsRoundRobin, getCurrentPlayer, advancePlayer, getActiveRound, setPlayerTeam, syncChosenTeams, canPass, getPlannedTeamSizes, beginTurn, closeTurn, uncountCard, countCard, getRoundScores, getSessionScores } from './game.js';
-import { showScreen, updateTimer, showCard, updateRoundScreen, updateTurnInfo, updateGameHeader, showTurnResult, showRoundEnd, showFinalScreen, renderThemeButtons, renderPlayerList, updateCurrentPlayer, renderPlayerStats, renderRoundsSelector, renderAssignMode, applyTeamAccent, showResumeOption, renderSoundSetting, renderRules, showPauseOverlay, showPauseCountdown, hidePause, showPuppetConfirm, setRoundsNextEnabled, renderThemeEditor, showThemeEditError, renderCustomThemes, showDialog } from './ui.js';
+import { game, ROUNDS, shuffle, resetGame, replayGame, buildDeck, startNewRound, getCurrentCard, cardFound, cardPassed, switchTeam, isRoundOver, isGameOver, nextRound, getCardsRemaining, addPlayer, removePlayer, assignTeamsRoundRobin, getCurrentPlayer, advancePlayer, getActiveRound, setPlayerTeam, syncChosenTeams, canPass, getPlannedTeamSizes, beginTurn, closeTurn, uncountCard, countCard, getRoundScores, getSessionScores } from './game.js';
+import { showScreen, updateTimer, showCard, updateRoundScreen, updateTurnInfo, updateGameHeader, showTurnResult, showRoundEnd, showFinalScreen, renderThemeButtons, renderPlayerList, updateCurrentPlayer, renderPlayerStats, renderRoundsSelector, renderAssignMode, applyTeamAccent, showResumeOption, renderSoundSetting, renderRules, showPauseOverlay, showPauseCountdown, hidePause, showPuppetConfirm, setRoundsNextEnabled, renderThemeEditor, showThemeEditError, renderCustomThemes, showDialog,
+         afficherInvitation, renderSession, renderBoutonMesCartes, renderSaisieLocale,
+         showSaisieError, renderRepartition } from './ui.js';
+import { ouvrirSession, sessionCourante, oublierSession, adresseInvitation, adresseLisible,
+         inscrire, deposerCartes, retirerJoueur, fermerSession, lireEtat,
+         suivre, arreterSuivi } from './session.js';
+import { creerQrSvg } from './qr.js';
 import { getCustomThemes, saveCustomTheme, deleteCustomTheme, generateWithAI, getQuota } from './library.js';
 import { saveGame, loadSavedGame, clearSavedGame, restoreInto } from './persistence.js';
 import { playTick, playBuzzer, unlockAudio, isSoundEnabled, setSoundEnabled } from './sound.js';
@@ -18,6 +24,10 @@ let puppetAnswer = null;       // réponse à la question d'effectif en mode sim
 let turnEndTitle = '';         // titre du récapitulatif de tour (temps écoulé / plus de cartes)
 let turnEndLabel = '';         // qui vient de jouer, conservé pour les re-rendus après correction
 let editingThemeId = null;     // thème maison ouvert dans la fiche d'édition
+let saisieMode = 'partagee';   // 'partagee' (QR) ou 'sequentielle' (on se passe le téléphone)
+let moiJoueur = null;          // l'organisateur, inscrit dans sa propre session
+let saisieLocale = null;       // saisie en cours sur cet appareil (organisateur ou joueur sans téléphone)
+let repartition = [];          // joueurs revenus de la session, pour l'écran des équipes
 
 // ===== INIT =====
 async function init() {
@@ -94,9 +104,23 @@ function refreshPlayerList() {
   });
 }
 
+// Effectifs par équipe, ou null quand l'app ne peut pas les connaître : mode
+// simple, ou saisie partagée où les joueurs ne se sont pas encore inscrits.
+// null déclenche la question posée à l'organisateur pour la manche pantin.
+function effectifsConnus() {
+  // Saisie partagée : une fois la session close, on sait exactement combien de
+  // personnes jouent. On suppose des équipes aussi équilibrées que possible —
+  // en nominatif, la répartition finale sera revérifiée.
+  if (saisiePartagee() && repartition.length > 0) {
+    return [Math.ceil(repartition.length / 2), Math.floor(repartition.length / 2)];
+  }
+  if (joueursViennentDesScans()) return null;
+  return getPlannedTeamSizes();
+}
+
 function openRoundsStep() {
   puppetAnswer = null;
-  renderRoundsSelector(ROUNDS, game.activeRounds, getPlannedTeamSizes(), onRoundToggle);
+  renderRoundsSelector(ROUNDS, game.activeRounds, effectifsConnus(), onRoundToggle);
   refreshPuppetGate();
   showScreen('screen-rounds');
 }
@@ -109,7 +133,7 @@ function selectedRoundsWithMinimum() {
 
 // En mode simple, l'app ignore les effectifs : il faut demander à l'utilisateur.
 function needsPuppetConfirm() {
-  if (getPlannedTeamSizes() !== null) return false;
+  if (effectifsConnus() !== null) return false;
   return selectedRoundsWithMinimum().length > 0;
 }
 
@@ -133,8 +157,10 @@ function collectActiveRounds() {
 
   const selected = [...mandatory, ...optional].sort((a, b) => a - b);
 
-  // Filet de sécurité : une manche à effectif minimum ne passe jamais si l'effectif est connu et insuffisant
-  const sizes = getPlannedTeamSizes();
+  // Filet de sécurité : une manche à effectif minimum ne passe jamais si l'effectif
+  // est connu et insuffisant. En saisie partagée il ne l'est pas encore — la
+  // vérification a lieu au lancement, une fois tout le monde inscrit.
+  const sizes = effectifsConnus();
   const plusPetiteEquipe = sizes ? Math.min(...sizes) : null;
   game.activeRounds = selected.filter(index => {
     const round = ROUNDS[index];
@@ -150,11 +176,23 @@ function setupListeners() {
   document.getElementById('btn-resume').addEventListener('click', resumeGame);
 
   // Mode tiles selection
-  document.querySelectorAll('.mode-tile').forEach(tile => {
+  // On cible [data-source] et non .mode-tile : le choix de saisie partagée
+  // réutilise la même apparence, mais ne doit pas changer le type de partie.
+  document.querySelectorAll('[data-source]').forEach(tile => {
     tile.addEventListener('click', () => {
-      document.querySelectorAll('.mode-tile').forEach(t => t.classList.remove('active'));
+      document.querySelectorAll('[data-source]').forEach(t => t.classList.remove('active'));
       tile.classList.add('active');
       game.cardSource = tile.dataset.source;
+      updateSaisieChoice();
+    });
+  });
+
+  // Cartes perso : chacun sur son téléphone, ou on se passe l'appareil
+  document.querySelectorAll('[data-saisie]').forEach(tuile => {
+    tuile.addEventListener('click', () => {
+      document.querySelectorAll('[data-saisie]').forEach(t => t.classList.remove('active'));
+      tuile.classList.add('active');
+      saisieMode = tuile.dataset.saisie;
     });
   });
 
@@ -208,7 +246,6 @@ function setupListeners() {
       pill.classList.add('active');
       const mode = pill.dataset.mode;
       game.nominativeMode = (mode === 'nominatif');
-      document.getElementById('nominatif-block').style.display = game.nominativeMode ? '' : 'none';
       updateSimpleCustomBlock();
       document.getElementById('mode-note').textContent = game.nominativeMode
         ? "Chaque joueur est identifié. Rotation et statistiques individuelles."
@@ -237,7 +274,9 @@ function setupListeners() {
 
   // Players → Rounds (step 3)
   document.getElementById('btn-next-players').addEventListener('click', () => {
-    if (game.nominativeMode && game.players.length < 4) {
+    // En saisie partagée, les joueurs s'inscrivent en scannant : l'effectif ne
+    // peut être vérifié qu'à la fermeture de la session, pas ici.
+    if (game.nominativeMode && !joueursViennentDesScans() && game.players.length < 4) {
       showDialog({
         title: 'Pas assez de joueurs',
         message: "Il faut au moins 4 joueurs pour jouer avec les noms. Sinon, passe en mode sans les noms.",
@@ -252,6 +291,13 @@ function setupListeners() {
       game.teams[1].players = [];
     }
     syncTeamNamesFromInputs();
+
+    // Saisie partagée : on ouvre la session ici, pour que les invités commencent
+    // à saisir pendant que l'organisateur règle les manches et le déroulement.
+    if (saisiePartagee() && !sessionCourante()) {
+      ouvrirReglageSession();
+      return;
+    }
     openRoundsStep();
   });
 
@@ -349,6 +395,33 @@ function setupListeners() {
 
   // Start game
   document.getElementById('btn-play').addEventListener('click', onPlayClicked);
+
+  // Ouverture de session : réglage du nombre de cartes
+  document.getElementById('btn-cartes-moins').addEventListener('click', () => reglerCartesSession(-1));
+  document.getElementById('btn-cartes-plus').addEventListener('click', () => reglerCartesSession(1));
+  document.getElementById('btn-ouvrir-session').addEventListener('click', demarrerSessionPartagee);
+
+  // Session partagée — écran de l'organisateur
+  document.getElementById('btn-mes-cartes').addEventListener('click', () => ouvrirSaisieLocale('organisateur'));
+  document.getElementById('btn-session-sanstel').addEventListener('click', () => ouvrirSaisieLocale('sansTel'));
+  document.getElementById('btn-session-lancer').addEventListener('click', terminerSaisieEtConfigurer);
+  document.getElementById('btn-session-abandon').addEventListener('click', abandonnerSessionPartagee);
+
+  // Saisie sur cet appareil
+  document.getElementById('btn-saisie-ajouter').addEventListener('click', ajouterCarteLocale);
+  document.getElementById('saisie-carte').addEventListener('keypress', e => {
+    if (e.key === 'Enter') ajouterCarteLocale();
+  });
+  document.getElementById('btn-saisie-fini').addEventListener('click', finirSaisieLocale);
+  document.getElementById('btn-saisie-retour').addEventListener('click', () => showScreen('screen-session'));
+  document.getElementById('btn-saisie-visibilite').addEventListener('click', () => {
+    const champ = document.getElementById('saisie-carte');
+    champ.type = champ.type === 'password' ? 'text' : 'password';
+  });
+
+  // Répartition des équipes après une session partagée
+  document.getElementById('btn-repartition-melanger').addEventListener('click', melangerRepartition);
+  document.getElementById('btn-repartition-jouer').addEventListener('click', lancerApresRepartition);
 
   // Custom cards flow
   document.getElementById('btn-handoff-ready').addEventListener('click', showCustomInput);
@@ -479,13 +552,21 @@ function updateCardsCountLabel() {
   const preset = document.getElementById('cards-preset');
   const stepper = document.getElementById('cards-stepper');
 
+  // En saisie partagée, ce réglage a déjà été fait à l'ouverture de la session :
+  // on masque le champ entier plutôt que d'offrir deux endroits pour le même choix.
+  const champ = document.getElementById('cards-count-field');
+  if (champ) champ.style.display = saisiePartagee() ? 'none' : '';
+
   if (game.cardSource === 'custom') {
     label.textContent = 'Cartes saisies par joueur';
     preset.style.display = 'none';
     stepper.style.display = '';
     const input = document.getElementById('cards-stepper-input');
     if (!input.value || parseInt(input.value) < 3) input.value = 5;
-    game.numCards = parseInt(input.value);
+    // En saisie partagée, la valeur qui fait foi est celle réglée à l'ouverture
+    // de la session : ne pas la réécrire depuis ce champ, qui est masqué.
+    if (saisiePartagee()) input.value = game.numCards;
+    else game.numCards = parseInt(input.value);
     hint.style.display = '';
     updateCustomTotalHint();
   } else {
@@ -510,19 +591,360 @@ function updateCustomTotalHint() {
 
 function updateSimpleCustomBlock() {
   const block = document.getElementById('simple-custom-block');
-  block.style.display = (game.cardSource === 'custom' && !game.nominativeMode) ? '' : 'none';
+  const partagee = game.cardSource === 'custom' && saisieMode === 'partagee';
+  block.style.display = (game.cardSource === 'custom' && !game.nominativeMode && !partagee) ? '' : 'none';
+  updateBlocJoueurs();
 }
+
+// Le choix « comment saisir » n'a de sens que pour les cartes perso
+function updateSaisieChoice() {
+  const bloc = document.getElementById('saisie-choice');
+  if (bloc) bloc.style.display = game.cardSource === 'custom' ? '' : 'none';
+}
+
+// En saisie partagée et en mode nominatif, les prénoms arrivent avec les scans :
+// l'organisateur n'a plus à taper la liste des joueurs.
+function saisiePartagee() {
+  return game.cardSource === 'custom' && saisieMode === 'partagee';
+}
+
+function joueursViennentDesScans() {
+  return saisiePartagee() && game.nominativeMode;
+}
+
+function updateBlocJoueurs() {
+  const bloc = document.getElementById('nominatif-block');
+  const note = document.getElementById('note-joueurs-partages');
+  if (!bloc) return;
+
+  const parLesJoueurs = joueursViennentDesScans();
+  bloc.style.display = game.nominativeMode && !parLesJoueurs ? '' : 'none';
+  if (note) note.style.display = parLesJoueurs ? '' : 'none';
+}
+
+// Depuis la session, le retour dépend d'où on en est : reprendre la configuration
+// là où on l'a laissée, ou revenir au dernier écran réglé.
+window.retourDepuisSession = function() {
+  showScreen('screen-players');
+};
 
 window.handleBackFromPlayers = function() {
   showScreen(game.cardSource === 'themes' ? 'screen-themes' : 'screen-mode');
 };
+
+// ===== SAISIE PARTAGÉE (QR CODE) =====
+// Le nombre de cartes se règle ici, avant d'ouvrir la session : les invités
+// doivent connaître leur consigne dès leur premier scan. En saisie séquentielle,
+// ce réglage reste à l'étape « Déroulement ».
+
+function ouvrirReglageSession() {
+  // game.numCards vaut 30 par défaut (taille de paquet du mode thèmes) : hors
+  // de la plage acceptable pour une saisie individuelle, on repart de 5.
+  if (game.numCards < 3 || game.numCards > 15) game.numCards = 5;
+  rafraichirReglageSession();
+  showScreen('screen-session-ouvrir');
+}
+
+function rafraichirReglageSession() {
+  document.getElementById('session-cartes-valeur').textContent = game.numCards;
+  document.getElementById('session-cartes-estimation').textContent =
+    `À 6 joueurs, le paquet fera environ ${game.numCards * 6} cartes.`;
+}
+
+function reglerCartesSession(delta) {
+  game.numCards = Math.max(3, Math.min(15, game.numCards + delta));
+  rafraichirReglageSession();
+}
+
+// L'organisateur ouvre une session, les invités scannent, chacun saisit sur son
+// téléphone. Le nombre de cartes par joueur vient de l'étape « Déroulement ».
+
+async function demarrerSessionPartagee() {
+  moiJoueur = null;
+  repartition = [];
+
+  try {
+    const session = await ouvrirSession(game.numCards, game.nominativeMode ? 'nominatif' : 'simple');
+
+    afficherInvitation(
+      creerQrSvg(adresseInvitation(), { taille: 190 }),
+      session.code,
+      adresseLisible(),
+      `${session.cartesParJoueur} cartes chacun`
+    );
+    renderBoutonMesCartes(0, session.cartesParJoueur, false);
+    showScreen('screen-session');
+    suivre(surEtatSession, surPanneSession);
+  } catch (err) {
+    // Pas de réseau, ou stockage non configuré : on propose le repli sans détour
+    const basculer = await showDialog({
+      title: 'Saisie à plusieurs indisponible',
+      message: `${err.message} Vous pouvez saisir les cartes en vous passant le téléphone.`,
+      confirmLabel: 'Se passer le téléphone',
+      cancelLabel: 'Revenir en arrière'
+    });
+    if (basculer) { saisieMode = 'sequentielle'; openRoundsStep(); }
+    else showScreen('screen-players');
+  }
+}
+
+function surEtatSession(etat) {
+  renderSession(etat, confirmerRetraitJoueur);
+  const moi = moiJoueur ? etat.joueurs.find(j => j.id === moiJoueur.id) : null;
+  renderBoutonMesCartes(moi ? moi.nbCartes : 0, etat.cartesParJoueur, !!moi?.fini);
+}
+
+function surPanneSession() {
+  const compteur = document.getElementById('session-compteur');
+  if (compteur) compteur.textContent = '📡 Connexion perdue — nouvelle tentative…';
+}
+
+async function confirmerRetraitJoueur(joueur) {
+  const partir = await showDialog({
+    title: `Retirer ${joueur.prenom} ?`,
+    message: `Ses ${joueur.nbCartes} carte(s) déjà envoyées seront abandonnées. Il pourra rejoindre à nouveau avec le même code.`,
+    confirmLabel: 'Retirer',
+    cancelLabel: 'Attendre encore',
+    danger: true
+  });
+  if (!partir) return;
+
+  try {
+    await retirerJoueur(joueur.id);
+    if (moiJoueur && moiJoueur.id === joueur.id) moiJoueur = null;
+    surEtatSession(await lireEtatSansAttendre());
+  } catch (err) {
+    showDialog({ title: 'Retrait impossible', message: err.message, confirmLabel: 'Compris' });
+  }
+}
+
+// Rafraîchissement immédiat, sans attendre le prochain tour du suivi
+function lireEtatSansAttendre() {
+  return lireEtat();
+}
+
+// ===== Saisie sur cet appareil =====
+// Deux cas : l'organisateur saisit ses propres cartes (en clair, c'est son
+// téléphone), ou un joueur sans téléphone emprunte l'appareil (cartes masquées).
+
+async function ouvrirSaisieLocale(role) {
+  const session = sessionCourante();
+  const organisateur = role === 'organisateur';
+
+  saisieLocale = {
+    role,
+    id: organisateur ? moiJoueur?.id || null : null,
+    prenom: organisateur ? moiJoueur?.prenom || '' : '',
+    cartes: [],
+    masque: !organisateur,
+    cible: session.cartesParJoueur
+  };
+
+  // Le prénom n'est demandé que quand il servira : joueur sans téléphone,
+  // ou organisateur en mode nominatif (il figurera dans la répartition).
+  saisieLocale.demanderPrenom = !organisateur || session.mode === 'nominatif';
+
+  const champ = document.getElementById('saisie-prenom');
+  champ.value = saisieLocale.prenom;
+  document.getElementById('saisie-carte').type = saisieLocale.masque ? 'password' : 'text';
+  document.getElementById('saisie-carte').value = '';
+  showSaisieError('');
+  rafraichirSaisieLocale();
+  showScreen('screen-saisie-locale');
+}
+
+function rafraichirSaisieLocale() {
+  const organisateur = saisieLocale.role === 'organisateur';
+  renderSaisieLocale({
+    titre: organisateur ? 'Tes cartes' : 'Saisie sur cet appareil',
+    note: organisateur
+      ? "C'est ton téléphone : tes cartes s'affichent en clair. Les autres continuent de saisir pendant ce temps."
+      : 'Passe ton téléphone à ce joueur. Ses cartes restent masquées pendant qu\'il tape.',
+    cartes: saisieLocale.cartes,
+    cible: saisieLocale.cible,
+    masque: saisieLocale.masque,
+    demanderPrenom: saisieLocale.demanderPrenom
+  }, retirerCarteLocale);
+}
+
+function ajouterCarteLocale() {
+  const champ = document.getElementById('saisie-carte');
+  const mot = champ.value.trim();
+  showSaisieError('');
+
+  if (mot.length < 2) return showSaisieError('Une carte doit faire au moins 2 caractères.');
+  if (saisieLocale.cartes.some(m => m.toLocaleLowerCase() === mot.toLocaleLowerCase())) {
+    return showSaisieError('Cette carte a déjà été saisie.');
+  }
+  if (saisieLocale.cartes.length >= saisieLocale.cible) {
+    return showSaisieError(`${saisieLocale.cible} cartes suffisent.`);
+  }
+
+  saisieLocale.cartes.push(mot);
+  champ.value = '';
+  champ.focus();
+  rafraichirSaisieLocale();
+}
+
+function retirerCarteLocale(index) {
+  saisieLocale.cartes.splice(index, 1);
+  rafraichirSaisieLocale();
+}
+
+async function finirSaisieLocale() {
+  const prenomSaisi = document.getElementById('saisie-prenom').value.trim();
+
+  if (saisieLocale.demanderPrenom && prenomSaisi.length < 1) {
+    return showSaisieError('Indique un prénom.');
+  }
+  const prenom = prenomSaisi || 'Organisateur';
+
+  try {
+    // L'organisateur ne s'inscrit qu'une fois ; ensuite il ne fait que redéposer
+    let id = saisieLocale.id;
+    if (!id) {
+      const reponse = await inscrire(prenom, saisieLocale.role);
+      id = reponse.idJoueur;
+      if (saisieLocale.role === 'organisateur') moiJoueur = { id, prenom };
+    }
+    await deposerCartes(id, saisieLocale.cartes, true);
+    showScreen('screen-session');
+    surEtatSession(await lireEtatSansAttendre());
+  } catch (err) {
+    showDialog({ title: 'Envoi impossible', message: err.message, confirmLabel: 'Réessayer' });
+  }
+}
+
+// ===== Lancement =====
+
+// Manches retenues dont l'effectif minimum n'est pas atteint
+function manchesTropExigeantes(tailles) {
+  const plusPetite = Math.min(...tailles);
+  return game.activeRounds
+    .map(index => ROUNDS[index])
+    .filter(round => round.minPerTeam && plusPetite < round.minPerTeam);
+}
+
+// Vérification finale, quand l'effectif est enfin connu. Plutôt que de bloquer,
+// on propose de jouer sans la manche : personne ne doit se retrouver coincé
+// devant un écran de lancement qui refuse sans issue.
+async function effectifsSuffisants(tailles, libelleAttente) {
+  const trop = manchesTropExigeantes(tailles);
+  if (trop.length === 0) return true;
+
+  const noms = trop.map(round => `« ${round.name} »`).join(' et ');
+  const minimum = Math.max(...trop.map(round => round.minPerTeam));
+  const continuer = await showDialog({
+    title: 'Effectif insuffisant',
+    message: `${noms} demande au moins ${minimum} joueurs par équipe, et la plus petite en compte ${Math.min(...tailles)}.`,
+    confirmLabel: trop.length > 1 ? 'Lancer sans ces manches' : 'Lancer sans cette manche',
+    cancelLabel: libelleAttente
+  });
+  if (!continuer) return false;
+
+  // On désélectionne aussi la pastille : collectActiveRounds() relit le DOM au
+  // lancement, et ramènerait la manche qu'on vient de retirer.
+  game.activeRounds
+    .filter(index => trop.includes(ROUNDS[index]))
+    .forEach(index => {
+      const pastille = document.querySelector(`#rounds-optional .round-pill[data-round-index="${index}"]`);
+      if (pastille) pastille.classList.remove('active');
+    });
+
+  game.activeRounds = game.activeRounds.filter(index => !trop.includes(ROUNDS[index]));
+  return true;
+}
+
+// Tout le monde a saisi : on fige le paquet, puis on reprend la configuration.
+// Fermer est irréversible : on vérifie l'effectif AVANT, sinon un refus
+// laisserait une session close que plus personne ne pourrait rejoindre.
+async function terminerSaisieEtConfigurer() {
+  try {
+    const etat = await lireEtat();
+
+    if (game.nominativeMode && etat.joueurs.length < 4) {
+      return showDialog({
+        title: 'Pas assez de joueurs',
+        message: `Une partie avec les noms demande au moins 4 joueurs, et ${etat.joueurs.length} ont rejoint. Fais scanner les autres, ou reviens en arrière pour jouer sans les noms.`,
+        confirmLabel: 'Compris'
+      });
+    }
+
+    const resultat = await fermerSession();
+    arreterSuivi();
+
+    // Le paquet est figé et l'effectif enfin connu : les étapes suivantes
+    // raisonnent dessus comme dans une partie ordinaire.
+    game.customCards = resultat.cartes;
+    repartition = resultat.joueurs.map((j, index) => ({ ...j, equipe: index % game.teams.length }));
+    openRoundsStep();
+  } catch (err) {
+    if (err.statut === 409 && err.details?.enAttente) {
+      return showDialog({
+        title: 'Des joueurs saisissent encore',
+        message: `On attend : ${err.details.enAttente.join(', ')}.`,
+        confirmLabel: 'Compris'
+      });
+    }
+    showDialog({ title: 'Impossible de continuer', message: err.message, confirmLabel: 'Réessayer' });
+  }
+}
+
+function afficherRepartition() {
+  renderRepartition(repartition, game.teams, joueur => {
+    joueur.equipe = (joueur.equipe + 1) % game.teams.length;
+    afficherRepartition();
+  });
+}
+
+function melangerRepartition() {
+  repartition = shuffle(repartition).map((j, index) => ({ ...j, equipe: index % game.teams.length }));
+  afficherRepartition();
+}
+
+async function lancerApresRepartition() {
+  // Ici les équipes sont formées : on connaît les effectifs exacts. Renoncer
+  // ramène simplement à l'écran de répartition, où l'on peut rééquilibrer.
+  const tailles = game.teams.map((_, index) =>
+    repartition.filter(joueur => joueur.equipe === index).length);
+  if (!(await effectifsSuffisants(tailles, 'Rééquilibrer les équipes'))) return;
+
+  game.players = repartition.map(j => j.prenom);
+  game.playerAssignments = {};
+  repartition.forEach(j => { game.playerAssignments[j.prenom] = j.equipe; });
+  game.assignMode = 'chosen';
+  oublierSession();
+  startGame();
+}
+
+// Repli en cours de session : on abandonne la saisie partagée pour l'appareil unique
+async function abandonnerSessionPartagee() {
+  const basculer = await showDialog({
+    title: 'Se passer le téléphone ?',
+    message: 'La session en cours sera abandonnée, et les cartes déjà envoyées perdues. Chacun saisira à son tour sur cet appareil.',
+    confirmLabel: 'Basculer',
+    cancelLabel: 'Rester ici',
+    danger: true
+  });
+  if (!basculer) return;
+  arreterSuivi();
+  oublierSession();
+  saisieMode = 'sequentielle';
+  startCustomCardsEntry();
+}
 
 // ===== CUSTOM CARDS ENTRY =====
 let customEntry = { playerIndex: 0, playerList: [], currentCards: [], batchSize: 0, currentTarget: 0 };
 
 function onPlayClicked() {
   if (game.cardSource === 'custom') {
-    startCustomCardsEntry();
+    if (saisieMode === 'partagee') {
+      // Les cartes sont déjà là : on enchaîne sur la répartition, ou sur la partie
+      if (game.nominativeMode) { afficherRepartition(); showScreen('screen-repartition'); }
+      else { oublierSession(); startGame(); }
+    } else {
+      startCustomCardsEntry();
+    }
   } else {
     startGame();
   }

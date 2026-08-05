@@ -24,7 +24,7 @@ export const game = {
   selectedThemes: new Set(),
   activeRounds: [0, 1, 2],
   assignMode: 'random',
-  startingTeam: 0,         // équipe tirée au sort au lancement, qui ouvre chaque manche
+  startingTeam: 0,         // équipe tirée au sort qui ouvre la partie (les manches suivantes alternent)
   currentTeam: 0,
   currentRound: 0,
   turnTime: 40,
@@ -331,8 +331,10 @@ export function isGameOver() {
 
 export function nextRound() {
   game.currentRound++;
-  // L'équipe tirée au sort ouvre aussi les manches suivantes
-  game.currentTeam = game.startingTeam;
+  // On ne touche pas à l'équipe active : la rotation continue par-dessus le
+  // changement de manche. Ouvrir une manche est un avantage, il ne doit pas
+  // revenir toujours à la même équipe. Le tour qui vient de s'achever a déjà
+  // passé la main à l'équipe suivante.
 }
 
 export function getCardsRemaining() {

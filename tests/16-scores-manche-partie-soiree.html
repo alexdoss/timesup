@@ -17,12 +17,13 @@ document.getElementById('f').addEventListener('load', async () => {
   const ecran = () => [...d.querySelectorAll('.screen')].find(s => s.classList.contains('active'))?.id;
   const sauvegarde = () => JSON.parse(w.localStorage.getItem('timesup_partie_en_cours') || 'null');
 
-  // L'equipe qui commence est tiree au sort : elle marque tous les points de ce test
-  let marqueur = 0;
   const val = id => parseInt($(id).textContent, 10);
-  const manche = () => val(`end-team${marqueur + 1}-round`);
-  const totalPartie = () => val(`end-team${marqueur + 1}-score`);
-  const perdant = suffixe => val(`end-team${2 - marqueur}-${suffixe}`);
+  const scoreManche = e => val(`end-team${e + 1}-round`);
+  const scorePartie = e => val(`end-team${e + 1}-score`);
+
+  // La rotation continue par-dessus les manches : chaque manche est ouverte par
+  // l'equipe suivante. On lit donc qui joue, au lieu de le supposer.
+  const equipeQuiJoue = () => sauvegarde().state.currentTeam;
 
   // Vide le paquet d'une traite : un seul tour suffit quand on ne perd pas de temps
   async function jouerLaManche() {
@@ -45,35 +46,53 @@ document.getElementById('f').addEventListener('load', async () => {
     $('btn-next-players').click();
     $('btn-next-rounds').click();
     $('btn-play').click();
-    marqueur = sauvegarde().state.startingTeam;
+    const total1 = [0, 0];
 
+    // --- Manche 1 ---
+    const ouvre1 = equipeQuiJoue();
+    check('la partie s ouvre sur l equipe tiree au sort', ouvre1 === sauvegarde().state.startingTeam);
     await jouerLaManche();
     check('fin de la manche 1', ecran() === 'screen-round-end');
-    const paquet = manche();
-    log('       cartes du paquet : ' + paquet);
+    const paquet = scoreManche(ouvre1);
+    total1[ouvre1] += paquet;
+    log('       cartes du paquet : ' + paquet + ', manche 1 ouverte par l equipe ' + (ouvre1 + 1));
     check('la manche 1 a bien ete jouee', paquet > 0);
-    check('le score de la manche est affiche', manche() === paquet);
-    check('le total de la partie aussi', totalPartie() === paquet);
-    check('l equipe adverse est a zero', perdant('round') === 0 && perdant('score') === 0);
+    check('le total de la partie vaut la manche', scorePartie(ouvre1) === paquet);
+    check('l equipe adverse est a zero',
+          scoreManche(1 - ouvre1) === 0 && scorePartie(1 - ouvre1) === 0);
     check('le titre nomme la manche', $('round-end-title').textContent.includes('1/3'));
 
+    // --- Manche 2 : c'est a l'autre equipe d'ouvrir ---
     $('btn-next-round').click();
+    const ouvre2 = equipeQuiJoue();
+    check('la manche 2 est ouverte par l autre equipe', ouvre2 === 1 - ouvre1);
     await jouerLaManche();
+    total1[ouvre2] += paquet;
     check('fin de la manche 2', ecran() === 'screen-round-end');
-    check('la manche 2 compte ses propres points', manche() === paquet);
-    check('le total de la partie cumule les deux manches', totalPartie() === paquet * 2);
-    check('manche et total sont bien distincts', manche() !== totalPartie());
+    check('la manche 2 compte ses propres points', scoreManche(ouvre2) === paquet);
+    check('celle qui n a pas joue reste a zero sur la manche', scoreManche(1 - ouvre2) === 0);
+    check('les totaux de partie cumulent les deux manches',
+          scorePartie(0) === total1[0] && scorePartie(1) === total1[1]);
+    check('manche et total sont bien distincts pour l equipe 1',
+          scoreManche(ouvre1) !== scorePartie(ouvre1));
 
+    // --- Manche 3 : la rotation ramene la premiere equipe ---
     $('btn-next-round').click();
+    const ouvre3 = equipeQuiJoue();
+    check('la manche 3 revient a l equipe qui a ouvert la partie', ouvre3 === ouvre1);
     await jouerLaManche();
+    total1[ouvre3] += paquet;
     check('fin de la manche 3', ecran() === 'screen-round-end');
-    check('le total atteint trois manches', totalPartie() === paquet * 3);
+    check('les totaux atteignent trois manches',
+          scorePartie(0) === total1[0] && scorePartie(1) === total1[1]);
+    check('le paquet complet a ete distribue', total1[0] + total1[1] === paquet * 3);
+    check('personne n a ouvert les trois manches', total1[0] > 0 && total1[1] > 0);
 
     // ===== FIN DE LA PREMIERE PARTIE =====
     $('btn-next-round').click();
     check('ecran de fin de partie', ecran() === 'screen-final');
-    check('le score de la partie est affiche',
-          val(`final-team${marqueur + 1}-score`) === paquet * 3);
+    check('le score de la partie est reporte',
+          val('final-team1-score') === total1[0] && val('final-team2-score') === total1[1]);
     check('aucun cumul de soiree a la premiere partie', $('session-row').style.display === 'none');
     check('un vainqueur est annonce', $('winner').textContent.includes('gagne'));
     check('on peut rejouer avec les memes joueurs', !!$('btn-replay'));
@@ -84,24 +103,25 @@ document.getElementById('f').addEventListener('load', async () => {
     check('la partie suivante demarre directement', ecran() === 'screen-round');
     const etat = sauvegarde().state;
     check('les scores de partie repartent a zero', etat.teams[0].score === 0 && etat.teams[1].score === 0);
-    check('la partie precedente est mise de cote', etat.sessionScores[marqueur] === paquet * 3);
+    check('la partie precedente est mise de cote',
+          etat.sessionScores[0] === total1[0] && etat.sessionScores[1] === total1[1]);
     check('une partie est comptabilisee', etat.gamesPlayed === 1);
     check('on repart bien de la manche 1', etat.currentRound === 0);
 
-    // L'equipe qui commence est retiree au sort : la partie 2 peut changer de marqueur
-    const marqueur1 = marqueur;
-    marqueur = sauvegarde().state.startingTeam;
-    const marqueur2 = marqueur;
-    log('       marqueur partie 1 : ' + marqueur1 + ' / partie 2 : ' + marqueur2);
+    // ===== PARTIE 2 : meme mecanique, nouveau tirage =====
+    const total2 = [0, 0];
+    let ouvre = equipeQuiJoue();
+    await jouerLaManche();
+    total2[ouvre] += paquet;
+    check('la manche 1 de la partie 2 est isolee', scoreManche(ouvre) === paquet);
+    check('le total de la partie 2 ne reprend pas la partie 1', scorePartie(ouvre) === paquet);
 
-    await jouerLaManche();
-    check('la manche 1 de la partie 2 est isolee', manche() === paquet);
-    check('le total de la partie 2 ne reprend pas la partie 1', totalPartie() === paquet);
-
-    $('btn-next-round').click();
-    await jouerLaManche();
-    $('btn-next-round').click();
-    await jouerLaManche();
+    for (const numero of [2, 3]) {
+      $('btn-next-round').click();
+      ouvre = equipeQuiJoue();
+      await jouerLaManche();
+      total2[ouvre] += paquet;
+    }
     $('btn-next-round').click();
     check('fin de la deuxieme partie', ecran() === 'screen-final');
 
@@ -109,20 +129,18 @@ document.getElementById('f').addEventListener('load', async () => {
     check('le cumul de soiree apparait', $('session-row').style.display !== 'none');
     log('       libelle : "' + $('session-label').textContent + '"');
     check('il annonce le nombre de parties', $('session-label').textContent.includes('2 parties'));
-    check('le score de la partie en cours reste distinct',
-          val(`final-team${marqueur2 + 1}-score`) === paquet * 3);
-    check('la partie 2 seule ne montre pas le cumul',
-          val(`final-team${marqueur2 + 1}-score`) !== val(`session-team${marqueur2 + 1}-score`)
-          || marqueur1 !== marqueur2);
+    check('le score de la partie en cours reste celui de la partie 2',
+          val('final-team1-score') === total2[0] && val('final-team2-score') === total2[1]);
 
-    // Chaque partie a rapporte un paquet complet a l'equipe qui l'a ouverte
-    const attendu = [0, 0];
-    attendu[marqueur1] += paquet * 3;
-    attendu[marqueur2] += paquet * 3;
+    log('       partie 1 : ' + total1.join('/') + '   partie 2 : ' + total2.join('/'));
     check('le cumul additionne les deux parties',
-          val('session-team1-score') === attendu[0] && val('session-team2-score') === attendu[1]);
+          val('session-team1-score') === total1[0] + total2[0]
+          && val('session-team2-score') === total1[1] + total2[1]);
     check('le total de la soiree vaut bien six manches',
           val('session-team1-score') + val('session-team2-score') === paquet * 6);
+    check('cumul et partie en cours sont bien distincts',
+          val('session-team1-score') !== val('final-team1-score')
+          || val('session-team2-score') !== val('final-team2-score'));
 
     // ===== NOUVELLE PARTIE : LE CUMUL S ARRETE =====
     $('btn-restart').click();

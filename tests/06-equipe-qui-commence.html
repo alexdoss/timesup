@@ -5,7 +5,7 @@
 <pre id="log">demarrage...</pre>
 <div id="hote"></div>
 <script type="module">
-import { game, resetGame, nextRound } from '/js/game.js';
+import { game, resetGame, nextRound, switchTeam } from '/js/game.js';
 
 const out = [];
 function log(s) { out.push(s); document.getElementById('log').textContent = out.join('\n'); }
@@ -34,18 +34,31 @@ try {
   check('aucune equipe n est favorisee', compte[0] > TIRAGES * 0.35 && compte[1] > TIRAGES * 0.35);
   check('la partie s ouvre sur l equipe tiree', toujoursCoherent);
 
-  // ===== MOTEUR : les manches suivantes =====
-  game.startingTeam = 1;
-  game.currentTeam = 0;   // l'equipe 1 vient de jouer le dernier tour de la manche
+  // ===== MOTEUR : la rotation continue par-dessus les manches =====
+  // Ouvrir une manche est un avantage : il ne doit pas revenir toujours a la
+  // meme equipe. Le changement de manche ne remet donc rien a zero.
+  game.startingTeam = 0;
+  game.currentTeam = 1;   // le dernier tour a passe la main a l equipe 2
   game.currentRound = 0;
   nextRound();
-  check('la manche 2 rouvre sur l equipe tiree', game.currentTeam === 1);
+  check('la manche 2 s ouvre sur l equipe suivante, pas sur celle qui a commence', game.currentTeam === 1);
   check('le compteur de manche avance', game.currentRound === 1);
 
-  game.startingTeam = 0;
-  game.currentTeam = 1;
+  game.currentTeam = 0;
   nextRound();
-  check('et ce quelle que soit l equipe tiree', game.currentTeam === 0);
+  check('et inversement a la manche suivante', game.currentTeam === 0);
+  check('l equipe qui a ouvert la partie n a aucun privilege', game.startingTeam === 0 && game.currentTeam === 0);
+
+  // Enchainement complet : 3 tours dans la manche 1, puis changement de manche
+  game.startingTeam = 0;
+  game.currentTeam = 0;
+  const passages = [];
+  for (let tour = 0; tour < 3; tour++) { passages.push(game.currentTeam); switchTeam(); }
+  nextRound();
+  passages.push(game.currentTeam);
+  log('       ordre de passage : ' + passages.join(' -> ') + ' (les 3 premiers en manche 1)');
+  check('la manche 1 alterne A B A', JSON.stringify(passages.slice(0, 3)) === JSON.stringify([0, 1, 0]));
+  check('la manche 2 s ouvre donc sur B', passages[3] === 1);
 
   // ===== BOUT EN BOUT : ce que voit le joueur =====
   localStorage.removeItem('timesup_partie_en_cours');

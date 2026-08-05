@@ -3,16 +3,25 @@
   deploy.ps1 — publie Rush en production.
 
   Enchaîne : bump du cache service worker (si un asset caché a changé)
-  → commit → push. Vercel déploie automatiquement sur push vers la branche.
+  → commit → push → vérification en production. Vercel déploie automatiquement
+  sur push vers la branche.
+
+  La vérification finale existe parce que les tests tournent contre le serveur
+  local, qui ne se comporte pas exactement comme Vercel : c'est ainsi qu'un
+  /rejoindre en 404 avait échappé à 623 vérifications.
 
   Usage :
     pwsh -NoProfile -ExecutionPolicy Bypass -File scripts/deploy.ps1 -Check
     pwsh -NoProfile -ExecutionPolicy Bypass -File scripts/deploy.ps1 -Message "fix du chrono"
+    pwsh -NoProfile -ExecutionPolicy Bypass -File scripts/deploy.ps1 -VerifierSeulement
 #>
 [CmdletBinding()]
 param(
   [string]$Message,
-  [switch]$Check
+  [switch]$Check,
+  [switch]$VerifierSeulement,
+  [switch]$SansVerification,
+  [string]$Site = 'https://rush-alexina.vercel.app'
 )
 
 $ErrorActionPreference = 'Stop'
@@ -35,6 +44,65 @@ function Resolve-Git {
 
 $git = Resolve-Git
 
+# ===== Verification en production =====
+# Interroge le site reellement deploye. Aucune ecriture : le controle de l'API
+# demande l'etat d'une partie inexistante, ce qui prouve a la fois que la
+# fonction serveur repond et que le stockage Upstash est joignable (sans lui,
+# elle renverrait 503 au lieu de 404).
+
+function Get-Reponse {
+  param([string]$Url, [string]$Methode = 'GET', [string]$Corps = $null)
+  try {
+    $p = @{ Uri = $Url; Method = $Methode; UseBasicParsing = $true; TimeoutSec = 20; SkipHttpErrorCheck = $true }
+    if ($Corps) { $p.ContentType = 'application/json'; $p.Body = $Corps }
+    return Invoke-WebRequest @p
+  } catch {
+    return $null
+  }
+}
+
+function Test-Production {
+  param([string]$Racine, [string]$CacheAttendu)
+
+  $controles = @(
+    @{ nom = "accueil";                 url = "$Racine/";                 code = 200; contient = '<title>Rush</title>' }
+    @{ nom = "page des invites";        url = "$Racine/rejoindre";        code = 200; contient = 'rejoindre une partie' }
+    @{ nom = "  la meme, en .html";     url = "$Racine/rejoindre.html";   code = 200; contient = 'rejoindre une partie' }
+    @{ nom = "manifeste";               url = "$Racine/manifest.json";    code = 200; contient = '"name": "Rush"' }
+    @{ nom = "moteur de jeu";           url = "$Racine/js/app.js";        code = 200 }
+    @{ nom = "bibliotheque QR";         url = "$Racine/js/vendor/qrcode.js"; code = 200 }
+    @{ nom = "service worker";          url = "$Racine/sw.js";            code = 200; contient = "'$CacheAttendu'" }
+    @{ nom = "generation IA (methode)"; url = "$Racine/api/generate";     code = 405 }
+    @{ nom = "session partagee + KV";   url = "$Racine/api/session";      code = 404; methode = 'POST'
+       corps = '{"action":"etat","code":"ZZZZ"}'; contient = 'Aucune partie' }
+  )
+
+  $echecs = 0
+  foreach ($c in $controles) {
+    $r = Get-Reponse -Url $c.url -Methode ($c.methode ?? 'GET') -Corps $c.corps
+    $ok = $r -and $r.StatusCode -eq $c.code
+    if ($ok -and $c.contient) { $ok = $r.Content -match [regex]::Escape($c.contient) }
+
+    $etat = if ($ok) { 'OK   ' } else { 'ECHEC' }
+    $vu = if ($r) { $r.StatusCode } else { 'injoignable' }
+    # Write-Host et non Write-Output : sinon ces lignes se melangeraient a la
+    # valeur de retour de la fonction, qui doit rester un simple compteur.
+    Write-Host ("  {0} {1,-26} attendu {2}, recu {3}" -f $etat, $c.nom, $c.code, $vu)
+    if (-not $ok) { $echecs++ }
+  }
+
+  # Le nom du depot ne doit apparaitre nulle part cote joueur
+  foreach ($page in @("$Racine/", "$Racine/rejoindre")) {
+    $r = Get-Reponse -Url $page
+    if ($r -and $r.Content -match 'timesup') {
+      Write-Host ("  ECHEC nom du depot visible sur $page")
+      $echecs++
+    }
+  }
+
+  return $echecs
+}
+
 function Invoke-Git {
   param([Parameter(ValueFromRemainingArguments = $true)][string[]]$GitArgs)
   $out = & $git @GitArgs
@@ -43,6 +111,18 @@ function Invoke-Git {
 }
 
 Set-Location $repo
+
+# --- Verification seule, sans rien publier ---
+if ($VerifierSeulement) {
+  $cache = ([regex]::Match((Get-Content (Join-Path $repo 'sw.js') -Raw), "const CACHE_NAME = '(rush-v\d+)';")).Groups[1].Value
+  Write-Output "VERIFICATION EN PRODUCTION ($Site)"
+  $echecs = Test-Production -Racine $Site -CacheAttendu $cache
+  Write-Output ""
+  if ($echecs -eq 0) { Write-Output "Tout repond correctement."; exit 0 }
+  Write-Output "$echecs controle(s) en echec."
+  exit 1
+}
+
 $branch = (Invoke-Git rev-parse --abbrev-ref HEAD).Trim()
 
 # --- Ce qui a changé dans le répertoire de travail ---
@@ -114,4 +194,39 @@ if ($changed.Count -gt 0 -or $needsBump) {
 Invoke-Git push origin HEAD | Out-Null
 $sha = (Invoke-Git rev-parse --short HEAD).Trim()
 Write-Output "Pousse sur origin/$branch — commit $sha"
-Write-Output "Vercel deploie automatiquement (environ 1 minute)."
+
+if ($SansVerification) {
+  Write-Output "Vercel deploie automatiquement (environ 1 minute). Verification passee."
+  exit 0
+}
+
+# --- Attente du deploiement, puis verification ---
+$cacheFinal = ([regex]::Match((Get-Content $swFile -Raw), "const CACHE_NAME = '(rush-v\d+)';")).Groups[1].Value
+
+Write-Output ""
+Write-Output "Attente du deploiement Vercel..."
+$enLigne = $false
+foreach ($essai in 1..24) {
+  Start-Sleep -Seconds 5
+  $r = Get-Reponse -Url "$Site/sw.js"
+  if ($r -and $r.StatusCode -eq 200 -and $r.Content -match [regex]::Escape("'$cacheFinal'")) {
+    Write-Output "Deploiement en ligne apres $($essai * 5) s."
+    $enLigne = $true
+    break
+  }
+}
+if (-not $enLigne) {
+  Write-Output "Le deploiement n'est pas encore visible apres 2 minutes — on verifie quand meme."
+}
+
+Write-Output ""
+Write-Output "VERIFICATION EN PRODUCTION ($Site)"
+$echecs = Test-Production -Racine $Site -CacheAttendu $cacheFinal
+
+Write-Output ""
+if ($echecs -eq 0) {
+  Write-Output "Tout repond correctement en production."
+} else {
+  Write-Output "$echecs controle(s) en echec. Le commit $sha est pousse, mais la production n'est pas saine."
+  exit 1
+}

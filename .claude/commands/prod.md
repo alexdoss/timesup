@@ -22,6 +22,11 @@ Marche à suivre :
    `pwsh -NoProfile -ExecutionPolicy Bypass -File scripts/deploy.ps1 -Message "<message>"`
    Le message vient de $ARGUMENTS. S'il est vide, rédige-le toi-même à partir du diff : en français, à l'impératif, une ligne.
 
-5. **Confirme** : rappelle le commit poussé, que Vercel déploie en ~1 min, et ce qu'il faut aller vérifier sur l'app en ligne.
+5. **Le script vérifie tout seul la production** après le push : il attend que Vercel ait déployé (en guettant la version du cache service worker), puis contrôle l'accueil, `/rejoindre`, le manifeste, les modules, la fonction IA, la session partagée avec son stockage, et l'absence du nom du dépôt dans les pages. Il sort en erreur si un contrôle échoue.
+
+6. **Confirme** : rappelle le commit poussé et le résultat de la vérification. Si un contrôle a échoué, dis-le clairement — le code est poussé mais la production n'est pas saine.
+
+Pour rejouer la vérification sans rien publier :
+`pwsh -NoProfile -ExecutionPolicy Bypass -File scripts/deploy.ps1 -VerifierSeulement`
 
 Si `-Check` signale `RIEN A PUBLIER`, dis-le et n'exécute pas l'étape 4.

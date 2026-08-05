@@ -29,7 +29,8 @@ api/generate.js Serverless Vercel → Groq (llama-3.3-70b-versatile), génère d
 api/session.js  Serverless Vercel → Upstash : sessions de saisie partagée
 themes/*.json   Thèmes officiels : { id, name, icon, words[] }
 sw.js           Service worker, cache-first sur une liste d'assets figée
-scripts/        serve.ps1 (dev + imitation de /api/session), test.ps1, deploy.ps1
+scripts/        serve.ps1 (dev + imitation de /api/session), test.ps1,
+                deploy.ps1 (publie puis vérifie la production ; `-VerifierSeulement` pour vérifier seul)
 tests/          Scénarios pilotés dans Chrome sans fenêtre — `scripts/test.ps1`
 ```
 

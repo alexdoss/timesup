@@ -79,9 +79,18 @@ function Test-Production {
 
   $echecs = 0
   foreach ($c in $controles) {
-    $r = Get-Reponse -Url $c.url -Methode ($c.methode ?? 'GET') -Corps $c.corps
-    $ok = $r -and $r.StatusCode -eq $c.code
-    if ($ok -and $c.contient) { $ok = $r.Content -match [regex]::Escape($c.contient) }
+    # Plusieurs tentatives : le reseau de diffusion de Vercel sert des copies
+    # mises en cache, et une copie ancienne peut subsister quelques secondes
+    # apres le deploiement. Une fausse alerte decredibiliserait le controle.
+    $ok = $false
+    $r = $null
+    foreach ($tentative in 1..3) {
+      $r = Get-Reponse -Url $c.url -Methode ($c.methode ?? 'GET') -Corps $c.corps
+      $ok = $r -and $r.StatusCode -eq $c.code
+      if ($ok -and $c.contient) { $ok = $r.Content -match [regex]::Escape($c.contient) }
+      if ($ok) { break }
+      if ($tentative -lt 3) { Start-Sleep -Seconds 4 }
+    }
 
     $etat = if ($ok) { 'OK   ' } else { 'ECHEC' }
     $vu = if ($r) { $r.StatusCode } else { 'injoignable' }

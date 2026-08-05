@@ -1,5 +1,8 @@
 {
   "installCommand": "npm install",
   "buildCommand": "",
-  "outputDirectory": "."
+  "outputDirectory": ".",
+  "rewrites": [
+    { "source": "/rejoindre", "destination": "/rejoindre.html" }
+  ]
 }

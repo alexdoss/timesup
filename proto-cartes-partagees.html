@@ -192,7 +192,7 @@
         </div>
         <div class="qr-bloc" id="qr-bloc"></div>
         <div class="code-session">RU4B</div>
-        <div class="adresse-session">rush-timesup.vercel.app/rejoindre</div>
+        <div class="adresse-session">rush-alexina.vercel.app/rejoindre</div>
 
         <!-- L'organisateur ne peut pas scanner son propre QR : il a son propre accès -->
         <button type="button" class="btn btn-secondary" id="btn-mes-cartes" onclick="ouvrirMesCartes()">✍️ Saisir mes cartes</button>
@@ -409,7 +409,7 @@
 import { creerQrSvg } from './js/qr.js';
 
 document.getElementById('qr-bloc')
-  .appendChild(creerQrSvg('https://rush-timesup.vercel.app/rejoindre?c=RU4B', { taille: 176 }));
+  .appendChild(creerQrSvg('https://rush-alexina.vercel.app/rejoindre?c=RU4B', { taille: 176 }));
 
 // ===== État partagé : ce que le « serveur » saurait =====
 let mode = 'simple';

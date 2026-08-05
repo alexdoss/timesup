@@ -42,35 +42,21 @@ f.addEventListener('load', async () => {
   try {
     await wait(1200);
 
-    // ===== Le carrefour de saisie =====
+    // ===== Les cartes perso menent directement au QR, sans choix intermediaire =====
     $('btn-start').click();
     check('etape du type de partie', ecran() === 'screen-mode');
-    check('le choix de saisie est cache pour les themes', !visible('saisie-choice'));
+    check('aucun choix de mode de saisie n est propose', d.querySelectorAll('[data-saisie]').length === 0);
 
     d.querySelector('[data-source="custom"]').click();
-    check('il apparait pour les cartes perso', visible('saisie-choice'));
-    check('deux facons de saisir sont proposees', d.querySelectorAll('[data-saisie]').length === 2);
-    check('« chacun sur son telephone » est propose par defaut',
-          d.querySelector('[data-saisie="partagee"]').classList.contains('active'));
+    check('la description annonce le QR code',
+          d.querySelector('[data-source="custom"]').textContent.includes('QR'));
 
-    // ===== En nominatif, la saisie des joueurs disparait =====
     $('btn-next-mode').click();
     check('etape des joueurs', ecran() === 'screen-players');
     check('la liste des joueurs est masquee en saisie partagee', !visible('nominatif-block'));
     check('une note explique pourquoi', visible('note-joueurs-partages'));
     check('le texte annonce le scan', $('note-joueurs-partages').textContent.includes('scannant'));
 
-    // en repassant sur la saisie sequentielle, la liste revient
-    d.querySelector('#screen-players .btn-back').click();
-    d.querySelector('[data-saisie="sequentielle"]').click();
-    $('btn-next-mode').click();
-    check('en saisie sequentielle, la liste des joueurs revient', visible('nominatif-block'));
-    check('et la note disparait', !visible('note-joueurs-partages'));
-
-    // on revient a la saisie partagee, en mode simple pour la suite
-    d.querySelector('#screen-players .btn-back').click();
-    d.querySelector('[data-saisie="partagee"]').click();
-    $('btn-next-mode').click();
     d.querySelector('[data-mode="simple"]').click();
     $('btn-next-players').click();
 
@@ -98,6 +84,36 @@ f.addEventListener('load', async () => {
     check('le QR encode bien un lien de participation',
           d.querySelector('#session-qr svg').getAttribute('aria-label').includes('rejoindre'));
     check('l adresse lisible est donnee', $('session-adresse').textContent.includes('/rejoindre'));
+
+    // ===== Le lien est cliquable et partageable =====
+    check('l adresse est un vrai lien', $('session-adresse').tagName === 'A');
+    check('il mene bien a la partie',
+          $('session-adresse').href.includes('/rejoindre.html?c=' + code));
+    check('il s ouvre dans un autre onglet', $('session-adresse').target === '_blank');
+
+    check('un bouton de partage est propose', !!$('btn-partager'));
+    let partage = null;
+    w.navigator.share = async donnees => { partage = donnees; };
+    $('btn-partager').click();
+    await wait(200);
+    log('       partage : ' + JSON.stringify(partage));
+    check('le partage natif est utilise quand il existe', !!partage);
+    check('il transmet le lien de la partie', partage.url.includes('c=' + code));
+    check('le message rappelle le code', partage.text.includes(code));
+    check('et nomme le jeu', partage.title === 'Rush');
+
+    // Sans partage natif, on retombe sur le presse-papier
+    let copie = null;
+    delete w.navigator.share;
+    Object.defineProperty(w.navigator, 'clipboard', {
+      value: { writeText: async t => { copie = t; } }, configurable: true
+    });
+    $('btn-partager').click();
+    await wait(300);
+    check('sans partage natif, le lien est copie', !!copie && copie.includes(code));
+    check('l utilisateur en est informe', $('dialog-title').textContent.includes('copié'));
+    $('dialog-confirm').click();
+    await wait(100);
     check('le nombre de cartes est rappele', $('session-rappel').textContent.includes('3 cartes'));
     check('personne n a encore rejoint', connectes()[0].includes('Personne'));
 

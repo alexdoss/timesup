@@ -627,9 +627,13 @@ body {
 }
 
 .adresse-session {
+  display: inline-block;
   font-size: 0.82rem;
-  color: var(--muted);
-  margin-bottom: 4px;
+  color: var(--muted-strong);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  margin-bottom: 10px;
+  padding: 4px;   /* une cible tactile un peu plus large que le texte */
 }
 
 .connectes {

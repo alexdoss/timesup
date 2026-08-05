@@ -183,16 +183,11 @@ function setupListeners() {
       document.querySelectorAll('[data-source]').forEach(t => t.classList.remove('active'));
       tile.classList.add('active');
       game.cardSource = tile.dataset.source;
-      updateSaisieChoice();
-    });
-  });
-
-  // Cartes perso : chacun sur son téléphone, ou on se passe l'appareil
-  document.querySelectorAll('[data-saisie]').forEach(tuile => {
-    tuile.addEventListener('click', () => {
-      document.querySelectorAll('[data-saisie]').forEach(t => t.classList.remove('active'));
-      tuile.classList.add('active');
-      saisieMode = tuile.dataset.saisie;
+      // Les cartes perso passent toujours par le QR code : le repli « on se
+      // passe le téléphone » reste offert depuis l'écran de session, y compris
+      // si le réseau manque. Un choix de moins à faire en début de partie.
+      saisieMode = 'partagee';
+      updateSimpleCustomBlock();
     });
   });
 
@@ -402,6 +397,7 @@ function setupListeners() {
   document.getElementById('btn-ouvrir-session').addEventListener('click', demarrerSessionPartagee);
 
   // Session partagée — écran de l'organisateur
+  document.getElementById('btn-partager').addEventListener('click', partagerLien);
   document.getElementById('btn-mes-cartes').addEventListener('click', () => ouvrirSaisieLocale('organisateur'));
   document.getElementById('btn-session-sanstel').addEventListener('click', () => ouvrirSaisieLocale('sansTel'));
   document.getElementById('btn-session-lancer').addEventListener('click', terminerSaisieEtConfigurer);
@@ -596,12 +592,6 @@ function updateSimpleCustomBlock() {
   updateBlocJoueurs();
 }
 
-// Le choix « comment saisir » n'a de sens que pour les cartes perso
-function updateSaisieChoice() {
-  const bloc = document.getElementById('saisie-choice');
-  if (bloc) bloc.style.display = game.cardSource === 'custom' ? '' : 'none';
-}
-
 // En saisie partagée et en mode nominatif, les prénoms arrivent avec les scans :
 // l'organisateur n'a plus à taper la liste des joueurs.
 function saisiePartagee() {
@@ -670,6 +660,7 @@ async function demarrerSessionPartagee() {
       creerQrSvg(adresseInvitation(), { taille: 190 }),
       session.code,
       adresseLisible(),
+      adresseInvitation(),
       `${session.cartesParJoueur} cartes chacun`
     );
     renderBoutonMesCartes(0, session.cartesParJoueur, false);
@@ -683,15 +674,63 @@ async function demarrerSessionPartagee() {
       confirmLabel: 'Se passer le téléphone',
       cancelLabel: 'Revenir en arrière'
     });
-    if (basculer) { saisieMode = 'sequentielle'; openRoundsStep(); }
+    if (basculer) basculerEnSequentiel();
     else showScreen('screen-players');
   }
+}
+
+// Repli vers la saisie sur un seul appareil. On repasse par l'étape des joueurs :
+// en mode nominatif, leur liste n'a jamais été saisie puisqu'elle devait venir
+// des scans — sans ce retour, l'organisateur se retrouverait sans aucun nom.
+function basculerEnSequentiel() {
+  arreterSuivi();
+  oublierSession();
+  saisieMode = 'sequentielle';
+  updateSimpleCustomBlock();
+  showScreen('screen-players');
 }
 
 function surEtatSession(etat) {
   renderSession(etat, confirmerRetraitJoueur);
   const moi = moiJoueur ? etat.joueurs.find(j => j.id === moiJoueur.id) : null;
   renderBoutonMesCartes(moi ? moi.nbCartes : 0, etat.cartesParJoueur, !!moi?.fini);
+}
+
+// Partage du lien d'invitation. navigator.share ouvre le menu natif du téléphone
+// — messages, WhatsApp, mail… — mais n'existe ni sur tous les navigateurs, ni
+// sur ordinateur : on retombe alors sur une copie dans le presse-papier, puis
+// sur l'affichage du lien en clair si même ça est refusé.
+async function partagerLien() {
+  const session = sessionCourante();
+  if (!session) return;
+
+  const lien = adresseInvitation();
+  const texte = `Rejoins la partie de Rush ! Code ${session.code}`;
+
+  if (navigator.share) {
+    try {
+      await navigator.share({ title: 'Rush', text: texte, url: lien });
+      return;
+    } catch (err) {
+      // L'utilisateur a fermé le menu de partage : ce n'est pas une erreur
+      if (err.name === 'AbortError') return;
+    }
+  }
+
+  try {
+    await navigator.clipboard.writeText(`${texte} — ${lien}`);
+    showDialog({
+      title: 'Lien copié',
+      message: 'Colle-le dans ta messagerie pour inviter les autres joueurs.',
+      confirmLabel: 'Parfait'
+    });
+  } catch {
+    showDialog({
+      title: 'Lien à recopier',
+      message: lien,
+      confirmLabel: 'Compris'
+    });
+  }
 }
 
 function surPanneSession() {
@@ -921,16 +960,13 @@ async function lancerApresRepartition() {
 async function abandonnerSessionPartagee() {
   const basculer = await showDialog({
     title: 'Se passer le téléphone ?',
-    message: 'La session en cours sera abandonnée, et les cartes déjà envoyées perdues. Chacun saisira à son tour sur cet appareil.',
+    message: "La session en cours sera abandonnée, et les cartes déjà envoyées perdues. Chacun saisira à son tour sur cet appareil, et tu reprendras la configuration depuis les équipes.",
     confirmLabel: 'Basculer',
     cancelLabel: 'Rester ici',
     danger: true
   });
   if (!basculer) return;
-  arreterSuivi();
-  oublierSession();
-  saisieMode = 'sequentielle';
-  startCustomCardsEntry();
+  basculerEnSequentiel();
 }
 
 // ===== CUSTOM CARDS ENTRY =====

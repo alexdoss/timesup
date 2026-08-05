@@ -52,7 +52,6 @@ f.addEventListener('load', async () => {
     // ===== Le mode nominatif reste selectionne, sans saisir de joueurs =====
     $('btn-start').click();
     d.querySelector('[data-source="custom"]').click();
-    d.querySelector('[data-saisie="partagee"]').click();
     $('btn-next-mode').click();
     check('etape des joueurs', ecran() === 'screen-players');
     check('le mode nominatif est bien actif par defaut',

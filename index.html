@@ -206,25 +206,8 @@
           <button type="button" class="mode-tile" data-source="custom">
             <span class="mode-tile-icon">✍️</span>
             <span class="mode-tile-title">Cartes personnalisées</span>
-            <span class="mode-tile-desc">Chaque joueur saisit ses propres cartes en début de partie.</span>
+            <span class="mode-tile-desc">Chaque joueur saisit ses propres cartes sur son téléphone, en scannant un QR code.</span>
           </button>
-        </div>
-
-        <!-- Apparaît seulement pour les cartes perso : où chacun saisit-il ? -->
-        <div id="saisie-choice" class="config-section" style="display:none">
-          <span class="field-label">Comment saisir les cartes ?</span>
-          <div class="mode-choice">
-            <button type="button" class="mode-tile active" data-saisie="partagee">
-              <span class="mode-tile-icon">📱</span>
-              <span class="mode-tile-title">Chacun sur son téléphone</span>
-              <span class="mode-tile-desc">Tout le monde saisit en même temps, en scannant un QR code. Nécessite du réseau.</span>
-            </button>
-            <button type="button" class="mode-tile" data-saisie="sequentielle">
-              <span class="mode-tile-icon">🔁</span>
-              <span class="mode-tile-title">On se passe le téléphone</span>
-              <span class="mode-tile-desc">Chacun son tour sur cet appareil. Fonctionne sans réseau.</span>
-            </button>
-          </div>
         </div>
 
         <button id="btn-next-mode" class="btn btn-primary">Suivant ▶️</button>
@@ -468,9 +451,10 @@
 
       <div id="session-qr" class="qr-bloc"></div>
       <div id="session-code" class="code-session"></div>
-      <div id="session-adresse" class="adresse-session"></div>
+      <a id="session-adresse" class="adresse-session" target="_blank" rel="noopener"></a>
 
       <div class="config-form">
+        <button id="btn-partager" class="btn btn-secondary">📤 Envoyer le lien</button>
         <button id="btn-mes-cartes" class="btn btn-secondary">✍️ Saisir mes cartes</button>
         <div id="session-joueurs" class="connectes"></div>
         <p id="session-compteur" class="wizard-hint"></p>

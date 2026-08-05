@@ -360,13 +360,18 @@ export function renderRules(rounds) {
 // ===== SESSION DE SAISIE PARTAGÉE =====
 
 // Le QR est dessiné une seule fois, à l'ouverture de la session.
-export function afficherInvitation(svgQr, code, adresse, rappel) {
+export function afficherInvitation(svgQr, code, adresse, lien, rappel) {
   const bloc = document.getElementById('session-qr');
   bloc.innerHTML = '';
   bloc.appendChild(svgQr);
   document.getElementById('session-code').textContent = code;
-  document.getElementById('session-adresse').textContent = adresse;
   document.getElementById('session-rappel').textContent = rappel;
+
+  // L'adresse est cliquable : sur ordinateur, l'organisateur peut l'ouvrir
+  // dans un autre onglet pour vérifier, ou la copier d'un clic droit.
+  const lienAdresse = document.getElementById('session-adresse');
+  lienAdresse.textContent = adresse;
+  lienAdresse.href = lien;
 }
 
 // etat      : la réponse du serveur (qui a fini, jamais quoi)

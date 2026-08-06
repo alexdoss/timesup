@@ -58,28 +58,35 @@ f.addEventListener('load', async () => {
     check('le nombre de joueurs est demande', $('session-joueurs-valeur').textContent === '6');
     check('le nombre de cartes par joueur aussi', $('session-cartes-valeur').textContent === '5');
     log('       paquet : ' + $('session-cartes-estimation').textContent);
-    check('le total du paquet est calcule', $('session-cartes-estimation').textContent.includes('30 cartes'));
-    check('a 30 cartes, on peut ouvrir', !$('btn-ouvrir-session').disabled);
+    check('seul le total du paquet est affiche',
+          $('session-cartes-estimation').textContent === '30 cartes dans le paquet');
+    check('l ouverture est toujours possible', !$('btn-ouvrir-session').disabled);
 
-    // --- En dessous de 30 cartes, l ouverture est bloquee ---
+    // --- Le minimum est applique, pas signale ---
+    check('a 6 joueurs, on ne peut pas descendre sous 5 cartes', $('btn-cartes-moins').disabled);
+    check('on ne peut pas descendre sous 4 joueurs non plus', !$('btn-joueurs-moins').disabled);
+
+    // --- Plus de joueurs, donc moins de cartes chacun ---
+    for (let i = 0; i < 4; i++) $('btn-joueurs-plus').click();
+    check('10 joueurs', $('session-joueurs-valeur').textContent === '10');
+    check('le minimum par joueur descend a 3', !$('btn-cartes-moins').disabled);
     $('btn-cartes-moins').click();
-    check('4 cartes par joueur ne suffisent plus a 6 joueurs', $('btn-ouvrir-session').disabled);
-    log('       paquet : ' + $('session-cartes-estimation').textContent);
-    check('le manque est chiffre', $('session-cartes-estimation').textContent.includes('il en manque 6'));
-    check('le total est signale', $('session-cartes-estimation').classList.contains('insuffisant'));
-
-    // --- Ajouter des joueurs suffit a compenser ---
-    $('btn-joueurs-plus').click();
-    check('7 joueurs ne suffisent pas encore', $('btn-ouvrir-session').disabled);
-    $('btn-joueurs-plus').click();
-    check('a 8 joueurs et 4 cartes, le compte y est', !$('btn-ouvrir-session').disabled);
-    check('le total est correct', $('session-cartes-estimation').textContent.includes('32 cartes'));
-
-    // --- On repart sur 10 joueurs x 3 cartes pour la suite du scenario ---
     $('btn-cartes-moins').click();
-    for (let i = 0; i < 2; i++) $('btn-joueurs-plus').click();
-    check('10 joueurs x 3 cartes = 30, le minimum', !$('btn-ouvrir-session').disabled);
-    check('le reglage des cartes est bien a 3', $('session-cartes-valeur').textContent === '3');
+    check('3 cartes par joueur', $('session-cartes-valeur').textContent === '3');
+    check('le bouton se bloque au minimum', $('btn-cartes-moins').disabled);
+    check('le paquet fait toujours 30 cartes',
+          $('session-cartes-estimation').textContent === '30 cartes dans le paquet');
+
+    // --- Revenir a moins de joueurs releve les cartes d office ---
+    $('btn-joueurs-moins').click();
+    check('a 9 joueurs, les cartes passent a 4 toutes seules',
+          $('session-cartes-valeur').textContent === '4');
+    check('le paquet reste au-dessus du minimum',
+          parseInt($('session-cartes-estimation').textContent, 10) >= 30);
+    $('btn-joueurs-plus').click();
+    $('btn-cartes-moins').click();
+    check('on revient a 10 joueurs et 3 cartes',
+          $('session-joueurs-valeur').textContent === '10' && $('session-cartes-valeur').textContent === '3');
 
     $('btn-ouvrir-session').click();
     await wait(900);

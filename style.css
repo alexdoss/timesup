@@ -702,6 +702,26 @@ body {
   color: #fff;
 }
 
+/* Composition du paquet, sur l'écran d'ouverture de session.
+   Titre et stepper centrés ensemble. Sans ces règles, .field-label reste un
+   élément en ligne qui se centre en héritant de l'écran, tandis que le stepper
+   se tasse à gauche : les deux ne s'alignent sur rien. */
+.reglage-cartes {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  text-align: center;
+}
+
+.reglage-cartes .field-label {
+  display: block;
+  text-align: center;
+}
+
+.reglage-cartes .stepper {
+  justify-content: center;
+}
+
 /* Composition du paquet, sur l'ecran d'ouverture de session */
 .paquet-total {
   font-size: 0.95rem;
@@ -709,11 +729,6 @@ body {
   color: var(--muted-strong);
   text-align: center;
   margin: 4px 0 6px;
-}
-
-.paquet-total.insuffisant {
-  color: var(--warning);
-  font-weight: 500;
 }
 
 /* ===== PAGE DES INVITÉS (rejoindre.html) ===== */

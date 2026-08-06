@@ -232,6 +232,23 @@ const ENV = { KV_REST_API_URL: URL_KV, KV_REST_API_TOKEN: 'jeton-test' };
     res = await appeler({ action: 'deposer', code, idJoueur: idAlex, cartes: ['Triche'], fini: true });
     check('plus personne ne peut modifier ses cartes (409)', res.code === 409);
 
+    // ===== Plafond du nombre de joueurs =====
+    reinitialiser();
+    res = await appeler({ action: 'creer', cartesParJoueur: 3 });
+    const codePlein = res.body.code;
+    for (let i = 1; i <= 30; i++) {
+      res = await appeler({ action: 'rejoindre', code: codePlein, prenom: 'Joueur ' + i });
+    }
+    check('le 30e joueur est accepte', res.code === 200);
+
+    res = await appeler({ action: 'rejoindre', code: codePlein, prenom: 'Le 31e' });
+    log('       refus : ' + JSON.stringify(res.body));
+    check('le 31e est refuse (409)', res.code === 409);
+    check('le message annonce le plafond', res.body.error.includes('30 joueurs'));
+
+    res = await appeler({ action: 'etat', code: codePlein });
+    check('la session en compte bien 30', res.body.joueurs.length === 30);
+
     // ===== Plafond de creation par adresse =====
     reinitialiser();
     for (let i = 0; i < 30; i++) await appeler({ action: 'creer' }, '10.0.0.9');

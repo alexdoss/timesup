@@ -16,7 +16,7 @@
 // autonome, ce qui permet de la charger et de la tester isolément.
 
 const DUREE_SESSION_S = 2 * 60 * 60;      // au-delà, la session s'efface d'elle-même
-const MAX_JOUEURS = 12;
+const MAX_JOUEURS = 30;   // doit rester égal à JOUEURS_MAX dans js/app.js
 const MAX_CARTES = 20;                     // par joueur
 const LONGUEUR_CARTE_MAX = 40;
 const LONGUEUR_PRENOM_MAX = 20;

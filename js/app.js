@@ -642,40 +642,51 @@ window.handleBackFromPlayers = function() {
 
 // En dessous, une manche se termine trop vite pour que la partie ait du goût.
 const PAQUET_MINIMUM = 30;
+const JOUEURS_MIN = 4;
+const JOUEURS_MAX = 30;   // doit rester égal à MAX_JOUEURS dans api/session.js
+const CARTES_MIN = 3;
+const CARTES_MAX = 15;
+
+// Plutôt que de signaler un paquet trop court, on empêche d'y descendre :
+// le minimum par joueur découle du nombre de joueurs annoncé.
+function minimumCartesParJoueur() {
+  return Math.max(CARTES_MIN, Math.ceil(PAQUET_MINIMUM / joueursAttendus));
+}
 
 function ouvrirReglageSession() {
   // game.numCards vaut 30 par défaut (taille de paquet du mode thèmes) : hors
   // de la plage acceptable pour une saisie individuelle, on repart de 5.
-  if (game.numCards < 3 || game.numCards > 15) game.numCards = 5;
+  if (game.numCards < CARTES_MIN || game.numCards > CARTES_MAX) game.numCards = 5;
   rafraichirReglageSession();
   showScreen('screen-session-ouvrir');
 }
 
 function rafraichirReglageSession() {
-  const total = joueursAttendus * game.numCards;
-  const manquantes = PAQUET_MINIMUM - total;
+  // Réduire le nombre de joueurs relève d'office les cartes par joueur
+  const minimum = minimumCartesParJoueur();
+  game.numCards = Math.max(minimum, Math.min(CARTES_MAX, game.numCards));
 
   document.getElementById('session-joueurs-valeur').textContent = joueursAttendus;
   document.getElementById('session-cartes-valeur').textContent = game.numCards;
+  document.getElementById('session-cartes-estimation').textContent =
+    `${joueursAttendus * game.numCards} cartes dans le paquet`;
 
-  const resume = document.getElementById('session-cartes-estimation');
-  resume.textContent = manquantes > 0
-    ? `${joueursAttendus} × ${game.numCards} = ${total} cartes — il en manque ${manquantes} pour une partie correcte.`
-    : `${joueursAttendus} × ${game.numCards} = ${total} cartes`;
-  resume.classList.toggle('insuffisant', manquantes > 0);
-
-  document.getElementById('btn-ouvrir-session').disabled = manquantes > 0;
+  // Les bornes se voient : un bouton éteint explique mieux qu'un message d'erreur
+  document.getElementById('btn-joueurs-moins').disabled = joueursAttendus <= JOUEURS_MIN;
+  document.getElementById('btn-joueurs-plus').disabled = joueursAttendus >= JOUEURS_MAX;
+  document.getElementById('btn-cartes-moins').disabled = game.numCards <= minimum;
+  document.getElementById('btn-cartes-plus').disabled = game.numCards >= CARTES_MAX;
 }
 
 function reglerCartesSession(delta) {
-  game.numCards = Math.max(3, Math.min(15, game.numCards + delta));
+  game.numCards = Math.max(minimumCartesParJoueur(), Math.min(CARTES_MAX, game.numCards + delta));
   rafraichirReglageSession();
 }
 
 // Prévision, pas contrainte : le paquet réel dépendra de qui scanne vraiment.
-// Elle sert à s'assurer que le compte y sera, avant d'ouvrir la session.
+// Elle sert à dimensionner le paquet avant d'ouvrir la session.
 function reglerJoueursSession(delta) {
-  joueursAttendus = Math.max(2, Math.min(12, joueursAttendus + delta));
+  joueursAttendus = Math.max(JOUEURS_MIN, Math.min(JOUEURS_MAX, joueursAttendus + delta));
   rafraichirReglageSession();
 }
 

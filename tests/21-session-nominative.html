@@ -57,11 +57,12 @@ f.addEventListener('load', async () => {
     // ===== La composition du paquet, avant l ouverture =====
     check('un reglage precede l ouverture', ecran() === 'screen-session-ouvrir');
     // 10 joueurs x 3 cartes = 30, le minimum acceptable
-    $('btn-cartes-moins').click();
-    $('btn-cartes-moins').click();
     for (let i = 0; i < 4; i++) $('btn-joueurs-plus').click();
+    $('btn-cartes-moins').click();
+    $('btn-cartes-moins').click();
     check('3 cartes par joueur', $('session-cartes-valeur').textContent === '3');
-    check('le paquet atteint le minimum', !$('btn-ouvrir-session').disabled);
+    check('le paquet atteint le minimum',
+          $('session-cartes-estimation').textContent === '30 cartes dans le paquet');
 
     $('btn-ouvrir-session').click();
     await wait(900);

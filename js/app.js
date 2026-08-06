@@ -28,6 +28,7 @@ let saisieMode = 'partagee';   // 'partagee' (QR) ou 'sequentielle' (on se passe
 let moiJoueur = null;          // l'organisateur, inscrit dans sa propre session
 let saisieLocale = null;       // saisie en cours sur cet appareil (organisateur ou joueur sans téléphone)
 let repartition = [];          // joueurs revenus de la session, pour l'écran des équipes
+let joueursAttendus = 6;       // prévision d'effectif, pour dimensionner le paquet
 
 // ===== INIT =====
 async function init() {
@@ -198,6 +199,10 @@ function setupListeners() {
     updateSimpleCustomBlock();
     if (game.cardSource === 'themes') {
       showScreen('screen-themes');
+    } else if (saisieMode === 'partagee') {
+      // La saisie des cartes passe avant tout le reste : les joueurs commencent
+      // pendant que l'organisateur n'a encore rien réglé.
+      ouvrirReglageSession();
     } else {
       showScreen('screen-players');
     }
@@ -269,12 +274,16 @@ function setupListeners() {
 
   // Players → Rounds (step 3)
   document.getElementById('btn-next-players').addEventListener('click', () => {
-    // En saisie partagée, les joueurs s'inscrivent en scannant : l'effectif ne
-    // peut être vérifié qu'à la fermeture de la session, pas ici.
-    if (game.nominativeMode && !joueursViennentDesScans() && game.players.length < 4) {
+    // En saisie partagée, l'effectif est celui des joueurs qui ont scanné ;
+    // sinon, celui de la liste saisie à la main. Le mode de jeu étant choisi
+    // ici, c'est ici que se vérifie le minimum.
+    const effectif = saisiePartagee() ? repartition.length : game.players.length;
+    if (game.nominativeMode && effectif < 4) {
       showDialog({
         title: 'Pas assez de joueurs',
-        message: "Il faut au moins 4 joueurs pour jouer avec les noms. Sinon, passe en mode sans les noms.",
+        message: saisiePartagee()
+          ? `Jouer avec les noms demande au moins 4 joueurs, et ${effectif} ont saisi leurs cartes. Choisis « Simple » pour jouer quand même.`
+          : "Il faut au moins 4 joueurs pour jouer avec les noms. Sinon, passe en mode sans les noms.",
         confirmLabel: 'Compris'
       });
       return;
@@ -286,13 +295,6 @@ function setupListeners() {
       game.teams[1].players = [];
     }
     syncTeamNamesFromInputs();
-
-    // Saisie partagée : on ouvre la session ici, pour que les invités commencent
-    // à saisir pendant que l'organisateur règle les manches et le déroulement.
-    if (saisiePartagee() && !sessionCourante()) {
-      ouvrirReglageSession();
-      return;
-    }
     openRoundsStep();
   });
 
@@ -392,6 +394,8 @@ function setupListeners() {
   document.getElementById('btn-play').addEventListener('click', onPlayClicked);
 
   // Ouverture de session : réglage du nombre de cartes
+  document.getElementById('btn-joueurs-moins').addEventListener('click', () => reglerJoueursSession(-1));
+  document.getElementById('btn-joueurs-plus').addEventListener('click', () => reglerJoueursSession(1));
   document.getElementById('btn-cartes-moins').addEventListener('click', () => reglerCartesSession(-1));
   document.getElementById('btn-cartes-plus').addEventListener('click', () => reglerCartesSession(1));
   document.getElementById('btn-ouvrir-session').addEventListener('click', demarrerSessionPartagee);
@@ -526,19 +530,16 @@ function setupListeners() {
 }
 
 // ===== WIZARD HELPERS =====
+// Les deux parcours comptent cinq étapes ; seule la deuxième diffère —
+// le choix des thèmes, ou la saisie des cartes par les joueurs eux-mêmes.
 function updateWizardLabels() {
-  const total = 5;
-  const steps = {
-    mode: 1,
-    themes: game.cardSource === 'themes' ? 2 : null,
-    players: game.cardSource === 'themes' ? 3 : 2,
-    rounds: game.cardSource === 'themes' ? 4 : 3,
-    config: game.cardSource === 'themes' ? 5 : 4
-  };
-  const totalDisplay = game.cardSource === 'themes' ? 5 : 4;
+  const steps = game.cardSource === 'themes'
+    ? { mode: 1, themes: 2, players: 3, rounds: 4, config: 5 }
+    : { mode: 1, session: 2, players: 3, rounds: 4, config: 5 };
+
   document.querySelectorAll('[data-step]').forEach(el => {
     const s = el.dataset.step;
-    if (steps[s]) el.textContent = `Étape ${steps[s]}/${totalDisplay}`;
+    if (steps[s]) el.textContent = `Étape ${steps[s]}/5`;
   });
 }
 
@@ -609,7 +610,19 @@ function updateBlocJoueurs() {
 
   const parLesJoueurs = joueursViennentDesScans();
   bloc.style.display = game.nominativeMode && !parLesJoueurs ? '' : 'none';
-  if (note) note.style.display = parLesJoueurs ? '' : 'none';
+
+  if (note) {
+    note.style.display = parLesJoueurs ? '' : 'none';
+    if (parLesJoueurs) {
+      note.querySelector('p').textContent =
+        `📱 ${repartition.length} joueur(s) ont saisi leurs cartes : ${repartition.map(j => j.prenom).join(', ')}. Tu les répartiras en équipes juste avant de jouer.`;
+    }
+  }
+
+  // Une fois les cartes collectées, revenir en arrière n'a plus de sens :
+  // la session est close et le paquet figé.
+  const retour = document.querySelector('#screen-players .btn-back');
+  if (retour) retour.style.display = saisiePartagee() ? 'none' : '';
 }
 
 // Depuis la session, le retour dépend d'où on en est : reprendre la configuration
@@ -627,6 +640,9 @@ window.handleBackFromPlayers = function() {
 // doivent connaître leur consigne dès leur premier scan. En saisie séquentielle,
 // ce réglage reste à l'étape « Déroulement ».
 
+// En dessous, une manche se termine trop vite pour que la partie ait du goût.
+const PAQUET_MINIMUM = 30;
+
 function ouvrirReglageSession() {
   // game.numCards vaut 30 par défaut (taille de paquet du mode thèmes) : hors
   // de la plage acceptable pour une saisie individuelle, on repart de 5.
@@ -636,13 +652,30 @@ function ouvrirReglageSession() {
 }
 
 function rafraichirReglageSession() {
+  const total = joueursAttendus * game.numCards;
+  const manquantes = PAQUET_MINIMUM - total;
+
+  document.getElementById('session-joueurs-valeur').textContent = joueursAttendus;
   document.getElementById('session-cartes-valeur').textContent = game.numCards;
-  document.getElementById('session-cartes-estimation').textContent =
-    `À 6 joueurs, le paquet fera environ ${game.numCards * 6} cartes.`;
+
+  const resume = document.getElementById('session-cartes-estimation');
+  resume.textContent = manquantes > 0
+    ? `${joueursAttendus} × ${game.numCards} = ${total} cartes — il en manque ${manquantes} pour une partie correcte.`
+    : `${joueursAttendus} × ${game.numCards} = ${total} cartes`;
+  resume.classList.toggle('insuffisant', manquantes > 0);
+
+  document.getElementById('btn-ouvrir-session').disabled = manquantes > 0;
 }
 
 function reglerCartesSession(delta) {
   game.numCards = Math.max(3, Math.min(15, game.numCards + delta));
+  rafraichirReglageSession();
+}
+
+// Prévision, pas contrainte : le paquet réel dépendra de qui scanne vraiment.
+// Elle sert à s'assurer que le compte y sera, avant d'ouvrir la session.
+function reglerJoueursSession(delta) {
+  joueursAttendus = Math.max(2, Math.min(12, joueursAttendus + delta));
   rafraichirReglageSession();
 }
 
@@ -654,7 +687,9 @@ async function demarrerSessionPartagee() {
   repartition = [];
 
   try {
-    const session = await ouvrirSession(game.numCards, game.nominativeMode ? 'nominatif' : 'simple');
+    // Le mode de jeu n'est pas encore choisi : il vient après la saisie.
+    // La page des invités demande donc simplement le prénom, dans tous les cas.
+    const session = await ouvrirSession(game.numCards);
 
     afficherInvitation(
       creerQrSvg(adresseInvitation(), { taille: 190 }),
@@ -899,14 +934,20 @@ async function effectifsSuffisants(tailles, libelleAttente) {
 // laisserait une session close que plus personne ne pourrait rejoindre.
 async function terminerSaisieEtConfigurer() {
   try {
+    // Contrôle avant de fermer, car la fermeture est irréversible : si moins de
+    // joueurs que prévu ont scanné, le paquet est plus maigre qu'annoncé.
     const etat = await lireEtat();
-
-    if (game.nominativeMode && etat.joueurs.length < 4) {
-      return showDialog({
-        title: 'Pas assez de joueurs',
-        message: `Une partie avec les noms demande au moins 4 joueurs, et ${etat.joueurs.length} ont rejoint. Fais scanner les autres, ou reviens en arrière pour jouer sans les noms.`,
-        confirmLabel: 'Compris'
+    if (etat.total < PAQUET_MINIMUM) {
+      const manque = joueursAttendus - etat.joueurs.length;
+      const continuer = await showDialog({
+        title: `Le paquet ne fait que ${etat.total} cartes`,
+        message: manque > 0
+          ? `Tu attendais ${joueursAttendus} joueurs, ${etat.joueurs.length} ont saisi les leurs. Il manque ${manque} personne(s). Les manches passeront très vite.`
+          : `Il en faudrait au moins ${PAQUET_MINIMUM} pour que les manches ne passent pas trop vite.`,
+        confirmLabel: 'Lancer quand même',
+        cancelLabel: 'Attendre les autres'
       });
+      if (!continuer) return;
     }
 
     const resultat = await fermerSession();
@@ -916,7 +957,8 @@ async function terminerSaisieEtConfigurer() {
     // raisonnent dessus comme dans une partie ordinaire.
     game.customCards = resultat.cartes;
     repartition = resultat.joueurs.map((j, index) => ({ ...j, equipe: index % game.teams.length }));
-    openRoundsStep();
+    updateBlocJoueurs();
+    showScreen('screen-players');
   } catch (err) {
     if (err.statut === 409 && err.details?.enAttente) {
       return showDialog({

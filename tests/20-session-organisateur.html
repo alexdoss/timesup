@@ -52,23 +52,34 @@ f.addEventListener('load', async () => {
           d.querySelector('[data-source="custom"]').textContent.includes('QR'));
 
     $('btn-next-mode').click();
-    check('etape des joueurs', ecran() === 'screen-players');
-    check('la liste des joueurs est masquee en saisie partagee', !visible('nominatif-block'));
-    check('une note explique pourquoi', visible('note-joueurs-partages'));
-    check('le texte annonce le scan', $('note-joueurs-partages').textContent.includes('scannant'));
 
-    d.querySelector('[data-mode="simple"]').click();
-    $('btn-next-players').click();
-
-    // ===== La session s ouvre AVANT le reste de la configuration =====
+    // ===== La composition du paquet, avant l ouverture =====
     check('un reglage precede l ouverture', ecran() === 'screen-session-ouvrir');
-    check('le nombre de cartes par joueur y est propose', $('session-cartes-valeur').textContent === '5');
-    check('une estimation du paquet est donnee', $('session-cartes-estimation').textContent.includes('30'));
+    check('le nombre de joueurs est demande', $('session-joueurs-valeur').textContent === '6');
+    check('le nombre de cartes par joueur aussi', $('session-cartes-valeur').textContent === '5');
+    log('       paquet : ' + $('session-cartes-estimation').textContent);
+    check('le total du paquet est calcule', $('session-cartes-estimation').textContent.includes('30 cartes'));
+    check('a 30 cartes, on peut ouvrir', !$('btn-ouvrir-session').disabled);
 
+    // --- En dessous de 30 cartes, l ouverture est bloquee ---
     $('btn-cartes-moins').click();
+    check('4 cartes par joueur ne suffisent plus a 6 joueurs', $('btn-ouvrir-session').disabled);
+    log('       paquet : ' + $('session-cartes-estimation').textContent);
+    check('le manque est chiffre', $('session-cartes-estimation').textContent.includes('il en manque 6'));
+    check('le total est signale', $('session-cartes-estimation').classList.contains('insuffisant'));
+
+    // --- Ajouter des joueurs suffit a compenser ---
+    $('btn-joueurs-plus').click();
+    check('7 joueurs ne suffisent pas encore', $('btn-ouvrir-session').disabled);
+    $('btn-joueurs-plus').click();
+    check('a 8 joueurs et 4 cartes, le compte y est', !$('btn-ouvrir-session').disabled);
+    check('le total est correct', $('session-cartes-estimation').textContent.includes('32 cartes'));
+
+    // --- On repart sur 10 joueurs x 3 cartes pour la suite du scenario ---
     $('btn-cartes-moins').click();
-    check('le reglage descend a 3', $('session-cartes-valeur').textContent === '3');
-    check('l estimation suit', $('session-cartes-estimation').textContent.includes('18'));
+    for (let i = 0; i < 2; i++) $('btn-joueurs-plus').click();
+    check('10 joueurs x 3 cartes = 30, le minimum', !$('btn-ouvrir-session').disabled);
+    check('le reglage des cartes est bien a 3', $('session-cartes-valeur').textContent === '3');
 
     $('btn-ouvrir-session').click();
     await wait(900);
@@ -194,13 +205,57 @@ f.addEventListener('load', async () => {
     check('trois joueurs ont saisi', r.corps.joueurs.length === 3);
     check('le paquet compte 9 cartes', r.corps.total === 9);
 
-    // ===== La configuration ne reprend qu ici =====
+    // ===== Un paquet trop maigre est signale AVANT la fermeture =====
     $('btn-session-lancer').click();
+    await wait(500);
+    log('       alerte : "' + $('dialog-title').textContent + ' — ' + $('dialog-message').textContent + '"');
+    check('le paquet trop court est signale', $('dialog-overlay').style.display !== 'none');
+    check('le titre chiffre le paquet', $('dialog-title').textContent.includes('9 cartes'));
+    check('le message compare aux joueurs attendus', $('dialog-message').textContent.includes('10 joueurs'));
+    check('il dit combien manquent', $('dialog-message').textContent.includes('3 ont saisi'));
+    check('on peut attendre les autres', $('dialog-cancel').textContent.includes('Attendre'));
+
+    $('dialog-cancel').click();
+    await wait(300);
+    check('renoncer laisse sur la session', ecran() === 'screen-session');
+    r = await api('etat', { code });
+    check('et surtout ne ferme pas la session', r.corps.ouverte === true);
+
+    // ===== On passe outre =====
+    $('btn-session-lancer').click();
+    await wait(500);
+    $('dialog-confirm').click();
     await wait(900);
-    check('on enchaine sur les manches', ecran() === 'screen-rounds');
+    check('la configuration reprend par les equipes', ecran() === 'screen-players');
 
     r = await api('etat', { code });
     check('la saisie est close, plus personne ne peut rejoindre', r.corps.ouverte === false);
+
+    check('la liste des joueurs reste masquee', !visible('nominatif-block'));
+    check('une note recapitule qui a saisi', visible('note-joueurs-partages'));
+    log('       note : "' + $('note-joueurs-partages').textContent.trim() + '"');
+    check('elle nomme les joueurs', $('note-joueurs-partages').textContent.includes('Marc'));
+    check('elle annonce la repartition a venir',
+          $('note-joueurs-partages').textContent.includes('équipes'));
+    check('le retour arriere est retire, la session etant close',
+          d.querySelector('#screen-players .btn-back').style.display === 'none');
+
+    // ===== A 3 joueurs, le mode nominatif est refuse =====
+    check('le mode nominatif est propose par defaut',
+          d.querySelector('[data-mode="nominatif"]').classList.contains('active'));
+    $('btn-next-players').click();
+    await wait(300);
+    log('       message : "' + $('dialog-message').textContent + '"');
+    check('a 3 joueurs, jouer avec les noms est refuse', $('dialog-overlay').style.display !== 'none');
+    check('le message dit combien ont saisi', $('dialog-message').textContent.includes('3 ont saisi'));
+    check('il oriente vers le mode simple', $('dialog-message').textContent.includes('Simple'));
+    $('dialog-confirm').click();
+    await wait(200);
+    check('on reste sur l etape des equipes', ecran() === 'screen-players');
+
+    d.querySelector('[data-mode="simple"]').click();
+    $('btn-next-players').click();
+    check('en mode simple, on enchaine sur les manches', ecran() === 'screen-rounds');
 
     check('l app connait maintenant l effectif : aucune question posee',
           $('puppet-confirm').style.display === 'none');

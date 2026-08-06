@@ -702,6 +702,20 @@ body {
   color: #fff;
 }
 
+/* Composition du paquet, sur l'ecran d'ouverture de session */
+.paquet-total {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--muted-strong);
+  text-align: center;
+  margin: 4px 0 6px;
+}
+
+.paquet-total.insuffisant {
+  color: var(--warning);
+  font-weight: 500;
+}
+
 /* ===== PAGE DES INVITÉS (rejoindre.html) ===== */
 .rejoindre-content {
   display: flex;

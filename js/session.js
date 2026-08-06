@@ -42,8 +42,11 @@ async function appeler(action, donnees = {}) {
   return corps;
 }
 
-export async function ouvrirSession(cartesParJoueur, mode) {
-  const reponse = await appeler('creer', { cartesParJoueur, mode });
+// Le mode de jeu (avec ou sans les noms) est choisi après la saisie : la session
+// n'a pas besoin de le connaître, et la page des invités demande le prénom
+// dans tous les cas.
+export async function ouvrirSession(cartesParJoueur) {
+  const reponse = await appeler('creer', { cartesParJoueur });
   courante = {
     code: reponse.code,
     jeton: reponse.jeton,

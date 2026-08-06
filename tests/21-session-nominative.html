@@ -53,22 +53,15 @@ f.addEventListener('load', async () => {
     $('btn-start').click();
     d.querySelector('[data-source="custom"]').click();
     $('btn-next-mode').click();
-    check('etape des joueurs', ecran() === 'screen-players');
-    check('le mode nominatif est bien actif par defaut',
-          d.querySelector('[data-mode="nominatif"]').classList.contains('active'));
-    check('la liste des joueurs est masquee', !visible('nominatif-block'));
 
-    // C'est ici que ca coincait : aucun joueur saisi, mais on doit pouvoir avancer
-    $('btn-next-players').click();
-    await wait(300);
-    check('on n est plus bloque par « pas assez de joueurs »', ecran() !== 'screen-players');
-    check('aucune boite d erreur n est affichee', $('dialog-overlay').style.display === 'none');
-
-    // ===== La session s ouvre avant le reste de la configuration =====
+    // ===== La composition du paquet, avant l ouverture =====
     check('un reglage precede l ouverture', ecran() === 'screen-session-ouvrir');
+    // 10 joueurs x 3 cartes = 30, le minimum acceptable
     $('btn-cartes-moins').click();
     $('btn-cartes-moins').click();
+    for (let i = 0; i < 4; i++) $('btn-joueurs-plus').click();
     check('3 cartes par joueur', $('session-cartes-valeur').textContent === '3');
+    check('le paquet atteint le minimum', !$('btn-ouvrir-session').disabled);
 
     $('btn-ouvrir-session').click();
     await wait(900);
@@ -76,38 +69,34 @@ f.addEventListener('load', async () => {
     const code = $('session-code').textContent.trim();
     log('       code : ' + code);
 
-    let r = await api('etat', { code });
-    check('la session est bien nominative', r.corps.mode === 'nominatif');
-
-    // ===== Trois invites seulement : pas assez pour une partie nominative =====
+    // ===== Quatre invites saisissent leurs cartes =====
     await invite(code, 'Marc', ['M1', 'M2', 'M3']);
     await invite(code, 'Inès', ['I1', 'I2', 'I3']);
     await invite(code, 'Sam', ['S1', 'S2', 'S3']);
+    await invite(code, 'Jo', ['J1', 'J2', 'J3']);
     await wait(2600);
     check('la suite est proposee une fois tout le monde pret',
           !$('btn-session-lancer').disabled);
 
     $('btn-session-lancer').click();
-    await wait(600);
-    log('       message : "' + $('dialog-title').textContent + '"');
-    check('a 3 joueurs, la partie est refusee', $('dialog-overlay').style.display !== 'none');
-    check('le message dit combien il en faut', $('dialog-message').textContent.includes('4 joueurs'));
-    check('il rappelle combien ont rejoint', $('dialog-message').textContent.includes('3 ont rejoint'));
+    await wait(500);
+    check('le paquet de 12 cartes est signale comme court',
+          $('dialog-overlay').style.display !== 'none');
     $('dialog-confirm').click();
-    await wait(200);
-    check('on reste sur la session pour attendre les autres', ecran() === 'screen-session');
-
-    // Le refus ne doit surtout pas avoir ferme la session : elle est irreversible
-    r = await api('etat', { code });
-    check('la session est restee ouverte malgre le refus', r.corps.ouverte === true);
-
-
-    // ===== Le quatrieme arrive =====
-    await invite(code, 'Jo', ['J1', 'J2', 'J3']);
-    await wait(2600);
-    $('btn-session-lancer').click();
     await wait(700);
-    check('a 4 joueurs, la configuration reprend', ecran() === 'screen-rounds');
+    check('la configuration reprend par les equipes', ecran() === 'screen-players');
+    check('le mode nominatif est propose par defaut',
+          d.querySelector('[data-mode="nominatif"]').classList.contains('active'));
+    check('la note nomme les quatre joueurs',
+          ['Marc', 'Inès', 'Sam', 'Jo'].every(p => $('note-joueurs-partages').textContent.includes(p)));
+
+    const r = await api('etat', { code });
+    check('la saisie est close', r.corps.ouverte === false);
+
+    $('btn-next-players').click();
+    await wait(300);
+    check('a 4 joueurs, le mode nominatif est accepte', ecran() === 'screen-rounds');
+    check('aucune boite d erreur', $('dialog-overlay').style.display === 'none');
 
     // L'app connait desormais l'effectif : 4 joueurs = 2 par equipe
     check('aucune question d effectif n est posee', !visible('puppet-confirm'));

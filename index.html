@@ -250,7 +250,7 @@
           <p class="wizard-hint">Chaque joueur saisira ses cartes tour à tour au début de la partie.</p>
         </div>
         <div id="note-joueurs-partages" class="config-section" style="display:none">
-          <p class="wizard-hint">📱 Pas besoin de saisir les joueurs : chacun donnera son prénom en scannant le QR code. Tu répartiras les équipes juste après.</p>
+          <p class="wizard-hint"></p>
         </div>
         <div class="config-section">
           <span class="field-label">Noms des équipes</span>
@@ -422,10 +422,19 @@
       <button class="btn-back" onclick="showScreen('screen-players')">←</button>
       <button class="btn-close" onclick="showScreen('screen-home')">✕</button>
       <div class="wizard-header">
-        <h2>Combien de cartes chacun ?</h2>
-        <p class="wizard-hint">Ce nombre sera demandé à chaque joueur. Il ne pourra plus changer une fois la session ouverte.</p>
+        <span class="wizard-step" data-step="session">Étape 2/5</span>
+        <h2>Le paquet de cartes</h2>
+        <p class="wizard-hint">Ces réglages ne pourront plus changer une fois la session ouverte.</p>
       </div>
       <div class="config-form">
+        <div class="reglage-cartes">
+          <span class="field-label">Nombre de joueurs</span>
+          <div class="stepper">
+            <button type="button" id="btn-joueurs-moins" class="stepper-btn">−</button>
+            <span id="session-joueurs-valeur" class="stepper-valeur">6</span>
+            <button type="button" id="btn-joueurs-plus" class="stepper-btn">+</button>
+          </div>
+        </div>
         <div class="reglage-cartes">
           <span class="field-label">Cartes par joueur</span>
           <div class="stepper">
@@ -433,8 +442,8 @@
             <span id="session-cartes-valeur" class="stepper-valeur">5</span>
             <button type="button" id="btn-cartes-plus" class="stepper-btn">+</button>
           </div>
-          <p id="session-cartes-estimation" class="wizard-hint"></p>
         </div>
+        <p id="session-cartes-estimation" class="paquet-total"></p>
         <button id="btn-ouvrir-session" class="btn btn-primary">Ouvrir la session ▶️</button>
         <p class="wizard-hint">Le QR code s'affichera tout de suite. Tu pourras régler les manches et le chrono une fois que tout le monde aura saisi ses cartes — toi compris.</p>
       </div>
@@ -445,6 +454,7 @@
       <button class="btn-back" onclick="retourDepuisSession()">←</button>
       <button class="btn-close" onclick="showScreen('screen-home')">✕</button>
       <div class="wizard-header">
+        <span class="wizard-step" data-step="session">Étape 2/5</span>
         <h2>Rejoignez la partie</h2>
         <p id="session-rappel" class="wizard-hint"></p>
       </div>

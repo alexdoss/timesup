@@ -131,9 +131,8 @@ async function validerCode(code) {
         "Cette partie est déjà lancée. Demande à l'organisateur d'en ouvrir une nouvelle.", null, null);
     }
 
-    document.getElementById('note-prenom').textContent = etat.mode === 'nominatif'
-      ? "Ton prénom sert aussi à te placer dans une équipe."
-      : "Il sert uniquement à ce que l'organisateur sache qui a fini.";
+    document.getElementById('note-prenom').textContent =
+      "Il permet à l'organisateur de savoir qui a fini, et de te placer dans une équipe.";
 
     montrer('screen-prenom');
     document.getElementById('champ-prenom').focus();

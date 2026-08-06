@@ -67,7 +67,8 @@ mode (thèmes prédéfinis / cartes perso) → thèmes → équipes & joueurs �
 - L'adresse montrée aux invités sous le QR code est `/rejoindre`, **sans extension** : c'est celle qu'ils recopient à la main. Vercel ne la sert que grâce à la règle `rewrites` de `vercel.json` ; `scripts/serve.ps1` fait la même correspondance en local. Sans l'une des deux, l'adresse affichée renvoie 404 — un défaut invisible en développement. `vercel.json` n'accepte aucune propriété inconnue (pas de clé `comment`), sous peine d'échec du déploiement.
 - Les fichiers `.mjs` ne sont pas typés par tous les serveurs, et un navigateur **refuse un module au mauvais type MIME** : les bibliothèques vendues sont rangées en `.js`.
 - Plusieurs tuiles partagent la classe `.mode-tile` (type de partie et mode de saisie). Les gestionnaires ciblent `[data-source]` et `[data-saisie]`, jamais la classe — sinon un clic sur l'un efface l'autre.
-- Le HTML appelle `showScreen()`, `confirmQuit()` et `handleBackFromPlayers()` via `onclick` : ces trois fonctions doivent rester exposées sur `window` depuis `app.js`.
+- Le HTML appelle `showScreen()`, `confirmQuit()`, `handleBackFromPlayers()` et `handleBackFromRounds()` via `onclick` : ces quatre fonctions doivent rester exposées sur `window` depuis `app.js`.
+- Les flèches de retour sont écrites en dur dans `index.html`. Après tout déplacement d'écran dans le wizard, **les revérifier une par une** : elles pointent volontiers vers un écran qui n'est plus le précédent, ce qui ne casse rien de visible et passe donc inaperçu. Celles qui dépendent du parcours passent par une fonction (`handleBackFrom…`).
 - Servir en HTTP (les modules ES et les `fetch` de thèmes échouent en `file://`) : `pwsh -File scripts/serve.ps1`, qui imite aussi `/api/session` en mémoire — la saisie partagée est donc jouable en local. Pour essayer à deux, ouvrir `/rejoindre.html` dans une fenêtre de navigation privée (stockage séparé).
 
 ## Fichiers hors app

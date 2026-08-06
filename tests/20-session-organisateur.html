@@ -55,6 +55,12 @@ f.addEventListener('load', async () => {
 
     // ===== La composition du paquet, avant l ouverture =====
     check('un reglage precede l ouverture', ecran() === 'screen-session-ouvrir');
+
+    // La fleche doit ramener a l ecran reellement precedent
+    d.querySelector('#screen-session-ouvrir .btn-back').click();
+    check('retour depuis le paquet : on retrouve le type de partie', ecran() === 'screen-mode');
+    $('btn-next-mode').click();
+    check('et on revient au paquet', ecran() === 'screen-session-ouvrir');
     check('le nombre de joueurs est demande', $('session-joueurs-valeur').textContent === '6');
     check('le nombre de cartes par joueur aussi', $('session-cartes-valeur').textContent === '5');
     log('       paquet : ' + $('session-cartes-estimation').textContent);
@@ -91,6 +97,9 @@ f.addEventListener('load', async () => {
     $('btn-ouvrir-session').click();
     await wait(900);
     check('l ecran de session s ouvre aussitot', ecran() === 'screen-session');
+    check('aucune fleche de retour : la session est ouverte',
+          !d.querySelector('#screen-session .btn-back'));
+    check('mais on peut toujours quitter', !!d.querySelector('#screen-session .btn-close'));
     check('la suite est bloquee tant que personne n a saisi', $('btn-session-lancer').disabled);
     check('le bouton dit qu on attend les joueurs',
           $('btn-session-lancer').textContent.includes('attente'));

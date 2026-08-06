@@ -635,10 +635,15 @@ function updateBlocJoueurs() {
   if (retour) retour.style.display = saisiePartagee() ? 'none' : '';
 }
 
-// Depuis la session, le retour dépend d'où on en est : reprendre la configuration
-// là où on l'a laissée, ou revenir au dernier écran réglé.
-window.retourDepuisSession = function() {
-  showScreen('screen-players');
+// L'écran précédant les manches dépend du parcours : en saisie partagée
+// nominative, la répartition des équipes s'intercale entre les deux.
+window.handleBackFromRounds = function() {
+  if (joueursViennentDesScans()) {
+    afficherRepartition();
+    showScreen('screen-repartition');
+  } else {
+    showScreen('screen-players');
+  }
 };
 
 window.handleBackFromPlayers = function() {

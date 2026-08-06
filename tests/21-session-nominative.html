@@ -150,6 +150,14 @@ f.addEventListener('load', async () => {
     await wait(300);
     check('la repartition mene aux manches', ecran() === 'screen-rounds');
 
+    // ===== Le retour depuis les manches revient bien a la repartition =====
+    d.querySelector('#screen-rounds .btn-back').click();
+    check('retour depuis les manches : on retrouve la repartition', ecran() === 'screen-repartition');
+    check('les equipes formees sont conservees', equipiers().length === 4);
+    $('btn-repartition-jouer').click();
+    await wait(200);
+    check('et on repart vers les manches', ecran() === 'screen-rounds');
+
     // Les equipes etant formees, l'effectif exact est connu : 2 par equipe
     check('aucune question d effectif n est posee', !visible('puppet-confirm'));
     const pantin = [...d.querySelectorAll('#rounds-optional .round-pill')].find(p => p.textContent.includes('bouger'));

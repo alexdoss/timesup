@@ -289,7 +289,7 @@
 
     <!-- ÉCRAN MANCHES — ÉTAPE 4 -->
     <div id="screen-rounds" class="screen">
-      <button class="btn-back" onclick="showScreen('screen-players')">←</button>
+      <button class="btn-back" onclick="handleBackFromRounds()">←</button>
       <button class="btn-close" onclick="showScreen('screen-home')">✕</button>
       <div class="wizard-header">
         <span class="wizard-step" data-step="rounds">Étape 4/5</span>
@@ -419,7 +419,7 @@
 
     <!-- OUVERTURE DE SESSION — dernier réglage avant d'afficher le QR -->
     <div id="screen-session-ouvrir" class="screen">
-      <button class="btn-back" onclick="showScreen('screen-players')">←</button>
+      <button class="btn-back" onclick="showScreen('screen-mode')">←</button>
       <button class="btn-close" onclick="showScreen('screen-home')">✕</button>
       <div class="wizard-header">
         <span class="wizard-step" data-step="session">Étape 2/5</span>
@@ -451,7 +451,6 @@
 
     <!-- ÉCRAN SESSION PARTAGÉE — l'organisateur attend que chacun saisisse -->
     <div id="screen-session" class="screen">
-      <button class="btn-back" onclick="retourDepuisSession()">←</button>
       <button class="btn-close" onclick="showScreen('screen-home')">✕</button>
       <div class="wizard-header">
         <span class="wizard-step" data-step="session">Étape 2/5</span>

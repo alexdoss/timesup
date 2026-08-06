@@ -57,9 +57,16 @@ export function clearSavedGame() {
 export function restoreInto(game, snapshot) {
   const state = snapshot.state;
   Object.keys(state).forEach(key => {
+    if (key === 'selectedThemes') return;
     game[key] = state[key];
   });
-  game.selectedThemes = new Set(state.selectedThemes || []);
+
+  // On vide et remplit l'ensemble existant au lieu de le remplacer : les boutons
+  // de thèmes retiennent cet objet depuis leur création. Le remplacer les ferait
+  // écrire dans un ensemble que plus personne ne lit.
+  game.selectedThemes.clear();
+  (state.selectedThemes || []).forEach(cle => game.selectedThemes.add(cle));
+
   game.timerInterval = null;
   return game;
 }

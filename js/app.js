@@ -48,6 +48,29 @@ async function init() {
   setupListeners();
 }
 
+// Remet l'assistant en accord avec l'état réel avant chaque nouvelle partie.
+// Sans ça, une partie reprise puis abandonnée laisse ses réglages dans `game`
+// pendant que les écrans affichent encore autre chose : on croit choisir des
+// thèmes prédéfinis et on se retrouve sur la saisie partagée.
+function preparerNouvellePartie() {
+  document.querySelectorAll('[data-source]').forEach(tuile => {
+    tuile.classList.toggle('active', tuile.dataset.source === game.cardSource);
+  });
+  document.querySelectorAll('[data-mode]').forEach(pastille => {
+    pastille.classList.toggle('active',
+      (pastille.dataset.mode === 'nominatif') === game.nominativeMode);
+  });
+
+  saisieMode = 'partagee';
+  repartition = [];
+  moiJoueur = null;
+  oublierSession();
+
+  updateSimpleCustomBlock();
+  refreshThemeSelector();
+  showScreen('screen-mode');
+}
+
 // ===== REPRISE DE PARTIE =====
 function refreshResumeOption() {
   pendingResume = loadSavedGame();
@@ -173,7 +196,7 @@ function collectActiveRounds() {
 
 function setupListeners() {
   // Home → Mode (step 1)
-  document.getElementById('btn-start').addEventListener('click', () => showScreen('screen-mode'));
+  document.getElementById('btn-start').addEventListener('click', preparerNouvellePartie);
 
   // Reprendre une partie interrompue
   document.getElementById('btn-resume').addEventListener('click', resumeGame);

@@ -47,6 +47,7 @@ $SCENARIOS = @(
   @{ f = '19-page-invite.html';                    b = 30000; p = 's' }
   @{ f = '20-session-organisateur.html';           b = 40000; p = 't' }
   @{ f = '21-session-nominative.html';             b = 40000; p = 'u' }
+  @{ f = '22-reprise-puis-nouvelle-partie.html';   b = 20000; p = 'v' }
 )
 
 function Resolve-Chrome {

@@ -96,20 +96,11 @@ f.addEventListener('load', async () => {
 
     $('btn-next-players').click();
     await wait(300);
-    check('a 4 joueurs, le mode nominatif est accepte', ecran() === 'screen-rounds');
+    check('a 4 joueurs, on passe a la repartition', ecran() === 'screen-repartition');
     check('aucune boite d erreur', $('dialog-overlay').style.display === 'none');
-
-    // L'app connait desormais l'effectif : 4 joueurs = 2 par equipe
-    check('aucune question d effectif n est posee', !visible('puppet-confirm'));
-    const pantin = [...d.querySelectorAll('#rounds-optional .round-pill')].find(p => p.textContent.includes('bouger'));
-    check('la manche pantin est verrouillee d elle-meme', pantin.disabled);
-    check('une explication chiffree est donnee', $('rounds-note').textContent.includes('en compte 2'));
-
-    $('btn-next-rounds').click();
-    check('puis le deroulement', ecran() === 'screen-config');
-    $('btn-play').click();
-    await wait(700);
-    check('on passe a la repartition des equipes', ecran() === 'screen-repartition');
+    check('un retour en arriere est possible', !!d.querySelector('#screen-repartition .btn-back'));
+    check('le bouton mene a l etape suivante, pas au jeu',
+          $('btn-repartition-jouer').textContent.includes('Suivant'));
 
     const liste = equipiers();
     log('       repartition : ' + JSON.stringify(liste));
@@ -132,8 +123,42 @@ f.addEventListener('load', async () => {
     check('et garde l equilibre',
           equipiers().filter(e => e.equipe.includes('1')).length === 2);
 
-    // ===== Lancement =====
+    // ===== Une equipe vide est refusee =====
+    equipiers().forEach((_, i) => {
+      const boutons = [...d.querySelectorAll('#repartition-liste .equipier button')];
+      if (boutons[i].textContent.includes('2')) boutons[i].click();
+    });
+    check('tous les joueurs sont dans la meme equipe',
+          equipiers().every(e => e.equipe.includes('1')));
     $('btn-repartition-jouer').click();
+    await wait(300);
+    check('une equipe vide est refusee', $('dialog-overlay').style.display !== 'none');
+    check('elle est nommee', $('dialog-message').textContent.includes('Équipe 2'));
+    $('dialog-confirm').click();
+    await wait(200);
+    check('on reste sur la repartition', ecran() === 'screen-repartition');
+    $('btn-repartition-melanger').click();
+
+    // ===== Retour en arriere, puis suite =====
+    d.querySelector('#screen-repartition .btn-back').click();
+    check('le retour ramene au mode de jeu', ecran() === 'screen-players');
+    $('btn-next-players').click();
+    await wait(300);
+    check('et on revient a la repartition', ecran() === 'screen-repartition');
+
+    $('btn-repartition-jouer').click();
+    await wait(300);
+    check('la repartition mene aux manches', ecran() === 'screen-rounds');
+
+    // Les equipes etant formees, l'effectif exact est connu : 2 par equipe
+    check('aucune question d effectif n est posee', !visible('puppet-confirm'));
+    const pantin = [...d.querySelectorAll('#rounds-optional .round-pill')].find(p => p.textContent.includes('bouger'));
+    check('la manche pantin est verrouillee d elle-meme', pantin.disabled);
+    check('une explication chiffree est donnee', $('rounds-note').textContent.includes('en compte 2'));
+
+    $('btn-next-rounds').click();
+    check('puis le deroulement', ecran() === 'screen-config');
+    $('btn-play').click();
     await wait(700);
     check('la partie demarre', ecran() === 'screen-round');
 

@@ -109,13 +109,15 @@ function refreshPlayerList() {
 // simple, ou saisie partagée où les joueurs ne se sont pas encore inscrits.
 // null déclenche la question posée à l'organisateur pour la manche pantin.
 function effectifsConnus() {
-  // Saisie partagée : une fois la session close, on sait exactement combien de
-  // personnes jouent. On suppose des équipes aussi équilibrées que possible —
-  // en nominatif, la répartition finale sera revérifiée.
   if (saisiePartagee() && repartition.length > 0) {
+    // Mode nominatif : les équipes viennent d'être formées, on a les vrais chiffres.
+    if (game.nominativeMode) {
+      return game.teams.map((_, index) => repartition.filter(j => j.equipe === index).length);
+    }
+    // Mode simple : on connaît le nombre de joueurs, pas leur répartition —
+    // on suppose des équipes aussi équilibrées que possible.
     return [Math.ceil(repartition.length / 2), Math.floor(repartition.length / 2)];
   }
-  if (joueursViennentDesScans()) return null;
   return getPlannedTeamSizes();
 }
 
@@ -295,6 +297,14 @@ function setupListeners() {
       game.teams[1].players = [];
     }
     syncTeamNamesFromInputs();
+
+    // En saisie partagée nominative, les équipes se forment maintenant : les
+    // manches pourront alors raisonner sur des effectifs exacts.
+    if (joueursViennentDesScans()) {
+      afficherRepartition();
+      showScreen('screen-repartition');
+      return;
+    }
     openRoundsStep();
   });
 
@@ -421,7 +431,7 @@ function setupListeners() {
 
   // Répartition des équipes après une session partagée
   document.getElementById('btn-repartition-melanger').addEventListener('click', melangerRepartition);
-  document.getElementById('btn-repartition-jouer').addEventListener('click', lancerApresRepartition);
+  document.getElementById('btn-repartition-jouer').addEventListener('click', validerRepartition);
 
   // Custom cards flow
   document.getElementById('btn-handoff-ready').addEventListener('click', showCustomInput);
@@ -901,44 +911,9 @@ async function finirSaisieLocale() {
 }
 
 // ===== Lancement =====
-
-// Manches retenues dont l'effectif minimum n'est pas atteint
-function manchesTropExigeantes(tailles) {
-  const plusPetite = Math.min(...tailles);
-  return game.activeRounds
-    .map(index => ROUNDS[index])
-    .filter(round => round.minPerTeam && plusPetite < round.minPerTeam);
-}
-
-// Vérification finale, quand l'effectif est enfin connu. Plutôt que de bloquer,
-// on propose de jouer sans la manche : personne ne doit se retrouver coincé
-// devant un écran de lancement qui refuse sans issue.
-async function effectifsSuffisants(tailles, libelleAttente) {
-  const trop = manchesTropExigeantes(tailles);
-  if (trop.length === 0) return true;
-
-  const noms = trop.map(round => `« ${round.name} »`).join(' et ');
-  const minimum = Math.max(...trop.map(round => round.minPerTeam));
-  const continuer = await showDialog({
-    title: 'Effectif insuffisant',
-    message: `${noms} demande au moins ${minimum} joueurs par équipe, et la plus petite en compte ${Math.min(...tailles)}.`,
-    confirmLabel: trop.length > 1 ? 'Lancer sans ces manches' : 'Lancer sans cette manche',
-    cancelLabel: libelleAttente
-  });
-  if (!continuer) return false;
-
-  // On désélectionne aussi la pastille : collectActiveRounds() relit le DOM au
-  // lancement, et ramènerait la manche qu'on vient de retirer.
-  game.activeRounds
-    .filter(index => trop.includes(ROUNDS[index]))
-    .forEach(index => {
-      const pastille = document.querySelector(`#rounds-optional .round-pill[data-round-index="${index}"]`);
-      if (pastille) pastille.classList.remove('active');
-    });
-
-  game.activeRounds = game.activeRounds.filter(index => !trop.includes(ROUNDS[index]));
-  return true;
-}
+// La vérification tardive des effectifs a disparu : la répartition des équipes
+// précède désormais l'étape des manches, qui verrouille elle-même les manches
+// trop exigeantes, comme dans une partie ordinaire.
 
 // Tout le monde a saisi : on fige le paquet, puis on reprend la configuration.
 // Fermer est irréversible : on vérifie l'effectif AVANT, sinon un refus
@@ -994,19 +969,26 @@ function melangerRepartition() {
   afficherRepartition();
 }
 
-async function lancerApresRepartition() {
-  // Ici les équipes sont formées : on connaît les effectifs exacts. Renoncer
-  // ramène simplement à l'écran de répartition, où l'on peut rééquilibrer.
-  const tailles = game.teams.map((_, index) =>
-    repartition.filter(joueur => joueur.equipe === index).length);
-  if (!(await effectifsSuffisants(tailles, 'Rééquilibrer les équipes'))) return;
+// Valide la répartition et passe aux manches. Une équipe vide bloquerait la
+// partie bien plus loin, sur un message obscur : on la refuse ici.
+function validerRepartition() {
+  const vides = game.teams
+    .map((equipe, index) => ({ equipe, nombre: repartition.filter(j => j.equipe === index).length }))
+    .filter(t => t.nombre === 0);
+
+  if (vides.length > 0) {
+    return showDialog({
+      title: 'Une équipe est vide',
+      message: `${vides.map(t => t.equipe.name).join(' et ')} n'a aucun joueur. Répartis-les avant de continuer.`,
+      confirmLabel: 'Compris'
+    });
+  }
 
   game.players = repartition.map(j => j.prenom);
   game.playerAssignments = {};
   repartition.forEach(j => { game.playerAssignments[j.prenom] = j.equipe; });
   game.assignMode = 'chosen';
-  oublierSession();
-  startGame();
+  openRoundsStep();
 }
 
 // Repli en cours de session : on abandonne la saisie partagée pour l'appareil unique
@@ -1028,9 +1010,9 @@ let customEntry = { playerIndex: 0, playerList: [], currentCards: [], batchSize:
 function onPlayClicked() {
   if (game.cardSource === 'custom') {
     if (saisieMode === 'partagee') {
-      // Les cartes sont déjà là : on enchaîne sur la répartition, ou sur la partie
-      if (game.nominativeMode) { afficherRepartition(); showScreen('screen-repartition'); }
-      else { oublierSession(); startGame(); }
+      // Cartes saisies, équipes formées : il n'y a plus qu'à jouer
+      oublierSession();
+      startGame();
     } else {
       startCustomCardsEntry();
     }

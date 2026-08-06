@@ -501,14 +501,17 @@
 
     <!-- ÉCRAN RÉPARTITION — mode nominatif, après la session -->
     <div id="screen-repartition" class="screen">
+      <button class="btn-back" onclick="showScreen('screen-players')">←</button>
+      <button class="btn-close" onclick="showScreen('screen-home')">✕</button>
       <div class="wizard-header">
+        <span class="wizard-step" data-step="players">Étape 3/5</span>
         <h2>Répartir les équipes</h2>
         <p class="wizard-hint">Les prénoms viennent des joueurs eux-mêmes. Tape sur une équipe pour la changer.</p>
       </div>
       <div class="config-form">
         <div id="repartition-liste" class="equipes"></div>
         <button id="btn-repartition-melanger" class="btn btn-secondary">🎲 Mélanger</button>
-        <button id="btn-repartition-jouer" class="btn btn-primary">C'est parti 🎮</button>
+        <button id="btn-repartition-jouer" class="btn btn-primary">Suivant ▶️</button>
       </div>
     </div>
 

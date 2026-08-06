@@ -38,6 +38,7 @@ async function appeler(action, donnees = {}) {
   if (!reponse.ok) {
     const erreur = new Error(corps.error || 'Le service est indisponible.');
     erreur.statut = reponse.status;
+    erreur.details = corps;
     throw erreur;
   }
   return corps;
@@ -165,6 +166,12 @@ async function validerPrenom() {
     sauvegarder();
     ouvrirSaisie();
   } catch (err) {
+    // Prénom déjà pris : on corrige sur place, sans écran bloquant
+    if (err.details?.motif === 'prenom-pris') {
+      erreur.textContent = err.message;
+      champ.select();
+      return;
+    }
     surErreur(err);
   }
 }

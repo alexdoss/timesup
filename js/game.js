@@ -96,8 +96,15 @@ export function replayGame() {
   resetGame({ keepSession: true });
 }
 
+// Refuse les doublons sans tenir compte de la casse : « Marc » et « marc »
+// seraient indistinguables dans les équipes et les statistiques.
+export function playerExists(name) {
+  const repere = String(name ?? '').trim().toLocaleLowerCase();
+  return game.players.some(p => p.toLocaleLowerCase() === repere);
+}
+
 export function addPlayer(name) {
-  if (name && !game.players.includes(name)) {
+  if (name && !playerExists(name)) {
     game.players.push(name);
     game.playerAssignments[name] = game.players.length % game.teams.length === 0 ? 1 : 0;
     return true;

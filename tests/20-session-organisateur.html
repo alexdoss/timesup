@@ -112,16 +112,16 @@ f.addEventListener('load', async () => {
           d.querySelector('#session-qr svg').getAttribute('aria-label').includes('rejoindre'));
     check('l adresse lisible est donnee', $('session-adresse').textContent.includes('/rejoindre'));
 
-    // ===== Le lien est cliquable et partageable =====
-    check('l adresse est un vrai lien', $('session-adresse').tagName === 'A');
-    check('il mene bien a la partie',
-          $('session-adresse').href.includes('/rejoindre.html?c=' + code));
-    check('il s ouvre dans un autre onglet', $('session-adresse').target === '_blank');
+    // ===== L adresse est elle-meme le bouton de partage =====
+    check('l adresse est une puce cliquable', $('session-adresse').tagName === 'BUTTON');
+    check('elle annonce le partage', $('session-adresse').textContent.includes('📤'));
+    check('elle reste lisible pour etre recopiee',
+          $('session-adresse').textContent.includes('/rejoindre'));
+    check('le bouton separe a disparu', !$('btn-partager'));
 
-    check('un bouton de partage est propose', !!$('btn-partager'));
     let partage = null;
     w.navigator.share = async donnees => { partage = donnees; };
-    $('btn-partager').click();
+    $('session-adresse').click();
     await wait(200);
     log('       partage : ' + JSON.stringify(partage));
     check('le partage natif est utilise quand il existe', !!partage);
@@ -135,7 +135,7 @@ f.addEventListener('load', async () => {
     Object.defineProperty(w.navigator, 'clipboard', {
       value: { writeText: async t => { copie = t; } }, configurable: true
     });
-    $('btn-partager').click();
+    $('session-adresse').click();
     await wait(300);
     check('sans partage natif, le lien est copie', !!copie && copie.includes(code));
     check('l utilisateur en est informe', $('dialog-title').textContent.includes('copié'));
@@ -173,7 +173,8 @@ f.addEventListener('load', async () => {
     await wait(200);
     check('l ecran de saisie s ouvre', ecran() === 'screen-saisie-locale');
     check('ses cartes s affichent en clair', $('saisie-carte').type === 'text');
-    check('aucun prenom demande en mode simple', !visible('saisie-bloc-prenom'));
+    check('son prenom lui est demande a lui aussi', visible('saisie-bloc-prenom'));
+    check('le libelle le tutoie', $('saisie-label-prenom').textContent === 'Ton prénom');
     check('terminer est bloque tant que le compte n y est pas', $('btn-saisie-fini').disabled);
 
     for (const mot of ['Alpha', 'Beta', 'Gamma']) {
@@ -185,10 +186,18 @@ f.addEventListener('load', async () => {
     check('terminer devient possible', !$('btn-saisie-fini').disabled);
 
     $('btn-saisie-fini').click();
+    await wait(400);
+    check('sans prenom, la saisie ne part pas', ecran() === 'screen-saisie-locale');
+    log('       message : "' + $('saisie-erreur').textContent + '"');
+    check('un message explique pourquoi', $('saisie-erreur').textContent.includes('prénom'));
+
+    $('saisie-prenom').value = 'Alex';
+    $('btn-saisie-fini').click();
     await wait(800);
-    check('on revient a la session', ecran() === 'screen-session');
+    check('avec son prenom, la saisie part', ecran() === 'screen-session');
     check('le bouton indique que c est fait', $('btn-mes-cartes').textContent.includes('✓'));
-    check('l organisateur figure dans la liste', connectes().some(t => t.includes('toi')));
+    check('l organisateur figure dans la liste sous son prenom',
+          connectes().some(t => t.includes('Alex') && t.includes('toi')));
 
     // ===== Le joueur sans telephone =====
     $('btn-session-sanstel').click();

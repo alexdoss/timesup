@@ -279,6 +279,7 @@
               <input type="text" id="player-name-input" placeholder="Prénom du joueur" maxlength="20">
               <button id="btn-add-player" class="btn btn-add">+</button>
             </div>
+            <p id="player-error" class="wizard-hint" style="min-height:18px"></p>
             <ul id="player-list" class="player-list"></ul>
             <p id="player-count" class="player-count">0 joueur(s)</p>
           </div>
@@ -460,10 +461,9 @@
 
       <div id="session-qr" class="qr-bloc"></div>
       <div id="session-code" class="code-session"></div>
-      <a id="session-adresse" class="adresse-session" target="_blank" rel="noopener"></a>
+      <button type="button" id="session-adresse" class="adresse-session"></button>
 
       <div class="config-form">
-        <button id="btn-partager" class="btn btn-secondary">📤 Envoyer le lien</button>
         <button id="btn-mes-cartes" class="btn btn-secondary">✍️ Saisir mes cartes</button>
         <div id="session-joueurs" class="connectes"></div>
         <p id="session-compteur" class="wizard-hint"></p>
@@ -482,7 +482,7 @@
       </div>
       <div class="config-form">
         <div id="saisie-bloc-prenom" class="config-section" style="display:none">
-          <span class="field-label">Son prénom</span>
+          <span id="saisie-label-prenom" class="field-label">Son prénom</span>
           <input type="text" id="saisie-prenom" placeholder="Prénom" maxlength="20" autocomplete="off">
         </div>
         <div class="jauge"><div id="saisie-jauge"></div></div>

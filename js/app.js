@@ -2,7 +2,7 @@
 // Orchestre les modules et gère les événements
 
 import { loadThemes } from './themes.js';
-import { game, ROUNDS, shuffle, resetGame, replayGame, buildDeck, startNewRound, getCurrentCard, cardFound, cardPassed, switchTeam, isRoundOver, isGameOver, nextRound, getCardsRemaining, addPlayer, removePlayer, assignTeamsRoundRobin, getCurrentPlayer, advancePlayer, getActiveRound, setPlayerTeam, syncChosenTeams, canPass, getPlannedTeamSizes, beginTurn, closeTurn, uncountCard, countCard, getRoundScores, getSessionScores } from './game.js';
+import { game, ROUNDS, shuffle, resetGame, replayGame, buildDeck, startNewRound, getCurrentCard, cardFound, cardPassed, switchTeam, isRoundOver, isGameOver, nextRound, getCardsRemaining, addPlayer, removePlayer, assignTeamsRoundRobin, getCurrentPlayer, advancePlayer, getActiveRound, setPlayerTeam, syncChosenTeams, canPass, getPlannedTeamSizes, beginTurn, closeTurn, uncountCard, countCard, getRoundScores, getSessionScores, playerExists } from './game.js';
 import { showScreen, updateTimer, showCard, updateRoundScreen, updateTurnInfo, updateGameHeader, showTurnResult, showRoundEnd, showFinalScreen, renderThemeButtons, renderPlayerList, updateCurrentPlayer, renderPlayerStats, renderRoundsSelector, renderAssignMode, applyTeamAccent, showResumeOption, renderSoundSetting, renderRules, showPauseOverlay, showPauseCountdown, hidePause, showPuppetConfirm, setRoundsNextEnabled, renderThemeEditor, showThemeEditError, renderCustomThemes, showDialog,
          afficherInvitation, renderSession, renderBoutonMesCartes, renderSaisieLocale,
          showSaisieError, renderRepartition } from './ui.js';
@@ -227,10 +227,21 @@ function setupListeners() {
   const playerInput = document.getElementById('player-name-input');
   document.getElementById('btn-add-player').addEventListener('click', () => {
     const name = playerInput.value.trim();
-    if (addPlayer(name)) {
-      playerInput.value = '';
-      refreshPlayerList();
+    const erreur = document.getElementById('player-error');
+    erreur.textContent = '';
+
+    if (!name) return playerInput.focus();
+
+    // Sans ce message, le clic ne faisait rien et personne ne comprenait pourquoi
+    if (playerExists(name)) {
+      erreur.textContent = `Il y a déjà un ${name} dans la partie. Ajoute une initiale pour les distinguer.`;
+      playerInput.select();
+      return;
     }
+
+    addPlayer(name);
+    playerInput.value = '';
+    refreshPlayerList();
     playerInput.focus();
   });
 
@@ -411,7 +422,7 @@ function setupListeners() {
   document.getElementById('btn-ouvrir-session').addEventListener('click', demarrerSessionPartagee);
 
   // Session partagée — écran de l'organisateur
-  document.getElementById('btn-partager').addEventListener('click', partagerLien);
+  document.getElementById('session-adresse').addEventListener('click', partagerLien);
   document.getElementById('btn-mes-cartes').addEventListener('click', () => ouvrirSaisieLocale('organisateur'));
   document.getElementById('btn-session-sanstel').addEventListener('click', () => ouvrirSaisieLocale('sansTel'));
   document.getElementById('btn-session-lancer').addEventListener('click', terminerSaisieEtConfigurer);
@@ -721,7 +732,6 @@ async function demarrerSessionPartagee() {
       creerQrSvg(adresseInvitation(), { taille: 190 }),
       session.code,
       adresseLisible(),
-      adresseInvitation(),
       `${session.cartesParJoueur} cartes chacun`
     );
     renderBoutonMesCartes(0, session.cartesParJoueur, false);
@@ -837,15 +847,18 @@ async function ouvrirSaisieLocale(role) {
     prenom: organisateur ? moiJoueur?.prenom || '' : '',
     cartes: [],
     masque: !organisateur,
-    cible: session.cartesParJoueur
+    cible: session.cartesParJoueur,
+    // Le prénom est demandé à tout le monde, organisateur compris : le mode de
+    // jeu n'est pas encore choisi, et il servira à la répartition des équipes.
+    demanderPrenom: true
   };
 
-  // Le prénom n'est demandé que quand il servira : joueur sans téléphone,
-  // ou organisateur en mode nominatif (il figurera dans la répartition).
-  saisieLocale.demanderPrenom = !organisateur || session.mode === 'nominatif';
+  document.getElementById('saisie-label-prenom').textContent =
+    organisateur ? 'Ton prénom' : 'Son prénom';
 
   const champ = document.getElementById('saisie-prenom');
   champ.value = saisieLocale.prenom;
+  champ.placeholder = organisateur ? 'Ton prénom' : 'Son prénom';
   document.getElementById('saisie-carte').type = saisieLocale.masque ? 'password' : 'text';
   document.getElementById('saisie-carte').value = '';
   showSaisieError('');
@@ -858,7 +871,7 @@ function rafraichirSaisieLocale() {
   renderSaisieLocale({
     titre: organisateur ? 'Tes cartes' : 'Saisie sur cet appareil',
     note: organisateur
-      ? "C'est ton téléphone : tes cartes s'affichent en clair. Les autres continuent de saisir pendant ce temps."
+      ? "C'est ton téléphone : tes cartes s'affichent en clair. Ton prénom te placera dans une équipe, comme les autres joueurs."
       : 'Passe ton téléphone à ce joueur. Ses cartes restent masquées pendant qu\'il tape.',
     cartes: saisieLocale.cartes,
     cible: saisieLocale.cible,
@@ -892,12 +905,13 @@ function retirerCarteLocale(index) {
 }
 
 async function finirSaisieLocale() {
-  const prenomSaisi = document.getElementById('saisie-prenom').value.trim();
+  const prenom = document.getElementById('saisie-prenom').value.trim();
 
-  if (saisieLocale.demanderPrenom && prenomSaisi.length < 1) {
-    return showSaisieError('Indique un prénom.');
+  if (prenom.length < 1) {
+    return showSaisieError(saisieLocale.role === 'organisateur'
+      ? 'Indique ton prénom : il servira à te placer dans une équipe.'
+      : 'Indique le prénom de ce joueur.');
   }
-  const prenom = prenomSaisi || 'Organisateur';
 
   try {
     // L'organisateur ne s'inscrit qu'une fois ; ensuite il ne fait que redéposer
@@ -911,6 +925,8 @@ async function finirSaisieLocale() {
     showScreen('screen-session');
     surEtatSession(await lireEtatSansAttendre());
   } catch (err) {
+    // Prénom déjà pris : on corrige sur place plutôt que d'ouvrir une boîte
+    if (err.details?.motif === 'prenom-pris') return showSaisieError(err.message);
     showDialog({ title: 'Envoi impossible', message: err.message, confirmLabel: 'Réessayer' });
   }
 }

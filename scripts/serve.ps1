@@ -102,6 +102,16 @@ function Invoke-FausseSession($corps) {
       $prenom = ([string]$corps.prenom).Trim()
       if ($prenom.Length -lt 1) { return @{ statut = 400; corps = @{ error = 'Indique ton prenom.' } } }
       if ($prenom.Length -gt 20) { $prenom = $prenom.Substring(0, 20) }
+      # Message identique a celui d'api/session.js, accents compris : les tests
+      # verifient ce texte, ils doivent verifier celui que voit le joueur.
+      if ($s.joueurs.Values | Where-Object { $_.prenom.ToLower() -eq $prenom.ToLower() }) {
+        return @{ statut = 409; corps = [ordered]@{
+          error = "Il y a déjà un $prenom dans cette partie. Ajoute une initiale pour te distinguer."
+          motif = 'prenom-pris' } }
+      }
+      if ($s.joueurs.Count -ge 30) {
+        return @{ statut = 409; corps = @{ error = 'Cette partie est complete (30 joueurs).' } }
+      }
       $id = New-Id
       $s.joueurs[$id] = @{ prenom = $prenom; role = $role; cartes = @(); fini = $false }
       return @{ statut = 200; corps = [ordered]@{

@@ -143,6 +143,18 @@ const ENV = { KV_REST_API_URL: URL_KV, KV_REST_API_TOKEN: 'jeton-test' };
     res = await appeler({ action: 'rejoindre', code, prenom: 'Pirate', role: 'organisateur' });
     check('on ne peut pas se declarer organisateur sans le jeton (403)', res.code === 403);
 
+    // --- Deux joueurs ne peuvent pas porter le meme prenom ---
+    res = await appeler({ action: 'rejoindre', code, prenom: 'Marc' });
+    check('un prenom deja pris est refuse (409)', res.code === 409);
+    res = await appeler({ action: 'rejoindre', code, prenom: '  MARC  ' });
+    log('       refus : ' + JSON.stringify(res.body));
+    check('meme en changeant la casse et les espaces', res.code === 409);
+    check('le refus est identifiable par le client', res.body.motif === 'prenom-pris');
+    check('le message propose une solution', res.body.error.includes('initiale'));
+    res = await appeler({ action: 'rejoindre', code, prenom: 'Marc B' });
+    check('un prenom distinct passe', res.code === 200);
+    await appeler({ action: 'retirer', code, idJoueur: res.body.idJoueur, jeton });
+
     // ===== Depot de cartes =====
     res = await appeler({ action: 'deposer', code, idJoueur: idMarc, cartes: ['Plage', 'Valise'], fini: false });
     check('depot partiel accepte', res.code === 200 && res.body.nbCartes === 2);

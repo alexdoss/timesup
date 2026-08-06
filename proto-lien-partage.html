@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Rush — proto : l'adresse sous le QR code</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <!-- Vraie feuille de style de l'app : ce que tu vois est ce que ça donnera -->
+  <link rel="stylesheet" href="style.css">
+  <style>
+    body { user-select: auto; padding: 28px 16px 64px; }
+
+    .proto-intro { max-width: 820px; margin: 0 auto 26px; text-align: center; }
+    .proto-intro h1 { font-size: 1.5rem; margin-bottom: 10px; }
+    .proto-intro p { color: var(--muted); font-size: .95rem; line-height: 1.6; }
+    .proto-intro strong { color: var(--text); }
+
+    .grille { display: flex; flex-wrap: wrap; gap: 26px; justify-content: center; align-items: flex-start; }
+
+    .cadre { width: 340px; max-width: 100%; }
+    .cadre-titre { margin-bottom: 10px; padding-left: 4px; }
+    .cadre-titre b { font-size: 1.02rem; }
+    .cadre-titre span { font-size: .8rem; color: var(--muted); margin-left: 8px; }
+
+    .telephone {
+      border: 1px solid var(--border); border-radius: var(--r-xl);
+      background: var(--panel); padding: 22px 18px 24px;
+      box-shadow: var(--shadow); display: flex; flex-direction: column; align-items: center;
+    }
+    .telephone .config-form { margin-top: 12px; }
+
+    .note { margin-top: 12px; padding: 0 4px; font-size: .85rem; color: var(--muted); line-height: 1.5; }
+    .note b { color: var(--text); }
+
+    /* --- Variante B : l'adresse devient une puce cliquable --- */
+    .adresse-puce {
+      display: inline-flex; align-items: center; gap: 8px;
+      background: var(--surface); border: 1px solid var(--line);
+      border-radius: 100px; padding: 9px 16px; margin-bottom: 12px;
+      color: var(--muted-strong); font-family: inherit; font-size: .82rem;
+      cursor: pointer; transition: all .2s;
+    }
+    .adresse-puce:active { transform: scale(0.97); }
+
+    /* --- L'adresse en lien, mais qui partage (variantes A et C) --- */
+    .adresse-bouton {
+      background: none; border: none; padding: 4px; margin-bottom: 12px;
+      font-family: inherit; font-size: .82rem; color: var(--muted-strong);
+      text-decoration: underline; text-underline-offset: 3px; cursor: pointer;
+    }
+
+    /* --- Fausse feuille de partage, pour illustrer --- */
+    .feuille-fond {
+      position: fixed; inset: 0; z-index: 300; display: none;
+      align-items: flex-end; justify-content: center;
+      background: rgba(15,23,42,.6);
+    }
+    .feuille-fond.ouverte { display: flex; }
+    .feuille {
+      width: 100%; max-width: 420px; background: #1E293B;
+      border-radius: 20px 20px 0 0; padding: 18px 18px 28px;
+      border-top: 1px solid var(--line);
+    }
+    .feuille-poignee { width: 40px; height: 4px; border-radius: 100px; background: var(--muted-2); margin: 0 auto 16px; }
+    .feuille h4 { font-size: .95rem; margin-bottom: 4px; }
+    .feuille .apercu { font-size: .78rem; color: var(--muted); margin-bottom: 18px; word-break: break-all; }
+    .feuille-apps { display: flex; gap: 14px; overflow-x: auto; padding-bottom: 8px; }
+    .app { flex: 0 0 auto; width: 66px; text-align: center; font-size: .68rem; color: var(--muted-strong); }
+    .app i { display: block; width: 52px; height: 52px; border-radius: 16px; margin: 0 auto 6px; font-style: normal; font-size: 26px; line-height: 52px; }
+    .feuille-note { margin-top: 14px; font-size: .74rem; color: var(--muted-2); text-align: center; }
+
+    .reset {
+      display: block; margin: 34px auto 0; background: var(--surface); color: var(--muted-strong);
+      border: 1px solid var(--line); border-radius: var(--r-md); padding: 12px 22px;
+      font-family: inherit; font-size: .9rem; cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+
+<div class="proto-intro">
+  <h1>L'adresse sous le QR code</h1>
+  <p>
+    Dans les trois cas, <strong>toucher l'adresse ouvre le menu de partage</strong> du téléphone.<br>
+    Ce qui change, c'est son apparence et ce qu'il reste comme bouton à côté.
+    La feuille de partage ci-dessous est une <strong>imitation</strong> : la vraie est celle du système.
+  </p>
+</div>
+
+<div class="grille">
+
+  <!-- ============ A ============ -->
+  <section class="cadre">
+    <div class="cadre-titre"><b>A · L'adresse remplace le bouton</b><span>recommandée</span></div>
+    <div class="telephone">
+      <div class="wizard-header"><h2>Rejoignez la partie</h2><p class="wizard-hint">5 cartes chacun</p></div>
+      <div class="qr-bloc" data-qr></div>
+      <div class="code-session">RU4B</div>
+      <button type="button" class="adresse-bouton" onclick="ouvrir()">rush-alexina.vercel.app/rejoindre</button>
+      <div class="config-form">
+        <button type="button" class="btn btn-secondary">✍️ Saisir mes cartes</button>
+        <div class="connectes"><div class="connecte fini"><span class="qui">● Marc</span><span class="etat">5 cartes ✓</span></div></div>
+        <p class="wizard-hint">1 joueur · 1 a fini · 5 cartes</p>
+        <button type="button" class="btn btn-primary">Continuer la configuration ▶️</button>
+      </div>
+    </div>
+    <p class="note">Un seul geste de partage, à l'endroit où l'œil cherche déjà l'adresse. <b>Le bouton « Envoyer le lien » disparaît</b> — un bouton de moins sur un écran qui en compte cinq.</p>
+  </section>
+
+  <!-- ============ B ============ -->
+  <section class="cadre">
+    <div class="cadre-titre"><b>B · L'adresse devient une puce</b><span>plus visible</span></div>
+    <div class="telephone">
+      <div class="wizard-header"><h2>Rejoignez la partie</h2><p class="wizard-hint">5 cartes chacun</p></div>
+      <div class="qr-bloc" data-qr></div>
+      <div class="code-session">RU4B</div>
+      <button type="button" class="adresse-puce" onclick="ouvrir()">📤 rush-alexina.vercel.app/rejoindre</button>
+      <div class="config-form">
+        <button type="button" class="btn btn-secondary">✍️ Saisir mes cartes</button>
+        <div class="connectes"><div class="connecte fini"><span class="qui">● Marc</span><span class="etat">5 cartes ✓</span></div></div>
+        <p class="wizard-hint">1 joueur · 1 a fini · 5 cartes</p>
+        <button type="button" class="btn btn-primary">Continuer la configuration ▶️</button>
+      </div>
+    </div>
+    <p class="note">L'icône annonce ce qui va se passer, la puce se touche plus facilement qu'un texte souligné. Mais elle attire l'œil au même titre que les vrais boutons, alors que c'est une action secondaire.</p>
+  </section>
+
+  <!-- ============ C ============ -->
+  <section class="cadre">
+    <div class="cadre-titre"><b>C · Les deux coexistent</b><span>état actuel + partage</span></div>
+    <div class="telephone">
+      <div class="wizard-header"><h2>Rejoignez la partie</h2><p class="wizard-hint">5 cartes chacun</p></div>
+      <div class="qr-bloc" data-qr></div>
+      <div class="code-session">RU4B</div>
+      <button type="button" class="adresse-bouton" onclick="ouvrir()">rush-alexina.vercel.app/rejoindre</button>
+      <div class="config-form">
+        <button type="button" class="btn btn-secondary" onclick="ouvrir()">📤 Envoyer le lien</button>
+        <button type="button" class="btn btn-secondary">✍️ Saisir mes cartes</button>
+        <div class="connectes"><div class="connecte fini"><span class="qui">● Marc</span><span class="etat">5 cartes ✓</span></div></div>
+        <p class="wizard-hint">1 joueur · 1 a fini · 5 cartes</p>
+        <button type="button" class="btn btn-primary">Continuer la configuration ▶️</button>
+      </div>
+    </div>
+    <p class="note">Deux chemins vers la même action. Rien n'est perdu, mais l'écran s'allonge et on peut se demander si les deux font vraiment la même chose.</p>
+  </section>
+</div>
+
+<!-- Imitation de la feuille de partage du téléphone -->
+<div class="feuille-fond" id="feuille" onclick="fermer(event)">
+  <div class="feuille">
+    <div class="feuille-poignee"></div>
+    <h4>Rejoins la partie de Rush ! Code RU4B</h4>
+    <p class="apercu">https://rush-alexina.vercel.app/rejoindre.html?c=RU4B</p>
+    <div class="feuille-apps">
+      <div class="app"><i style="background:#25D366">💬</i>WhatsApp</div>
+      <div class="app"><i style="background:#3B82F6">✉️</i>Messages</div>
+      <div class="app"><i style="background:#2563EB">📘</i>Messenger</div>
+      <div class="app"><i style="background:#0F172A;border:1px solid #334155">📧</i>Mail</div>
+      <div class="app"><i style="background:#334155">🔗</i>Copier</div>
+    </div>
+    <p class="feuille-note">Imitation — la vraie feuille est celle de ton téléphone, avec tes applications.</p>
+  </div>
+</div>
+
+<button type="button" class="reset" onclick="location.reload()">↺ Recharger</button>
+
+<script type="module">
+import { creerQrSvg } from './js/qr.js';
+document.querySelectorAll('[data-qr]').forEach(bloc => {
+  bloc.appendChild(creerQrSvg('https://rush-alexina.vercel.app/rejoindre.html?c=RU4B', { taille: 150 }));
+});
+window.ouvrir = () => document.getElementById('feuille').classList.add('ouverte');
+window.fermer = e => { if (e.target.id === 'feuille') e.target.classList.remove('ouverte'); };
+</script>
+</body>
+</html>

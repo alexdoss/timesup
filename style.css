@@ -626,14 +626,29 @@ body {
   color: var(--secondary);
 }
 
+/* L'adresse est une puce cliquable qui ouvre le menu de partage du téléphone.
+   Un texte souligné aurait annoncé une navigation — or on ne quitte pas
+   l'écran — et se raterait au doigt. */
 .adresse-session {
-  display: inline-block;
-  font-size: 0.82rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  max-width: 100%;
+  margin-bottom: 12px;
+  padding: 9px 16px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 100px;
   color: var(--muted-strong);
-  text-decoration: underline;
-  text-underline-offset: 3px;
-  margin-bottom: 10px;
-  padding: 4px;   /* une cible tactile un peu plus large que le texte */
+  font-family: 'Outfit', sans-serif;
+  font-size: 0.82rem;
+  cursor: pointer;
+  transition: transform var(--transition), background var(--transition);
+}
+
+.adresse-session:active {
+  transform: scale(0.97);
+  background: var(--surface-2);
 }
 
 .connectes {

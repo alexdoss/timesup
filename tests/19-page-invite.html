@@ -58,6 +58,18 @@ const recharger = () => new Promise(r => { resoudre = r; f.contentWindow.locatio
     check('un prenom vide est refuse', ecran() === 'screen-prenom');
     check('un message l explique', $('erreur-prenom').textContent.includes('prénom'));
 
+    // Un prenom deja pris est refuse sur place, sans ecran bloquant
+    const squatteur = await api('rejoindre', { code, prenom: 'Sam' });
+    saisir('champ-prenom', 'SAM');
+    $('btn-prenom').click();
+    await wait(500);
+    check('un prenom deja pris ne fait pas quitter l ecran', ecran() === 'screen-prenom');
+    log('       message : "' + $('erreur-prenom').textContent + '"');
+    check('le message le dit sur place', $('erreur-prenom').textContent.includes('déjà'));
+    check('il propose une solution', $('erreur-prenom').textContent.includes('initiale'));
+    // On le retire pour que la suite du scenario retrouve une session vierge
+    await api('retirer', { code, idJoueur: squatteur.corps.idJoueur, jeton });
+
     saisir('champ-prenom', '  Marc  ');
     $('btn-prenom').click();
     await wait(500);

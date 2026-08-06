@@ -32,6 +32,18 @@ document.getElementById('f').addEventListener('load', async () => {
     // mode nominatif actif par defaut
     ['Ana', 'Bob', 'Cleo', 'Dan'].forEach(ajouterJoueur);
     check('4 joueurs ajoutes', $('player-count').textContent.startsWith('4'));
+
+    // --- Deux joueurs ne peuvent pas porter le meme prenom ---
+    ajouterJoueur('ana');
+    check('un prenom deja pris n est pas ajoute', $('player-count').textContent.startsWith('4'));
+    log('       message : "' + $('player-error').textContent + '"');
+    check('un message l explique', $('player-error').textContent.includes('déjà'));
+    check('il propose une solution', $('player-error').textContent.includes('initiale'));
+    ajouterJoueur('Ana B');
+    check('un prenom distinct est accepte', $('player-count').textContent.startsWith('5'));
+    check('le message a disparu', $('player-error').textContent === '');
+    d.querySelectorAll('#player-list .btn-remove')[4].click();
+    check('retour a 4 joueurs', $('player-count').textContent.startsWith('4'));
     $('btn-next-players').click();
     check('etape des manches', screen() === 'screen-rounds');
 

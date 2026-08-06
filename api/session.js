@@ -199,6 +199,17 @@ async function rejoindre(req, res, session, code) {
   if (prenom.length < 1) {
     return res.status(400).json({ error: 'Indique ton prénom.' });
   }
+
+  // Deux « Marc » rendraient la répartition des équipes et les statistiques
+  // illisibles : on refuse avant d'inscrire.
+  const dejaPris = Object.values(session.joueurs)
+    .some(j => j.prenom.toLocaleLowerCase() === prenom.toLocaleLowerCase());
+  if (dejaPris) {
+    return res.status(409).json({
+      error: `Il y a déjà un ${prenom} dans cette partie. Ajoute une initiale pour te distinguer.`,
+      motif: 'prenom-pris'
+    });
+  }
   if (Object.keys(session.joueurs).length >= MAX_JOUEURS) {
     return res.status(409).json({ error: `Cette partie est complète (${MAX_JOUEURS} joueurs).` });
   }
@@ -270,8 +281,12 @@ async function fermer(req, res, session, code) {
     });
   }
 
+  // Deux joueurs peuvent proposer la même carte : elle sortira deux fois, ce
+  // qui ne gêne pas le jeu. On ne dédoublonne pas — le faire supposerait de
+  // révéler à un joueur ce qu'un autre a écrit, ou de rétrécir le paquet en silence.
   const cartes = [];
   joueurs.forEach(j => cartes.push(...j.cartes));
+
   if (cartes.length === 0) {
     return res.status(409).json({ error: 'Aucune carte n\'a été saisie.' });
   }

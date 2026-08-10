@@ -239,10 +239,38 @@ export function beginTurn() {
   game.turnActive = true;
 }
 
-// Clôture du tour : la carte restée à l'écran a été vue, elle est rattrapable.
+// Clôture du tour : la carte restée à l'écran a été vue, elle est rattrapable,
+// et elle retourne dans le paquet. Sans ça, l'équipe suivante héritait toujours
+// de celle sur laquelle on venait de sécher — après en avoir entendu toutes les
+// descriptions. Elle démarrait donc chaque tour sur la carte la plus dure.
 export function closeTurn() {
   game.turnActive = false;
-  rememberMissed(getCurrentCard());
+  const carte = getCurrentCard();
+  if (!carte) return;
+  rememberMissed(carte);
+  remettreCarteEnJeu();
+}
+
+// Nombre de cartes qui doivent défiler avant qu'une carte remise en jeu au
+// hasard puisse réapparaître. À zéro, elle pouvait revenir exactement à sa
+// place : le joueur appuyait sur « Passer » et rien ne bougeait.
+const ECART_MINIMUM = 2;
+
+// Replace la carte courante dans le paquet, selon le réglage du joueur.
+function remettreCarteEnJeu() {
+  const carte = game.deck[game.currentCardIndex];
+  if (carte === undefined) return;
+
+  if (game.passReplace === 'random') {
+    game.deck.splice(game.currentCardIndex, 1);
+    const plusTot = Math.min(game.currentCardIndex + ECART_MINIMUM, game.deck.length);
+    const choix = game.deck.length - plusTot + 1;
+    game.deck.splice(plusTot + Math.floor(Math.random() * choix), 0, carte);
+  } else {
+    // En bas du paquet : l'original reste dans la partie déjà consommée
+    game.deck.push(carte);
+    game.currentCardIndex++;
+  }
 }
 
 function creditTurn(word) {
@@ -302,19 +330,8 @@ export function countCard(word) {
 }
 
 export function cardPassed() {
-  const skippedCard = game.deck[game.currentCardIndex];
-  rememberMissed(skippedCard);
-  if (game.passReplace === 'random') {
-    // Remove card and insert at random position after currentCardIndex
-    game.deck.splice(game.currentCardIndex, 1);
-    const minPos = game.currentCardIndex;
-    const insertPos = minPos + Math.floor(Math.random() * (game.deck.length - minPos + 1));
-    game.deck.splice(insertPos, 0, skippedCard);
-  } else {
-    // bottom: push to end
-    game.deck.push(skippedCard);
-    game.currentCardIndex++;
-  }
+  rememberMissed(game.deck[game.currentCardIndex]);
+  remettreCarteEnJeu();
   game.passCount++;
 }
 

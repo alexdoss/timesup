@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head><meta charset="utf-8"><title>Test Rush — remise en jeu des cartes non trouvées</title></head>
+<body>
+<pre id="log">demarrage...</pre>
+<script type="module">
+import { game, resetGame, startNewRound, beginTurn, closeTurn, cardFound, cardPassed,
+         countCard, getCurrentCard, getCardsRemaining, isRoundOver, switchTeam } from '/js/game.js';
+
+const out = [];
+function log(s) { out.push(s); document.getElementById('log').textContent = out.join('\n'); }
+function check(name, cond) { log((cond ? 'PASS' : 'FAIL') + ' -- ' + name); }
+
+const PAQUET = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'];
+
+// Paquet dans un ordre connu, pour raisonner sur les positions
+function preparer(mode) {
+  game.cardSource = 'custom';
+  game.passMode = 'unlimited';
+  game.passReplace = mode;
+  game.masterDeck = [...PAQUET];
+  resetGame();
+  game.masterDeck = [...PAQUET];
+  startNewRound();
+  game.deck = [...PAQUET];
+  game.currentCardIndex = 0;
+}
+
+try {
+  // ===== 1. La carte du buzzer ne doit plus ouvrir le tour suivant =====
+  preparer('bottom');
+  beginTurn();
+  cardFound();                       // A
+  cardFound();                       // B
+  const auBuzzer = getCurrentCard();  // C
+  const resteAvant = getCardsRemaining();
+  check('la carte du buzzer est bien celle attendue', auBuzzer === 'C');
+
+  closeTurn();
+  switchTeam();
+  beginTurn();
+  log('       tour 1 s arrete sur ' + auBuzzer + ', tour 2 commence sur ' + getCurrentCard());
+  check('le tour suivant ne reprend pas sur la carte du buzzer', getCurrentCard() !== auBuzzer);
+  check('elle est repartie au fond du paquet',
+        game.deck[game.deck.length - 1] === auBuzzer);
+  check('elle reste a jouer, le compte est inchange', getCardsRemaining() === resteAvant);
+  // Seules A et B ont ete trouvees : la carte du buzzer ne rapporte rien
+  check('elle ne rapporte aucun point', game.teams[0].score + game.teams[1].score === 2);
+  check('elle est toujours dans le paquet a jouer',
+        game.deck.indexOf(auBuzzer, game.currentCardIndex) !== -1);
+
+  // ===== 2. Elle reste rattrapable en fin de tour =====
+  preparer('bottom');
+  beginTurn();
+  cardFound();
+  const carte2 = getCurrentCard();
+  closeTurn();
+  check('la carte du buzzer figure dans les non comptees', game.turnMissed.includes(carte2));
+  const resteApresCloture = getCardsRemaining();
+  check('rattraper la carte fonctionne', countCard(carte2) === true);
+  check('elle sort du paquet ou qu elle ait ete replacee', getCardsRemaining() === resteApresCloture - 1);
+  check('elle n est plus proposee ailleurs', game.deck.indexOf(carte2, game.currentCardIndex) === -1);
+  check('le point est bien credite', game.turnScore === 2);
+
+  // ===== 3. Mode « au hasard » : jamais de retour immediat =====
+  let immediat = 0, ecartMinimum = 99, essais = 3000;
+  for (let i = 0; i < essais; i++) {
+    preparer('random');
+    game.currentCardIndex = 2;
+    const passee = getCurrentCard();
+    cardPassed();
+    if (getCurrentCard() === passee) immediat++;
+    const ecart = game.deck.indexOf(passee, game.currentCardIndex) - game.currentCardIndex;
+    if (ecart < ecartMinimum) ecartMinimum = ecart;
+  }
+  log('       ' + essais + ' passes au hasard : ecart minimum observe = ' + ecartMinimum);
+  check('la carte passee ne revient jamais immediatement', immediat === 0);
+  check('deux cartes au moins defilent avant son retour', ecartMinimum >= 2);
+  check('elle revient bien dans le paquet, jamais perdue', ecartMinimum < 99);
+
+  // ===== 4. Le mode « au hasard » s applique aussi a la carte du buzzer =====
+  let buzzerImmediat = 0;
+  for (let i = 0; i < 1000; i++) {
+    preparer('random');
+    beginTurn();
+    cardFound();
+    const carte = getCurrentCard();
+    closeTurn();
+    switchTeam();
+    beginTurn();
+    if (getCurrentCard() === carte) buzzerImmediat++;
+  }
+  check('la carte du buzzer non plus, en mode hasard', buzzerImmediat === 0);
+
+  // ===== 5. Paquet presque vide : on ne perd pas la carte =====
+  preparer('random');
+  game.currentCardIndex = 7;          // derniere carte
+  const derniere = getCurrentCard();
+  cardPassed();
+  check('avec une seule carte restante, elle est conservee', game.deck.includes(derniere));
+  check('et le paquet garde sa taille', game.deck.length === PAQUET.length);
+  check('la manche n est pas close par erreur', !isRoundOver());
+
+  // ===== 6. Paquet epuise : rien a replacer, aucune erreur =====
+  preparer('bottom');
+  beginTurn();
+  let garde = 0;
+  while (!isRoundOver() && garde++ < 50) cardFound();
+  const tailleAvant = game.deck.length;
+  closeTurn();
+  check('sur un paquet epuise, la cloture ne replace rien', game.deck.length === tailleAvant);
+  check('la manche reste terminee', isRoundOver());
+
+  log('SCENARIO 23 TERMINE');
+} catch (e) {
+  log('EXCEPTION: ' + e.message + '\n' + e.stack);
+}
+</script>
+</body>
+</html>

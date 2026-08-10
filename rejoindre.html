@@ -42,7 +42,14 @@
           <h2>Rejoindre la partie</h2>
           <p class="wizard-hint">Partie <b id="rappel-code"></b></p>
         </div>
-        <div class="config-form">
+        <!-- Liste fermée : on rejoue avec les mêmes joueurs, chacun se reconnaît -->
+        <div id="bloc-liste-prenoms" class="config-form" style="display:none">
+          <span class="field-label">Qui es-tu ?</span>
+          <div id="liste-prenoms" class="choix-prenoms"></div>
+          <p id="erreur-liste" class="wizard-hint"></p>
+        </div>
+
+        <div id="bloc-saisie-prenom" class="config-form">
           <span class="field-label">Ton prénom</span>
           <input type="text" id="champ-prenom" placeholder="Ton prénom" maxlength="20" autocomplete="given-name">
           <p id="erreur-prenom" class="wizard-hint"></p>

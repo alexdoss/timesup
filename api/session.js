@@ -152,9 +152,28 @@ async function garderPlafondCreation(req) {
 
 // ===== Actions =====
 
+// Liste fermée de joueurs attendus, utilisée quand on rejoue avec les mêmes
+// personnes : les invités choisissent leur prénom au lieu de le retaper.
+function nettoyerListe(valeur) {
+  if (!Array.isArray(valeur)) return [];
+  const vus = new Set();
+  const liste = [];
+  for (const brut of valeur) {
+    const prenom = nettoyerPrenom(brut);
+    if (prenom.length < 1) continue;
+    const repere = prenom.toLocaleLowerCase();
+    if (vus.has(repere)) continue;
+    vus.add(repere);
+    liste.push(prenom);
+    if (liste.length >= MAX_JOUEURS) break;
+  }
+  return liste;
+}
+
 async function creer(req, res) {
   const cartesParJoueur = Math.max(2, Math.min(15, parseInt(req.body.cartesParJoueur, 10) || 5));
   const mode = req.body.mode === 'nominatif' ? 'nominatif' : 'simple';
+  const attendus = nettoyerListe(req.body.joueursAttendus);
 
   if (!(await garderPlafondCreation(req))) {
     return res.status(429).json({ error: "Trop de sessions ouvertes depuis cette connexion aujourd'hui." });
@@ -173,7 +192,7 @@ async function creer(req, res) {
   }
 
   const jeton = tirerIdentifiant();
-  const config = { creee: Date.now(), cartesParJoueur, mode, jeton, ouverte: true };
+  const config = { creee: Date.now(), cartesParJoueur, mode, jeton, ouverte: true, attendus };
 
   await commandeKV(['HSET', cleSession(code), 'config', JSON.stringify(config)]);
   await commandeKV(['EXPIRE', cleSession(code), DUREE_SESSION_S]);
@@ -183,6 +202,7 @@ async function creer(req, res) {
     jeton,
     cartesParJoueur,
     mode,
+    attendus,
     expireDans: DUREE_SESSION_S
   });
 }
@@ -198,6 +218,16 @@ async function rejoindre(req, res, session, code) {
   const prenom = nettoyerPrenom(req.body.prenom);
   if (prenom.length < 1) {
     return res.status(400).json({ error: 'Indique ton prénom.' });
+  }
+
+  // Liste fermée : on rejoue avec les mêmes joueurs, personne d'autre n'entre.
+  const attendus = session.config.attendus || [];
+  if (attendus.length > 0
+      && !attendus.some(nom => nom.toLocaleLowerCase() === prenom.toLocaleLowerCase())) {
+    return res.status(409).json({
+      error: "Cette partie rejoue avec les mêmes joueurs : choisis ton prénom dans la liste.",
+      motif: 'hors-liste'
+    });
   }
 
   // Deux « Marc » rendraient la répartition des équipes et les statistiques
@@ -247,6 +277,7 @@ function etat(req, res, session) {
   return res.status(200).json({
     cartesParJoueur: session.config.cartesParJoueur,
     mode: session.config.mode,
+    attendus: session.config.attendus || [],
     ouverte: session.config.ouverte !== false,
     joueurs,
     total: joueurs.reduce((n, j) => n + j.nbCartes, 0),

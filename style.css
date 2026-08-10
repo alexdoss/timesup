@@ -798,6 +798,36 @@ body {
 .etat-envoi.ok { color: var(--success); }
 .etat-envoi.horsligne { color: var(--warning); }
 
+/* Choix du prénom dans une liste fermée, quand on rejoue avec les mêmes joueurs */
+.choix-prenoms {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  width: 100%;
+}
+
+.choix-prenoms button {
+  padding: 16px 12px;
+  border: 1.5px solid var(--line);
+  border-radius: var(--r-md);
+  background: var(--surface);
+  color: var(--text);
+  font-family: 'Outfit', sans-serif;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.choix-prenoms button:active { transform: scale(0.97); }
+
+/* Déjà pris : la place est prise, pas le bouton cassé — on l'explique */
+.choix-prenoms button:disabled {
+  opacity: 0.45;
+  cursor: default;
+  font-weight: 500;
+}
+
 /* ===== BOÎTE DE DIALOGUE ===== */
 .dialog-overlay {
   position: fixed;

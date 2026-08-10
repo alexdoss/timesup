@@ -374,7 +374,8 @@ export function afficherInvitation(svgQr, code, adresse, rappel) {
 
 // etat      : la réponse du serveur (qui a fini, jamais quoi)
 // onRetirer : l'organisateur retire un joueur qui ne finit pas
-export function renderSession(etat, onRetirer) {
+// rejeu : la configuration est déjà faite, il ne reste qu'à relancer
+export function renderSession(etat, onRetirer, rejeu = false) {
   const liste = document.getElementById('session-joueurs');
   liste.innerHTML = '';
 
@@ -431,14 +432,27 @@ export function renderSession(etat, onRetirer) {
   const bouton = document.getElementById('btn-session-lancer');
   bouton.disabled = etat.total === 0 || enCours.length > 0;
 
-  if (etat.joueurs.length === 0) {
+  // En rejeu, on peut aussi attendre ceux qui n'ont pas encore rejoint :
+  // la liste des joueurs est connue d'avance.
+  const attendus = etat.attendus || [];
+  const manquants = attendus.filter(nom =>
+    !etat.joueurs.some(j => j.prenom.toLocaleLowerCase() === nom.toLocaleLowerCase()));
+  if (rejeu && manquants.length > 0) bouton.disabled = true;
+
+  if (rejeu && manquants.length === 1) {
+    bouton.textContent = `⏳ ${manquants[0]} n'a pas encore rejoint`;
+  } else if (rejeu && manquants.length > 1) {
+    bouton.textContent = `⏳ ${manquants.length} joueurs n'ont pas rejoint`;
+  } else if (etat.joueurs.length === 0) {
     bouton.textContent = 'En attente des joueurs…';
   } else if (enCours.length === 1) {
     bouton.textContent = `⏳ ${enCours[0].prenom} saisit ses cartes…`;
   } else if (enCours.length > 1) {
     bouton.textContent = `⏳ ${enCours.length} joueurs saisissent encore…`;
   } else {
-    bouton.textContent = `Continuer la configuration ▶️ (${etat.total} cartes)`;
+    bouton.textContent = rejeu
+      ? `🔄 Rejouer (${etat.total} cartes)`
+      : `Continuer la configuration ▶️ (${etat.total} cartes)`;
   }
 }
 

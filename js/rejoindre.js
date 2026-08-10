@@ -132,28 +132,70 @@ async function validerCode(code) {
         "Cette partie est déjà lancée. Demande à l'organisateur d'en ouvrir une nouvelle.", null, null);
     }
 
-    document.getElementById('note-prenom').textContent =
-      "Il permet à l'organisateur de savoir qui a fini, et de te placer dans une équipe.";
-
     montrer('screen-prenom');
-    document.getElementById('champ-prenom').focus();
+    afficherChoixPrenom(etat);
   } catch (err) {
     surErreur(err);
   }
 }
 
 // ===== Étape 2 : le prénom =====
+// Deux formes selon la partie : saisie libre pour une partie neuve, choix dans
+// une liste quand on rejoue avec les mêmes joueurs. Le choix évite les doublons,
+// les fautes de frappe, et permet à l'organisateur de savoir qui manque.
 
-async function validerPrenom() {
+function afficherChoixPrenom(etat) {
+  const attendus = etat.attendus || [];
+  const parListe = attendus.length > 0;
+
+  document.getElementById('bloc-liste-prenoms').style.display = parListe ? '' : 'none';
+  document.getElementById('bloc-saisie-prenom').style.display = parListe ? 'none' : '';
+  document.getElementById('note-prenom').textContent = parListe
+    ? "Cette partie rejoue avec les mêmes joueurs. Touche ton prénom pour saisir tes nouvelles cartes."
+    : "Il permet à l'organisateur de savoir qui a fini, et de te placer dans une équipe.";
+
+  if (!parListe) {
+    document.getElementById('champ-prenom').focus();
+    return;
+  }
+
+  const pris = new Set((etat.joueurs || []).map(j => j.prenom.toLocaleLowerCase()));
+  const liste = document.getElementById('liste-prenoms');
+  liste.innerHTML = '';
+
+  attendus.forEach(prenom => {
+    const bouton = document.createElement('button');
+    bouton.type = 'button';
+    const dejaLa = pris.has(prenom.toLocaleLowerCase());
+    bouton.textContent = dejaLa ? `${prenom} ✓` : prenom;
+    bouton.disabled = dejaLa;
+    bouton.addEventListener('click', () => rejoindreAvec(prenom));
+    liste.appendChild(bouton);
+  });
+
+  const restants = attendus.length - pris.size;
+  document.getElementById('erreur-liste').textContent = restants > 0
+    ? ''
+    : 'Tout le monde a déjà rejoint.';
+}
+
+function validerPrenom() {
   const champ = document.getElementById('champ-prenom');
-  const erreur = document.getElementById('erreur-prenom');
   const prenom = champ.value.trim();
 
   if (prenom.length < 1) {
-    erreur.textContent = 'Indique ton prénom pour continuer.';
+    document.getElementById('erreur-prenom').textContent = 'Indique ton prénom pour continuer.';
     return;
   }
+  rejoindreAvec(prenom);
+}
+
+async function rejoindreAvec(prenom) {
+  const champ = document.getElementById('champ-prenom');
+  const erreur = document.getElementById('erreur-prenom');
+  const erreurListe = document.getElementById('erreur-liste');
   erreur.textContent = '';
+  erreurListe.textContent = '';
 
   try {
     const reponse = await appeler('rejoindre', { code: session.code, prenom });
@@ -166,8 +208,17 @@ async function validerPrenom() {
     sauvegarder();
     ouvrirSaisie();
   } catch (err) {
-    // Prénom déjà pris : on corrige sur place, sans écran bloquant
-    if (err.details?.motif === 'prenom-pris') {
+    // Quelqu'un a pris cette place entre l'affichage et le tap : on rafraîchit
+    // la liste plutôt que de laisser un bouton qui ne marche plus.
+    if (err.details?.motif === 'prenom-pris' || err.details?.motif === 'hors-liste') {
+      try {
+        const etat = await appeler('etat', { code: session.code });
+        if ((etat.attendus || []).length > 0) {
+          afficherChoixPrenom(etat);
+          erreurListe.textContent = err.message;
+          return;
+        }
+      } catch { /* on retombe sur le message simple */ }
       erreur.textContent = err.message;
       champ.select();
       return;

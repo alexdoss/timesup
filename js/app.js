@@ -29,6 +29,8 @@ let moiJoueur = null;          // l'organisateur, inscrit dans sa propre session
 let saisieLocale = null;       // saisie en cours sur cet appareil (organisateur ou joueur sans téléphone)
 let repartition = [];          // joueurs revenus de la session, pour l'écran des équipes
 let joueursAttendus = 6;       // prévision d'effectif, pour dimensionner le paquet
+let modeRejeu = false;         // session ouverte pour rejouer : équipes et réglages déjà faits
+let listeJoueurs = [];         // liste fermée des joueurs attendus, en cas de rejeu
 
 // ===== INIT =====
 async function init() {
@@ -64,6 +66,8 @@ function preparerNouvellePartie() {
   saisieMode = 'partagee';
   repartition = [];
   moiJoueur = null;
+  modeRejeu = false;
+  listeJoueurs = [];
   oublierSession();
 
   updateSimpleCustomBlock();
@@ -505,6 +509,16 @@ function setupListeners() {
   // Rejouer avec les mêmes joueurs : mêmes équipes, mêmes réglages, le cumul continue
   document.getElementById('btn-replay').addEventListener('click', () => {
     replayGame();
+
+    // En cartes perso, il faut de NOUVELLES cartes : sans ça on rejouerait le
+    // paquet à l'identique, que tout le monde connaît déjà par cœur.
+    if (saisiePartagee()) {
+      modeRejeu = true;
+      listeJoueurs = game.players.length ? [...game.players] : repartition.map(j => j.prenom);
+      ouvrirReglageSession();
+      return;
+    }
+
     buildDeck(THEMES);
     beginRound();
   });
@@ -706,6 +720,14 @@ function ouvrirReglageSession() {
   // game.numCards vaut 30 par défaut (taille de paquet du mode thèmes) : hors
   // de la plage acceptable pour une saisie individuelle, on repart de 5.
   if (game.numCards < CARTES_MIN || game.numCards > CARTES_MAX) game.numCards = 5;
+
+  // En rejeu, l'effectif est connu : on le propose plutôt qu'une estimation.
+  // On le ramène dans les bornes du réglage — à moins de 4 joueurs réels, mieux
+  // vaut proposer 4 que de laisser l'estimation périmée de la partie précédente.
+  if (modeRejeu && listeJoueurs.length > 0) {
+    joueursAttendus = Math.max(JOUEURS_MIN, Math.min(JOUEURS_MAX, listeJoueurs.length));
+  }
+
   rafraichirReglageSession();
   showScreen('screen-session-ouvrir');
 }
@@ -747,9 +769,9 @@ async function demarrerSessionPartagee() {
   repartition = [];
 
   try {
-    // Le mode de jeu n'est pas encore choisi : il vient après la saisie.
-    // La page des invités demande donc simplement le prénom, dans tous les cas.
-    const session = await ouvrirSession(game.numCards);
+    // Partie neuve : le mode de jeu n'est pas encore choisi, la page des invités
+    // demande simplement le prénom. En rejeu : liste fermée, chacun se reconnaît.
+    const session = await ouvrirSession(game.numCards, modeRejeu ? listeJoueurs : []);
 
     afficherInvitation(
       creerQrSvg(adresseInvitation(), { taille: 190 }),
@@ -785,7 +807,7 @@ function basculerEnSequentiel() {
 }
 
 function surEtatSession(etat) {
-  renderSession(etat, confirmerRetraitJoueur);
+  renderSession(etat, confirmerRetraitJoueur, modeRejeu);
   const moi = moiJoueur ? etat.joueurs.find(j => j.id === moiJoueur.id) : null;
   renderBoutonMesCartes(moi ? moi.nbCartes : 0, etat.cartesParJoueur, !!moi?.fini);
 }
@@ -982,10 +1004,19 @@ async function terminerSaisieEtConfigurer() {
 
     const resultat = await fermerSession();
     arreterSuivi();
+    game.customCards = resultat.cartes;
+
+    // En rejeu, équipes et réglages n'ont pas bougé : on relance directement
+    if (modeRejeu) {
+      modeRejeu = false;
+      oublierSession();
+      buildDeck(THEMES);
+      beginRound();
+      return;
+    }
 
     // Le paquet est figé et l'effectif enfin connu : les étapes suivantes
     // raisonnent dessus comme dans une partie ordinaire.
-    game.customCards = resultat.cartes;
     repartition = resultat.joueurs.map((j, index) => ({ ...j, equipe: index % game.teams.length }));
     updateBlocJoueurs();
     showScreen('screen-players');

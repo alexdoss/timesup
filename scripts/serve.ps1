@@ -54,6 +54,7 @@ function Get-VuePublique($s) {
   [ordered]@{
     cartesParJoueur = $s.cartesParJoueur
     mode            = $s.mode
+    attendus        = @($s.attendus)
     ouverte         = $s.ouverte
     joueurs         = $liste
     total           = $total
@@ -67,17 +68,26 @@ function Invoke-FausseSession($corps) {
   if ($action -eq 'creer') {
     $n = [int]($corps.cartesParJoueur ?? 5)
     $n = [Math]::Max(2, [Math]::Min(15, $n))
+    # Liste fermee de joueurs attendus, quand on rejoue avec les memes personnes
+    $attendus = @()
+    foreach ($brut in @($corps.joueursAttendus)) {
+      $p = ([string]$brut).Trim()
+      if ($p.Length -lt 1) { continue }
+      if ($attendus | Where-Object { $_.ToLower() -eq $p.ToLower() }) { continue }
+      $attendus += $p
+    }
     $code = New-Code
     $sessions[$code] = @{
       cartesParJoueur = $n
       mode            = ($corps.mode -eq 'nominatif') ? 'nominatif' : 'simple'
       jeton           = New-Id
       ouverte         = $true
+      attendus        = $attendus
       joueurs         = @{}
     }
     return @{ statut = 200; corps = [ordered]@{
       code = $code; jeton = $sessions[$code].jeton; cartesParJoueur = $n
-      mode = $sessions[$code].mode; expireDans = 7200 } }
+      mode = $sessions[$code].mode; attendus = $attendus; expireDans = 7200 } }
   }
 
   $code = ([string]$corps.code).ToUpper().Trim()
@@ -102,6 +112,12 @@ function Invoke-FausseSession($corps) {
       $prenom = ([string]$corps.prenom).Trim()
       if ($prenom.Length -lt 1) { return @{ statut = 400; corps = @{ error = 'Indique ton prenom.' } } }
       if ($prenom.Length -gt 20) { $prenom = $prenom.Substring(0, 20) }
+      # Liste fermee : on rejoue avec les memes joueurs, personne d'autre n'entre
+      if (@($s.attendus).Count -gt 0 -and -not ($s.attendus | Where-Object { $_.ToLower() -eq $prenom.ToLower() })) {
+        return @{ statut = 409; corps = [ordered]@{
+          error = "Cette partie rejoue avec les mêmes joueurs : choisis ton prénom dans la liste."
+          motif = 'hors-liste' } }
+      }
       # Message identique a celui d'api/session.js, accents compris : les tests
       # verifient ce texte, ils doivent verifier celui que voit le joueur.
       if ($s.joueurs.Values | Where-Object { $_.prenom.ToLower() -eq $prenom.ToLower() }) {

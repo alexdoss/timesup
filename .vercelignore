@@ -7,3 +7,11 @@ scripts/
 # Documents de travail
 *.docx
 theme people.txt
+
+# Prototypes de design : références de travail, pas des écrans du jeu.
+# Aucun écran ne pointe vers eux, mais Vercel sert le dossier tel quel : sans
+# ces lignes, une maquette aux scores inventés reste ouvrable par son adresse.
+proto-*.html
+rush-app.html
+file_*.png
+CLAUDE.md

@@ -100,6 +100,25 @@ function Test-Production {
     if (-not $ok) { $echecs++ }
   }
 
+  # Les references de travail restent dans le depot mais hors du site : sans
+  # .vercelignore, une maquette aux scores inventes serait ouvrable par son
+  # adresse et laisserait croire que le jeu est casse.
+  foreach ($fichier in @('proto-scores.html', 'rush-app.html', 'CLAUDE.md')) {
+    $code = 200
+    foreach ($tentative in 1..3) {
+      $r = Get-Reponse -Url "$Racine/$fichier"
+      $code = if ($r) { $r.StatusCode } else { 'injoignable' }
+      if ($code -ne 200) { break }
+      if ($tentative -lt 3) { Start-Sleep -Seconds 4 }
+    }
+    if ($code -eq 200) {
+      Write-Host ("  ECHEC {0,-26} servi en ligne, attendu hors site" -f $fichier)
+      $echecs++
+    } else {
+      Write-Host ("  OK    {0,-26} hors du site, recu {1}" -f $fichier, $code)
+    }
+  }
+
   # Le nom du depot ne doit apparaitre nulle part cote joueur
   foreach ($page in @("$Racine/", "$Racine/rejoindre")) {
     $r = Get-Reponse -Url $page

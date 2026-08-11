@@ -64,11 +64,13 @@ document.getElementById('f').addEventListener('load', async () => {
     log('       oscillateurs crees : ' + oscs);
     log('       vibrations : ' + JSON.stringify(vibrations));
 
-    // 5 tics (1 oscillateur chacun) + buzzer (2 oscillateurs) = 7
-    check('7 sons produits : 5 tics + buzzer a 2 notes', oscs === 7);
+    // 5 tics (1 oscillateur chacun) + la cloche de fin de tour :
+    // 3 coups de 5 partiels = 15 oscillateurs, soit 20 en tout
+    check('20 sons produits : 5 tics + 3 coups de cloche', oscs === 20);
     check('6 vibrations : 5 tics + fin de tour', vibrations.length === 6);
     check('les tics vibrent brievement (20 ms)', vibrations.slice(0, 5).every(v => v === 20));
-    check('la fin de tour vibre en 3 temps', JSON.stringify(vibrations[5]) === JSON.stringify([300, 120, 300]));
+    check('la fin de tour vibre au rythme des trois coups',
+          JSON.stringify(vibrations[5]) === JSON.stringify([180, 80, 180, 80, 180]));
 
     log('SCENARIO 7 TERMINE');
   } catch (e) { log('EXCEPTION: ' + e.message + '\n' + e.stack); }

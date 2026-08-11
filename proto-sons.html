@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Rush — proto : le son de fin de tour</title>
+<style>
+:root {
+  --primary: #6D28D9; --primary-hover: #7C3AED; --primary-soft: rgba(109,40,217,.15);
+  --background: #0F172A; --surface: #1E293B; --surface-2: #273449;
+  --border: #334155; --text: #F8FAFC; --muted: #94A3B8; --muted-strong: #CBD5E1;
+  --success: #22C55E; --secondary: #F59E0B;
+  --r-md: 12px; --r-lg: 16px;
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  background: #060B18; color: var(--text); padding: 24px 16px 64px; line-height: 1.5;
+}
+.wrap { max-width: 720px; margin: 0 auto; }
+h1 { font-size: 1.5rem; margin-bottom: 6px; }
+.intro { color: var(--muted); font-size: .95rem; margin-bottom: 20px; }
+.intro b { color: var(--muted-strong); }
+
+.reglages {
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-md);
+  padding: 14px 16px; margin-bottom: 24px; font-size: .9rem; color: var(--muted-strong);
+}
+.reglages label { display: flex; align-items: center; gap: 10px; cursor: pointer; }
+.reglages input { width: 18px; height: 18px; accent-color: var(--primary); cursor: pointer; }
+.reglages p { color: var(--muted); font-size: .85rem; margin-top: 8px; }
+
+.son {
+  display: flex; align-items: center; gap: 16px;
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-lg);
+  padding: 14px 16px; margin-bottom: 12px;
+}
+.son.actuel { border-color: var(--primary-hover); background: var(--primary-soft); }
+.son .infos { flex: 1; min-width: 0; }
+.son h2 { font-size: 1rem; font-weight: 700; display: flex; align-items: center; gap: 8px; }
+.son p { color: var(--muted); font-size: .85rem; margin-top: 2px; }
+.badge {
+  background: var(--primary); color: #fff; border-radius: 999px; padding: 1px 8px;
+  font-size: .66rem; font-weight: 800; text-transform: uppercase; letter-spacing: .04em;
+}
+.btn-ecouter {
+  flex-shrink: 0; background: var(--surface-2); color: var(--text);
+  border: 1px solid var(--border); border-radius: var(--r-md);
+  padding: 12px 18px; font-size: .95rem; font-weight: 700; font-family: inherit; cursor: pointer;
+  min-width: 108px;
+}
+.btn-ecouter:hover { background: var(--primary); border-color: var(--primary-hover); }
+.btn-ecouter:active { transform: scale(.97); }
+.btn-ecouter.joue { background: var(--primary); border-color: var(--primary-hover); }
+
+.note {
+  margin-top: 26px; background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--r-md); padding: 16px; font-size: .9rem; color: var(--muted-strong);
+}
+.note h3 { font-size: .78rem; text-transform: uppercase; letter-spacing: .05em;
+  color: var(--muted); margin-bottom: 10px; }
+.note p { margin-bottom: 10px; }
+.note p:last-child { margin-bottom: 0; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <h1>Rush — le son de fin de tour</h1>
+  <p class="intro">
+    Sept buzzers, tous <b>fabriqués par le navigateur</b> : aucun fichier, aucune licence,
+    rien à télécharger. Monte le son et écoute-les l'un après l'autre.
+    Sur téléphone, la vibration part en même temps.
+  </p>
+
+  <div class="reglages">
+    <label>
+      <input type="checkbox" id="avec-tics" checked>
+      Jouer les trois derniers tics du décompte avant le buzzer
+    </label>
+    <p>C'est ainsi qu'on l'entend en partie : le buzzer arrive après les tics,
+       il doit trancher avec eux.</p>
+  </div>
+
+  <div id="liste"></div>
+
+  <div class="note">
+    <h3>Comment choisir</h3>
+    <p>Le buzzer joue dans une pièce bruyante, souvent au milieu des rires. Il doit
+      <b>couper la parole</b> sans faire sursauter : trop doux il passe inaperçu et
+      l'équipe continue de jouer, trop agressif il casse l'ambiance.</p>
+    <p>Écoute-les au volume que tu aurais en soirée, pas au casque.</p>
+    <p>Sur iPhone, aucun son ne sortira si l'interrupteur latéral est en mode silencieux :
+      c'est pour ça que la vibration accompagne toujours le buzzer.</p>
+  </div>
+
+</div>
+
+<script>
+/* ---- Même moteur que js/sound.js : ce qui sonne ici sonnera pareil dans l'app ---- */
+let ctx = null;
+function contexte() {
+  if (!ctx) ctx = new (window.AudioContext || window.webkitAudioContext)();
+  if (ctx.state === 'suspended') ctx.resume();
+  return ctx;
+}
+
+function note({ freq, freq2, type = 'sine', dur, gain = 0.25, when = 0 }) {
+  const c = contexte();
+  const t0 = c.currentTime + when;
+  const osc = c.createOscillator();
+  const g = c.createGain();
+
+  osc.type = type;
+  osc.frequency.setValueAtTime(freq, t0);
+  if (freq2) osc.frequency.exponentialRampToValueAtTime(freq2, t0 + dur);
+
+  g.gain.setValueAtTime(0.0001, t0);
+  g.gain.exponentialRampToValueAtTime(gain, t0 + 0.012);
+  g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+
+  osc.connect(g);
+  g.connect(c.destination);
+  osc.start(t0);
+  osc.stop(t0 + dur + 0.05);
+}
+
+// Une cloche tient à ses partiels non harmoniques : des multiples « faux »
+// de la fondamentale, qui s'éteignent d'autant plus vite qu'ils sont aigus.
+function cloche(base, { dur = 1.2, gain = 0.18, when = 0 } = {}) {
+  [[1, 1], [2.0, 0.55], [2.41, 0.4], [2.98, 0.28], [4.5, 0.14]].forEach(([ratio, poids]) => {
+    note({
+      freq: base * ratio, type: 'sine',
+      dur: dur * (1 - (ratio - 1) * 0.13),
+      gain: gain * poids, when
+    });
+  });
+}
+
+const SONS = [
+  {
+    id: 'actuel', actuel: true,
+    nom: 'Deux notes descendantes',
+    desc: "Ce que fait l'app aujourd'hui : deux notes graves en dents de scie.",
+    jouer: d => {
+      note({ freq: 210, type: 'sawtooth', dur: 0.30, gain: 0.22, when: d });
+      note({ freq: 155, type: 'sawtooth', dur: 0.55, gain: 0.22, when: d + 0.28 });
+    }
+  },
+  {
+    id: 'gong',
+    nom: 'Gong',
+    desc: 'Grave et long, il retombe tout seul. Solennel, plutôt doux.',
+    jouer: d => {
+      note({ freq: 98, freq2: 92, type: 'sine', dur: 1.6, gain: 0.30, when: d });
+      note({ freq: 146, freq2: 138, type: 'sine', dur: 1.2, gain: 0.14, when: d });
+      note({ freq: 233, freq2: 220, type: 'triangle', dur: 0.9, gain: 0.08, when: d });
+      note({ freq: 390, type: 'sine', dur: 0.45, gain: 0.05, when: d });
+    }
+  },
+  {
+    id: 'cloche',
+    nom: 'Cloche claire',
+    desc: 'Un seul coup cristallin qui traîne. Se détache bien du brouhaha.',
+    jouer: d => cloche(660, { dur: 1.5, gain: 0.20, when: d })
+  },
+  {
+    id: 'ring',
+    nom: 'Cloche de ring',
+    desc: 'Trois coups rapides, comme la fin d’un round de boxe. Sans équivoque.',
+    jouer: d => [0, 0.26, 0.52].forEach(w => cloche(760, { dur: 0.85, gain: 0.16, when: d + w }))
+  },
+  {
+    id: 'minuteur',
+    nom: 'Minuteur de cuisine',
+    desc: 'Un trille aigu et pressé. Très reconnaissable, un peu stressant.',
+    jouer: d => {
+      for (let i = 0; i < 14; i++) {
+        note({ freq: i % 2 ? 2350 : 1950, type: 'square', dur: 0.035, gain: 0.11, when: d + i * 0.045 });
+      }
+    }
+  },
+  {
+    id: 'plateau',
+    nom: 'Buzzer de plateau télé',
+    desc: 'Le « faux » des jeux télévisés : deux carrés désaccordés qui grognent.',
+    jouer: d => {
+      note({ freq: 175, type: 'square', dur: 0.65, gain: 0.15, when: d });
+      note({ freq: 185, type: 'square', dur: 0.65, gain: 0.15, when: d });
+    }
+  },
+  {
+    id: 'accord',
+    nom: 'Accord qui retombe',
+    desc: 'Trois notes chaudes qui descendent. Le plus doux des sept.',
+    jouer: d => [[392, 0], [330, 0.17], [262, 0.34]].forEach(([f, w]) =>
+      note({ freq: f, type: 'triangle', dur: 0.5, gain: 0.22, when: d + w }))
+  },
+  {
+    id: 'sirene',
+    nom: 'Sirène courte',
+    desc: 'Une glissade de l’aigu vers le grave. Franc, presque un klaxon.',
+    jouer: d => note({ freq: 880, freq2: 200, type: 'sawtooth', dur: 0.75, gain: 0.18, when: d })
+  }
+];
+
+// Le tic du décompte, tel qu'il existe déjà dans l'app
+function tic(when) {
+  note({ freq: 1250, type: 'triangle', dur: 0.045, gain: 0.22, when });
+}
+
+const liste = document.getElementById('liste');
+SONS.forEach(son => {
+  const bloc = document.createElement('div');
+  bloc.className = son.actuel ? 'son actuel' : 'son';
+
+  const infos = document.createElement('div');
+  infos.className = 'infos';
+  const titre = document.createElement('h2');
+  titre.textContent = son.nom;
+  if (son.actuel) {
+    const badge = document.createElement('span');
+    badge.className = 'badge';
+    badge.textContent = 'actuel';
+    titre.appendChild(badge);
+  }
+  const desc = document.createElement('p');
+  desc.textContent = son.desc;
+  infos.appendChild(titre);
+  infos.appendChild(desc);
+
+  const bouton = document.createElement('button');
+  bouton.className = 'btn-ecouter';
+  bouton.textContent = '▶ Écouter';
+  bouton.addEventListener('click', () => {
+    const avecTics = document.getElementById('avec-tics').checked;
+    let depart = 0;
+    if (avecTics) {
+      [0, 0.5, 1.0].forEach(tic);
+      depart = 1.5;
+    }
+    son.jouer(depart);
+    // La vibration de fin de tour, telle qu'elle est déjà réglée dans l'app
+    try {
+      if (navigator.vibrate) setTimeout(() => navigator.vibrate([300, 120, 300]), depart * 1000);
+    } catch { /* appareil sans vibreur */ }
+
+    bouton.classList.add('joue');
+    setTimeout(() => bouton.classList.remove('joue'), (depart + 1.2) * 1000);
+  });
+
+  bloc.appendChild(infos);
+  bloc.appendChild(bouton);
+  liste.appendChild(bloc);
+});
+</script>
+</body>
+</html>

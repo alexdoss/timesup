@@ -56,7 +56,8 @@ document.getElementById('f').addEventListener('load', async () => {
     log('       oscillateurs crees : ' + oscs + ' / vibrations : ' + vibrations.length);
     check('aucun son produit', oscs === 0);
     check('la vibration continue de fonctionner', vibrations.length === 6);
-    check('le motif de fin de tour est intact', JSON.stringify(vibrations[5]) === JSON.stringify([300, 120, 300]));
+    check('le motif de fin de tour est intact',
+          JSON.stringify(vibrations[5]) === JSON.stringify([180, 80, 180, 80, 180]));
 
     log('SCENARIO 8 TERMINE');
   } catch (e) { log('EXCEPTION: ' + e.message + '\n' + e.stack); }

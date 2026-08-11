@@ -115,6 +115,7 @@ h1 { font-size: 1.4rem; }
     <h2>3 · Ce que ça coûte, côté organisateur</h2>
     <div class="mesures">
       <div class="mesure"><div class="lbl">Publications</div><div class="val" id="m-pub">0</div></div>
+      <div class="mesure"><div class="lbl">Battements</div><div class="val" id="m-batt">0</div></div>
       <div class="mesure"><div class="lbl">Aller-retour médian</div><div class="val" id="m-rtt">–</div></div>
       <div class="mesure"><div class="lbl">Le plus lent</div><div class="val" id="m-max">–</div></div>
       <div class="mesure"><div class="lbl">Échecs</div><div class="val" id="m-ko">0</div></div>
@@ -175,7 +176,7 @@ const partie = {
 
 // Mesures des publications
 const rtts = [];
-let publications = 0, echecs = 0;
+let publications = 0, echecs = 0, battements = 0;
 
 function mediane(valeurs) {
   if (!valeurs.length) return null;
@@ -215,30 +216,46 @@ function etatPublie() {
   };
 }
 
-async function publier(motif) {
+// Signal de vie : on republie le même état, sans changer de version. L'invité
+// n'y voit aucun changement — mais l'horodatage du serveur, lui, rajeunit.
+// C'est ce qui rend une coupure détectable même entre deux tours, là où rien
+// ne bouge pendant des minutes tout à fait normalement.
+const BATTEMENT_MS = 15000;
+
+async function publier(motif, battement = false) {
   if (!partie.code) return;
   // Organisateur « muet » : on simule un téléphone verrouillé ou une app fermée.
-  // Rien n'est envoyé, et c'est à l'invité de s'en apercevoir tout seul.
-  if (partie.muet) { noter(`(muet) publication retenue : ${motif}`); return; }
-  partie.v++;
+  // Rien n'est envoyé, ni changement ni battement.
+  if (partie.muet) {
+    if (!battement) noter(`(muet) publication retenue : ${motif}`);
+    return;
+  }
+  if (!battement) partie.v++;
   const t0 = performance.now();
   try {
     await appel({ action: 'publier', code: partie.code, jeton: partie.jeton, v: partie.v, etat: etatPublie() });
     const rtt = Math.round(performance.now() - t0);
     rtts.push(rtt);
-    publications++;
-    noter(`publié v${partie.v} (${motif}) — ${rtt} ms`);
+    if (battement) {
+      battements++;
+    } else {
+      publications++;
+      noter(`publié v${partie.v} (${motif}) — ${rtt} ms`);
+    }
     erreur('');
   } catch (e) {
     echecs++;
-    noter(`ÉCHEC publication v${partie.v} (${motif}) : ${e.message}`);
-    erreur(`Publication impossible : ${e.message}`);
+    noter(`ÉCHEC ${battement ? 'battement' : 'publication v' + partie.v} : ${e.message}`);
+    if (!battement) erreur(`Publication impossible : ${e.message}`);
   }
   majMesures();
 }
 
+setInterval(() => publier('battement', true), BATTEMENT_MS);
+
 function majMesures() {
   $('m-pub').textContent = publications;
+  $('m-batt').textContent = battements;
   $('m-rtt').textContent = rtts.length ? `${mediane(rtts)} ms` : '–';
   $('m-max').textContent = rtts.length ? `${Math.max(...rtts)} ms` : '–';
   $('m-ko').textContent = echecs;
@@ -362,11 +379,16 @@ $('btn-pause').addEventListener('click', () => {
 
 $('btn-muet').addEventListener('click', () => {
   partie.muet = !partie.muet;
-  noter(partie.muet
-    ? 'organisateur muet : plus rien n\'est publié'
-    : 'publications rétablies');
   majEcran();
-  if (!partie.muet) publier('retour de l\'organisateur');
+  if (partie.muet) {
+    noter('organisateur muet : ni changement ni battement ne partent plus');
+    erreur("🔇 Coupure simulée — plus rien n'est publié. L'invité doit s'en apercevoir seul, "
+      + 'sous 45 secondes.');
+  } else {
+    noter('publications rétablies');
+    erreur('');
+    publier("retour de l'organisateur");
+  }
 });
 
 $('btn-fin-tour').addEventListener('click', () => terminerTour('tour arrêté'));

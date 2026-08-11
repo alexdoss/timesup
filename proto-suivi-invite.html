@@ -288,6 +288,17 @@ function afficher() {
     : (libelles[e.etape] || e.etape);
 }
 
+// L'organisateur republie son état toutes les 15 secondes même quand rien ne
+// change. Trois battements manqués et on le considère absent.
+const SILENCE_MS = 45000;
+
+function montrerSignal(classe, texte) {
+  const signal = $('v-signal');
+  signal.className = `signal ${classe}`;
+  signal.style.display = '';
+  signal.textContent = texte;
+}
+
 // Le décompte tourne en local, sans rien demander au serveur
 setInterval(() => {
   const chrono = $('v-chrono');
@@ -298,12 +309,21 @@ setInterval(() => {
   const age = ageEtat ? ageEtat.ms + (performance.now() - ageEtat.mesureA) : null;
   $('m-age').textContent = age === null ? '–' : `${Math.round(age / 1000)} s`;
 
+  // Le silence prime sur tout le reste : mieux vaut dire « je ne sais plus »
+  // que d'afficher un état périmé avec aplomb.
+  const silencieux = age !== null && age > SILENCE_MS && etape && etape !== 'fin-partie';
+  if (silencieux) {
+    montrerSignal('perdu',
+      `⚠️ Aucune nouvelle de l'organisateur depuis ${Math.round(age / 1000)} s`);
+    if (suitUnTour) { chrono.className = 'chrono gele'; }
+  }
+
   if (!suitUnTour) {
     chrono.textContent = '--';
     chrono.className = 'chrono off';
     $('c-ancre').textContent = '--';
     $('c-naif').textContent = '--';
-    signal.style.display = 'none';
+    if (!silencieux) signal.style.display = 'none';
     return;
   }
 
@@ -313,9 +333,7 @@ setInterval(() => {
     chrono.className = 'chrono gele';
     $('c-ancre').textContent = ancre.restant.toFixed(1);
     $('c-naif').textContent = '—';
-    signal.className = 'signal pause';
-    signal.style.display = '';
-    signal.textContent = "⏸ L'organisateur a mis la partie en pause";
+    if (!silencieux) montrerSignal('pause', "⏸ L'organisateur a mis la partie en pause");
     $('ecart-chronos').textContent =
       "En pause, le temps ne s'écoule plus : aucune horloge n'intervient dans l'affichage.";
     return;
@@ -341,13 +359,12 @@ setInterval(() => {
   // ===== Silence : le tour aurait dû se terminer, et rien n'est arrivé =====
   // C'est la seule façon, sans battement de cœur, de repérer un organisateur
   // dont le téléphone s'est verrouillé au milieu d'un tour.
+  // Repère plus rapide que le silence quand on est en plein tour : le décompte
+  // est tombé à zéro et l'organisateur n'a rien annoncé.
+  if (silencieux) return;
   const depuisLaFin = ecoule - ancre.restant;
   if (depuisLaFin > 4) {
-    signal.className = 'signal perdu';
-    signal.style.display = '';
-    signal.textContent = age !== null && age > 90000
-      ? `⚠️ Aucune nouvelle de l'organisateur depuis ${Math.round(age / 1000)} s`
-      : "Le tour devrait être fini — en attente de l'organisateur…";
+    montrerSignal('perdu', "Le tour devrait être fini — en attente de l'organisateur…");
   } else {
     signal.style.display = 'none';
   }
@@ -365,11 +382,15 @@ function majMesures() {
 
   const parMinute = 60000 / intervalle;
   const pourUnePartie = Math.round(9 * parMinute * 45);
+  // 45 min de battements toutes les 15 s, côté organisateur
+  const battements = 180;
+  const total = pourUnePartie + battements;
   $('projection').textContent =
     `À ce rythme : ${parMinute.toFixed(0)} lectures par minute et par invité. `
-    + `Pour 9 invités pendant 45 minutes, environ ${pourUnePartie.toLocaleString('fr-FR')} commandes, `
-    + `soit ${(500000 / pourUnePartie).toFixed(0)} parties par mois dans le forfait gratuit `
-    + `— avant l'économie de la mise en veille.`;
+    + `Pour 9 invités pendant 45 minutes, environ ${pourUnePartie.toLocaleString('fr-FR')} lectures `
+    + `plus ${battements} battements de l'organisateur, soit ${total.toLocaleString('fr-FR')} commandes `
+    + `— ${(500000 / total).toFixed(0)} parties par mois dans le forfait gratuit, `
+    + `avant l'économie de la mise en veille.`;
 }
 
 // ===== Boucle, veille, reprise =====

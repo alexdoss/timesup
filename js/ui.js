@@ -42,7 +42,9 @@ export function showCard(word, remaining) {
   document.getElementById('cards-left').textContent = remaining;
 }
 
-export function updateRoundScreen(round, teams, roundLabel) {
+// Le grand chiffre montre la manche en cours — celle qui se joue — et le total
+// de la partie passe dans le rappel. Au premier tour d'une manche il affiche 0 : voulu.
+export function updateRoundScreen(round, teams, roundLabel, roundScores = [0, 0]) {
   document.getElementById('round-title').textContent = roundLabel;
   const roundName = document.getElementById('round-name-label');
   if (roundName) roundName.textContent = `${round.icon} ${round.name}`;
@@ -50,8 +52,10 @@ export function updateRoundScreen(round, teams, roundLabel) {
   document.getElementById('round-description').textContent = round.desc;
   document.getElementById('round-team1-name').textContent = teams[0].name;
   document.getElementById('round-team2-name').textContent = teams[1].name;
-  document.getElementById('round-team1-score').textContent = teams[0].score;
-  document.getElementById('round-team2-score').textContent = teams[1].score;
+  document.getElementById('round-team1-score').textContent = roundScores[0];
+  document.getElementById('round-team2-score').textContent = roundScores[1];
+  document.getElementById('round-total').textContent =
+    `Total de la partie : ${teams[0].score} – ${teams[1].score}`;
 }
 
 export function updateTurnInfo(teamName) {
@@ -141,33 +145,76 @@ export function showTurnResult({ title, teamName, score, found, missed }, onRemo
   if (hint) hint.style.display = found.length || missed.length ? '' : 'none';
 }
 
-export function showRoundEnd(roundNum, teams, roundScores) {
+// Une ligne du tableau de scores. `ids` nomme les cellules dont les tests et
+// le reste de l'app ont besoin ; les lignes de manches n'en ont pas.
+function ligneScore(libelle, valeurs, classe = '', ids = []) {
+  const tr = document.createElement('tr');
+  if (classe) tr.className = classe;
+
+  const th = document.createElement('th');
+  th.scope = 'row';
+  th.textContent = libelle;
+  tr.appendChild(th);
+
+  valeurs.forEach((valeur, index) => {
+    const td = document.createElement('td');
+    td.className = 'score';
+    td.textContent = valeur;
+    if (ids[index]) td.id = ids[index];
+    tr.appendChild(td);
+  });
+  return tr;
+}
+
+// history : [{ round, scores }] pour chaque manche déjà jouée, la dernière
+// étant celle qui vient de s'achever.
+export function showRoundEnd(roundNum, teams, history) {
   document.getElementById('round-end-title').textContent = `Fin de la manche ${roundNum}`;
   document.getElementById('end-team1-name').textContent = teams[0].name;
   document.getElementById('end-team2-name').textContent = teams[1].name;
-  document.getElementById('end-team1-round').textContent = roundScores[0];
-  document.getElementById('end-team2-round').textContent = roundScores[1];
-  document.getElementById('end-team1-score').textContent = teams[0].score;
-  document.getElementById('end-team2-score').textContent = teams[1].score;
+
+  const corps = document.getElementById('end-scores');
+  corps.innerHTML = '';
+  history.forEach((ligne, index) => {
+    corps.appendChild(ligneScore(
+      `${ligne.round.icon} ${ligne.round.name}`,
+      ligne.scores,
+      index === history.length - 1 ? 'manche-en-cours' : 'manche-passee'
+    ));
+  });
+  corps.appendChild(ligneScore(
+    'Total partie', teams.map(equipe => equipe.score),
+    'score-total', ['end-team1-score', 'end-team2-score']
+  ));
 }
 
 // session : { totals, parties } quand plusieurs parties s'enchaînent, sinon null
-export function showFinalScreen(teams, session = null) {
+export function showFinalScreen(teams, session = null, history = []) {
   document.getElementById('final-team1-name').textContent = teams[0].name;
   document.getElementById('final-team2-name').textContent = teams[1].name;
-  document.getElementById('final-team1-score').textContent = teams[0].score;
-  document.getElementById('final-team2-score').textContent = teams[1].score;
 
-  // La ligne de cumul n'a de sens qu'à partir de la deuxième partie
-  const row = document.getElementById('session-row');
-  if (row) {
-    row.style.display = session ? '' : 'none';
-    if (session) {
-      document.getElementById('session-label').textContent = `Soirée (${session.parties} parties)`;
-      document.getElementById('session-team1-score').textContent = session.totals[0];
-      document.getElementById('session-team2-score').textContent = session.totals[1];
-    }
-  }
+  const corps = document.getElementById('final-scores');
+  corps.innerHTML = '';
+  history.forEach(ligne => corps.appendChild(
+    ligneScore(`${ligne.round.icon} ${ligne.round.name}`, ligne.scores, 'manche-passee')
+  ));
+  corps.appendChild(ligneScore(
+    'Cette partie', teams.map(equipe => equipe.score),
+    'score-total', ['final-team1-score', 'final-team2-score']
+  ));
+
+  // La ligne de cumul n'a de sens qu'à partir de la deuxième partie : elle est
+  // construite dans tous les cas, puis masquée, pour rester interrogeable.
+  // « Soirée » supposait qu'on joue le soir : le libellé ne dit plus que le compte.
+  const cumul = ligneScore(
+    session ? `Cumul des ${session.parties} parties` : 'Cumul des parties',
+    session ? session.totals : [0, 0],
+    'score-cumul', ['session-team1-score', 'session-team2-score']
+  );
+  cumul.id = 'session-row';
+  cumul.querySelector('th').id = 'session-label';
+  if (!session) cumul.style.display = 'none';
+  corps.appendChild(cumul);
 
   const diff = teams[0].score - teams[1].score;
   let winnerText;
@@ -695,22 +742,70 @@ export function renderCustomThemes(themes, onOpen, onDelete) {
   });
 }
 
-export function renderPlayerStats(playerStats, teams) {
-  const container = document.getElementById('player-stats');
-  // Sort players by score descending
-  const allPlayers = [];
-  teams.forEach(team => {
-    team.players.forEach(p => {
-      allPlayers.push({ name: p, team: team.name, found: playerStats[p]?.found || 0 });
-    });
-  });
-  allPlayers.sort((a, b) => b.found - a.found);
+function cellule(balise, texte, titre) {
+  const el = document.createElement(balise);
+  el.textContent = texte;
+  if (titre) el.title = titre;
+  return el;
+}
 
-  container.innerHTML = `
-    <h3>📊 Statistiques joueurs</h3>
-    <table>
-      <tr><th>Joueur</th><th>Équipe</th><th>Trouvés</th></tr>
-      ${allPlayers.map(p => `<tr><td>${p.name}</td><td>${p.team}</td><td>${p.found}</td></tr>`).join('')}
-    </table>
-  `;
+// Le détail des joueurs, replié : l'écran de fin reste court même à 10 joueurs
+// et 5 manches, et le résumé donne déjà le meilleur sans qu'on ouvre.
+// joueurs : getPlayerBreakdown() — manches : getRoundHistory()
+export function renderPlayerStats(joueurs, teams, manches) {
+  const container = document.getElementById('player-stats');
+  container.innerHTML = '';
+  if (!joueurs.length) return;
+
+  const meilleur = [...joueurs].sort((a, b) => b.total - a.total)[0];
+
+  const tiroir = document.createElement('details');
+  tiroir.className = 'drawer';
+  tiroir.id = 'stats-joueurs';
+
+  const resume = document.createElement('summary');
+  resume.textContent = `📊 Les joueurs — ${meilleur.name} en tête avec ${meilleur.total}`;
+  tiroir.appendChild(resume);
+
+  const table = document.createElement('table');
+  table.className = 'table-joueurs';
+
+  const thead = document.createElement('thead');
+  const enTete = document.createElement('tr');
+  enTete.appendChild(cellule('th', 'Joueur'));
+  // L'icône seule tient dans la colonne ; le nom complet reste en infobulle
+  manches.forEach(m => enTete.appendChild(cellule('th', m.round.icon, m.round.name)));
+  enTete.appendChild(cellule('th', 'Tot.'));
+  thead.appendChild(enTete);
+  table.appendChild(thead);
+
+  const corps = document.createElement('tbody');
+  joueurs.forEach((joueur, index) => {
+    const tr = document.createElement('tr');
+    // Un trait sépare les deux équipes : les joueurs sont groupés, pas classés
+    if (index > 0 && joueurs[index - 1].team !== joueur.team) tr.className = 'change-equipe';
+
+    const nom = document.createElement('th');
+    const puce = document.createElement('span');
+    puce.className = 'puce-equipe';
+    // La couleur vient de l'équipe : la coder ici en ferait une troisième copie
+    puce.style.background = teams[joueur.team]?.color || 'transparent';
+    nom.appendChild(puce);
+    // textContent, pas innerHTML : en saisie partagée les prénoms viennent
+    // du téléphone des invités et ne doivent jamais être interprétés en HTML
+    nom.appendChild(document.createTextNode(joueur.name));
+    tr.appendChild(nom);
+
+    joueur.perRound.forEach(valeur => tr.appendChild(cellule('td', String(valeur))));
+    const total = cellule('td', String(joueur.total));
+    total.className = 'total-joueur';
+    tr.appendChild(total);
+    corps.appendChild(tr);
+  });
+  table.appendChild(corps);
+  const boite = document.createElement('div');
+  boite.className = 'boite-joueurs';
+  boite.appendChild(table);
+  tiroir.appendChild(boite);
+  container.appendChild(tiroir);
 }

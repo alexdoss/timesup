@@ -522,15 +522,21 @@
         <p id="round-name-label" class="round-name-label">🗣️ Description libre</p>
         <div id="round-icon" class="round-icon">🗣️</div>
         <p id="round-description" class="round-desc"></p>
-        <div class="score-board">
-          <div class="score-team">
-            <span id="round-team1-name">Équipe 1</span>
-            <span id="round-team1-score" class="score">0</span>
+        <!-- Le grand chiffre est celui de la manche en cours ; le total de la
+             partie tient dans le rappel juste en dessous. -->
+        <div class="bloc-score">
+          <p class="score-cap">Score de la manche</p>
+          <div class="score-board">
+            <div class="score-team">
+              <span id="round-team1-name">Équipe 1</span>
+              <span id="round-team1-score" class="score">0</span>
+            </div>
+            <div class="score-team">
+              <span id="round-team2-name">Équipe 2</span>
+              <span id="round-team2-score" class="score">0</span>
+            </div>
           </div>
-          <div class="score-team">
-            <span id="round-team2-name">Équipe 2</span>
-            <span id="round-team2-score" class="score">0</span>
-          </div>
+          <p id="round-total" class="score-rappel"></p>
         </div>
         <p id="current-team-turn" class="turn-info"></p>
         <p id="current-player" class="player-info"></p>
@@ -615,18 +621,8 @@
               <th id="end-team2-name">Équipe 2</th>
             </tr>
           </thead>
-          <tbody>
-            <tr>
-              <th scope="row">Cette manche</th>
-              <td id="end-team1-round" class="score">0</td>
-              <td id="end-team2-round" class="score">0</td>
-            </tr>
-            <tr class="score-total">
-              <th scope="row">Total partie</th>
-              <td id="end-team1-score" class="score">0</td>
-              <td id="end-team2-score" class="score">0</td>
-            </tr>
-          </tbody>
+          <!-- Une ligne par manche jouée, puis le total : rempli par showRoundEnd() -->
+          <tbody id="end-scores"></tbody>
         </table>
         <button id="btn-next-round" class="btn btn-primary">Manche suivante ▶️</button>
       </div>
@@ -645,18 +641,8 @@
               <th id="final-team2-name">Équipe 2</th>
             </tr>
           </thead>
-          <tbody>
-            <tr>
-              <th scope="row">Cette partie</th>
-              <td id="final-team1-score" class="score">0</td>
-              <td id="final-team2-score" class="score">0</td>
-            </tr>
-            <tr id="session-row" class="score-total" style="display:none">
-              <th scope="row" id="session-label">Soirée</th>
-              <td id="session-team1-score" class="score">0</td>
-              <td id="session-team2-score" class="score">0</td>
-            </tr>
-          </tbody>
+          <!-- Détail par manche, total, puis cumul des parties : showFinalScreen() -->
+          <tbody id="final-scores"></tbody>
         </table>
         <div id="player-stats" class="player-stats"></div>
         <button id="btn-replay" class="btn btn-primary">🔄 Rejouer avec les mêmes joueurs</button>

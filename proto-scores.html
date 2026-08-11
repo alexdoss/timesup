@@ -1,0 +1,521 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Rush — proto : affichage des scores</title>
+<style>
+:root {
+  --primary: #6D28D9; --primary-hover: #7C3AED;
+  --background: #0F172A; --surface: #1E293B; --surface-2: #273449;
+  --border: #334155; --text: #F8FAFC; --muted: #94A3B8; --muted-strong: #CBD5E1;
+  --success: #22C55E; --secondary: #F59E0B;
+  --r-sm: 8px; --r-md: 12px;
+  --t1: #d6336c; --t2: #33c26a;
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  background: #060B18; color: var(--text); padding: 24px 16px 64px; line-height: 1.5;
+}
+.wrap { max-width: 940px; margin: 0 auto; }
+h1 { font-size: 1.5rem; margin-bottom: 6px; }
+.intro { color: var(--muted); margin-bottom: 24px; font-size: .95rem; }
+.intro b { color: var(--muted-strong); }
+
+/* --- navigation entre les 3 écrans --- */
+.pages { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 28px;
+  border-bottom: 1px solid var(--border); padding-bottom: 20px; }
+.page-tab {
+  background: var(--surface-2); color: var(--muted-strong); border: 1px solid var(--border);
+  border-radius: var(--r-md); padding: 10px 18px; font-size: .92rem; font-weight: 700;
+  cursor: pointer; font-family: inherit;
+}
+.page-tab.on { background: var(--primary); border-color: var(--primary-hover); color: #fff; }
+.page { display: none; }
+.page.on { display: block; }
+h2 { font-size: 1.15rem; margin-bottom: 4px; }
+.us { color: var(--muted); font-size: .9rem; margin-bottom: 18px; }
+
+/* --- sélecteur de variante --- */
+.tabs { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 20px; }
+.tab {
+  background: var(--surface); color: var(--muted-strong); border: 1px solid var(--border);
+  border-radius: 999px; padding: 8px 16px; font-size: .88rem; font-weight: 600;
+  cursor: pointer; font-family: inherit;
+}
+.tab.on { background: var(--primary); border-color: var(--primary-hover); color: #fff; }
+
+.stage { display: flex; gap: 28px; align-items: flex-start; flex-wrap: wrap; }
+.notes {
+  flex: 1; min-width: 250px; background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--r-md); padding: 16px; font-size: .9rem;
+}
+.notes h3 { font-size: .78rem; text-transform: uppercase; letter-spacing: .05em;
+  color: var(--muted); margin-bottom: 10px; }
+.notes p { margin-bottom: 10px; }
+.notes p:last-child { margin-bottom: 0; }
+.plus::before { content: '＋ '; color: var(--success); font-weight: 700; }
+.minus::before { content: '− '; color: var(--secondary); font-weight: 700; }
+.reco { display: inline-block; background: var(--success); color: #06210f;
+  border-radius: 999px; padding: 1px 8px; font-size: .7rem; font-weight: 800;
+  text-transform: uppercase; letter-spacing: .04em; margin-left: 6px; }
+
+/* --- maquette téléphone --- */
+.phone {
+  width: 360px; background: var(--background); border: 1px solid var(--border);
+  border-radius: 28px; padding: 22px 20px 26px; box-shadow: 0 12px 40px rgba(0,0,0,.5);
+  position: relative; flex-shrink: 0;
+}
+.phone .close { position: absolute; top: 14px; right: 16px; color: var(--muted); font-size: 1.1rem; }
+.variant { display: none; }
+.variant.on { display: block; }
+.screen-title { font-size: 1.3rem; font-weight: 800; text-align: center; margin: 8px 0 4px; }
+.round-name { text-align: center; color: var(--muted); font-size: .85rem; }
+.round-icon { text-align: center; font-size: 2.6rem; margin: 8px 0 2px; }
+.round-desc { text-align: center; color: var(--muted); font-size: .82rem; margin-bottom: 14px; }
+.winner { text-align: center; font-size: 1.15rem; font-weight: 800; color: var(--secondary);
+  margin: 10px 0 4px; }
+
+table.scores { width: 100%; border-collapse: collapse; margin: 14px 0; }
+table.scores th, table.scores td { padding: 7px 6px; }
+table.scores thead th { font-size: .72rem; font-weight: 700; color: var(--muted);
+  text-transform: uppercase; letter-spacing: .03em; }
+table.scores thead th.e1 { color: var(--t1); }
+table.scores thead th.e2 { color: var(--t2); }
+table.scores tbody th { text-align: left; font-size: .8rem; font-weight: 600;
+  color: var(--muted); white-space: nowrap; }
+table.scores td { text-align: center; font-size: 1.25rem; font-weight: 800; }
+tr.past td { color: var(--muted); font-size: 1.05rem; font-weight: 600; }
+tr.now { background: rgba(109,40,217,.18); }
+tr.now th, tr.now td { color: var(--text); }
+tr.now th:first-child { border-radius: var(--r-sm) 0 0 var(--r-sm); }
+tr.now td:last-child { border-radius: 0 var(--r-sm) var(--r-sm) 0; }
+tr.total { border-top: 1px solid var(--border); }
+tr.total th { color: var(--muted-strong); font-weight: 800; text-transform: uppercase; font-size: .72rem; }
+tr.total td { font-size: 1.6rem; }
+tr.soiree th { color: var(--secondary); font-weight: 800; text-transform: uppercase; font-size: .72rem; }
+tr.soiree td { font-size: 1.1rem; color: var(--muted-strong); }
+tr.soiree { border-top: 1px dashed var(--border); }
+
+/* --- tableau des joueurs --- */
+.joueurs { width: 100%; border-collapse: collapse; margin-top: 6px; }
+.joueurs th, .joueurs td { padding: 6px 4px; font-size: .85rem; }
+.joueurs thead th { font-size: .68rem; text-transform: uppercase; letter-spacing: .04em;
+  color: var(--muted); font-weight: 700; }
+.joueurs tbody th { text-align: left; font-weight: 600; color: var(--text); }
+.joueurs td { text-align: center; color: var(--muted-strong); }
+.joueurs td.tot { font-weight: 800; color: var(--text); }
+.joueurs .puce { display: inline-block; width: 7px; height: 7px; border-radius: 50%;
+  margin-right: 6px; vertical-align: middle; }
+.joueurs .p1 { background: var(--t1); } .joueurs .p2 { background: var(--t2); }
+.joueurs tbody tr.sep td, .joueurs tbody tr.sep th { border-top: 1px solid var(--border); }
+.bloc-titre { font-size: .78rem; text-transform: uppercase; letter-spacing: .05em;
+  color: var(--muted); font-weight: 700; margin: 18px 0 2px; }
+
+.btn { display: block; width: 100%; padding: 14px; border: 0; border-radius: var(--r-md);
+  background: var(--primary); color: #fff; font-size: 1rem; font-weight: 700;
+  font-family: inherit; margin-top: 16px; cursor: pointer; }
+.btn.sec { background: var(--surface-2); color: var(--text); margin-top: 8px; }
+.btn-link { display: block; width: 100%; background: none; border: 0; color: var(--muted);
+  font-size: .85rem; font-family: inherit; margin-top: 12px; text-decoration: underline; cursor: pointer; }
+details.detail { margin: 10px 0 0; background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--r-md); padding: 10px 12px; }
+details.detail summary { font-size: .85rem; color: var(--muted-strong); font-weight: 600; cursor: pointer; }
+details.detail table { margin: 10px 0 2px; }
+
+.board { display: flex; justify-content: center; gap: 36px; margin: 16px 0 6px; }
+.board .team { text-align: center; }
+.board .lbl { font-size: .72rem; font-weight: 700; text-transform: uppercase;
+  letter-spacing: .03em; display: block; margin-bottom: 2px; }
+.board .lbl.e1 { color: var(--t1); } .board .lbl.e2 { color: var(--t2); }
+.board .val { font-size: 2.4rem; font-weight: 800; }
+.rappel { text-align: center; color: var(--muted); font-size: .82rem; margin-bottom: 10px; }
+.rappel b { color: var(--muted-strong); }
+.turn-info { text-align: center; font-size: .9rem; margin-top: 10px; }
+.player-info { text-align: center; color: var(--muted); font-size: .85rem; margin-top: 2px; }
+.mini-cap { text-align: center; font-size: .7rem; text-transform: uppercase;
+  letter-spacing: .05em; color: var(--muted); }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <h1>Rush — où afficher les scores</h1>
+  <p class="intro">
+    Maquettes hors application, rien n'est branché. Exemple commun aux trois écrans :
+    <b>deuxième partie de la soirée</b>, 3 manches, 6 joueurs.
+    Manche 1 → 8/6, manche 2 → 5/7, manche 3 → 7/4, soit <b>20 à 17</b>.
+  </p>
+
+  <div class="pages">
+    <button class="page-tab on" data-page="p1">1 · Lancement de tour</button>
+    <button class="page-tab" data-page="p2">2 · Fin de manche</button>
+    <button class="page-tab" data-page="p3">3 · Fin de partie</button>
+  </div>
+
+  <!-- ============================================================ -->
+  <!-- PAGE 1 — LANCEMENT DE TOUR                                    -->
+  <!-- ============================================================ -->
+  <div class="page on" id="p1">
+    <h2>Écran de lancement de tour</h2>
+    <p class="us">Aujourd'hui : uniquement le score cumulé de la partie.
+      Ici, au milieu de la manche 3 : 4 – 3 sur la manche, 17 – 16 sur la partie.</p>
+
+    <div class="tabs">
+      <button class="tab on" data-cible="b1">A — Deux lignes</button>
+      <button class="tab" data-cible="b2">B — Gros total + rappel</button>
+      <button class="tab" data-cible="b3">C — Gros manche + rappel</button>
+    </div>
+
+    <div class="stage">
+      <div class="phone">
+        <span class="close">✕</span>
+
+        <div class="variant on" id="b1">
+          <p class="screen-title">Manche 3/3</p>
+          <p class="round-name">🤫 Mime</p>
+          <div class="round-icon">🤫</div>
+          <p class="round-desc">Fais deviner sans parler, uniquement par les gestes.</p>
+          <table class="scores">
+            <thead><tr><th></th><th class="e1">Équipe 1</th><th class="e2">Équipe 2</th></tr></thead>
+            <tbody>
+              <tr class="now"><th>Cette manche</th><td>4</td><td>3</td></tr>
+              <tr class="total"><th>Total partie</th><td>17</td><td>16</td></tr>
+            </tbody>
+          </table>
+          <p class="turn-info">🎯 C'est au tour de : Équipe 1</p>
+          <p class="player-info">Marc fait deviner</p>
+          <button class="btn">Lancer le tour ▶️</button>
+          <button class="btn-link">👥 Les équipes</button>
+        </div>
+
+        <div class="variant" id="b2">
+          <p class="screen-title">Manche 3/3</p>
+          <p class="round-name">🤫 Mime</p>
+          <div class="round-icon">🤫</div>
+          <p class="round-desc">Fais deviner sans parler, uniquement par les gestes.</p>
+          <div class="board">
+            <div class="team"><span class="lbl e1">Équipe 1</span><span class="val">17</span></div>
+            <div class="team"><span class="lbl e2">Équipe 2</span><span class="val">16</span></div>
+          </div>
+          <p class="rappel">Sur cette manche : <b>4</b> – <b>3</b></p>
+          <p class="turn-info">🎯 C'est au tour de : Équipe 1</p>
+          <p class="player-info">Marc fait deviner</p>
+          <button class="btn">Lancer le tour ▶️</button>
+          <button class="btn-link">👥 Les équipes</button>
+        </div>
+
+        <div class="variant" id="b3">
+          <p class="screen-title">Manche 3/3</p>
+          <p class="round-name">🤫 Mime</p>
+          <div class="round-icon">🤫</div>
+          <p class="round-desc">Fais deviner sans parler, uniquement par les gestes.</p>
+          <p class="mini-cap" style="margin-top:6px">Score de la manche</p>
+          <div class="board" style="margin-top:4px">
+            <div class="team"><span class="lbl e1">Équipe 1</span><span class="val">4</span></div>
+            <div class="team"><span class="lbl e2">Équipe 2</span><span class="val">3</span></div>
+          </div>
+          <p class="rappel">Total de la partie : <b>17</b> – <b>16</b></p>
+          <p class="turn-info">🎯 C'est au tour de : Équipe 1</p>
+          <p class="player-info">Marc fait deviner</p>
+          <button class="btn">Lancer le tour ▶️</button>
+          <button class="btn-link">👥 Les équipes</button>
+        </div>
+      </div>
+
+      <div class="notes">
+        <h3>Ce qui les sépare</h3>
+        <p class="plus"><b>A</b><span class="reco">ma reco</span> — exactement le tableau des deux
+          autres écrans : un seul objet à comprendre pour toute la partie.
+          Le gros chiffre disparaît, l'écran devient plus sage.</p>
+        <p class="plus"><b>B</b> — l'écran actuel intact, plus une ligne discrète.
+          Le moins de changement, mais la manche passe au second plan.</p>
+        <p class="plus"><b>C</b> — met en avant la manche en cours, celle qui se joue,
+          et relègue le cumul. Renverse la hiérarchie d'aujourd'hui.</p>
+        <p class="minus">Au premier tour d'une manche, la ligne manche affiche <b>0 – 0</b>
+          dans les trois cas — tu l'as validé.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================================================ -->
+  <!-- PAGE 2 — FIN DE MANCHE                                        -->
+  <!-- ============================================================ -->
+  <div class="page" id="p2">
+    <h2>Écran de fin de manche</h2>
+    <p class="us">Aujourd'hui : « Cette manche » et « Total partie », rien de plus.</p>
+
+    <div class="tabs">
+      <button class="tab on" data-cible="a1">A — Manche 1, 2, 3…</button>
+      <button class="tab" data-cible="a2">B — Nom de la manche</button>
+      <button class="tab" data-cible="a3">C — Détail repliable</button>
+    </div>
+
+    <div class="stage">
+      <div class="phone">
+        <span class="close">✕</span>
+
+        <div class="variant on" id="a1">
+          <p class="screen-title">Fin de la manche 3/3</p>
+          <table class="scores">
+            <thead><tr><th></th><th class="e1">Équipe 1</th><th class="e2">Équipe 2</th></tr></thead>
+            <tbody>
+              <tr class="past"><th>Manche 1</th><td>8</td><td>6</td></tr>
+              <tr class="past"><th>Manche 2</th><td>5</td><td>7</td></tr>
+              <tr class="now"><th>Manche 3</th><td>7</td><td>4</td></tr>
+              <tr class="total"><th>Total partie</th><td>20</td><td>17</td></tr>
+            </tbody>
+          </table>
+          <button class="btn">Voir le résultat 🏆</button>
+        </div>
+
+        <div class="variant" id="a2">
+          <p class="screen-title">Fin de la manche 3/3</p>
+          <table class="scores">
+            <thead><tr><th></th><th class="e1">Équipe 1</th><th class="e2">Équipe 2</th></tr></thead>
+            <tbody>
+              <tr class="past"><th>🗣️ Description</th><td>8</td><td>6</td></tr>
+              <tr class="past"><th>1️⃣ Un seul mot</th><td>5</td><td>7</td></tr>
+              <tr class="now"><th>🤫 Mime</th><td>7</td><td>4</td></tr>
+              <tr class="total"><th>Total partie</th><td>20</td><td>17</td></tr>
+            </tbody>
+          </table>
+          <button class="btn">Voir le résultat 🏆</button>
+        </div>
+
+        <div class="variant" id="a3">
+          <p class="screen-title">Fin de la manche 3/3</p>
+          <table class="scores">
+            <thead><tr><th></th><th class="e1">Équipe 1</th><th class="e2">Équipe 2</th></tr></thead>
+            <tbody>
+              <tr class="now"><th>Cette manche</th><td>7</td><td>4</td></tr>
+              <tr class="total"><th>Total partie</th><td>20</td><td>17</td></tr>
+            </tbody>
+          </table>
+          <details class="detail">
+            <summary>📊 Le détail des manches</summary>
+            <table class="scores">
+              <tbody>
+                <tr class="past"><th>🗣️ Description</th><td>8</td><td>6</td></tr>
+                <tr class="past"><th>1️⃣ Un seul mot</th><td>5</td><td>7</td></tr>
+                <tr class="past"><th>🤫 Mime</th><td>7</td><td>4</td></tr>
+              </tbody>
+            </table>
+          </details>
+          <button class="btn">Voir le résultat 🏆</button>
+        </div>
+      </div>
+
+      <div class="notes">
+        <h3>Ce qui les sépare</h3>
+        <p class="plus"><b>A</b> — lisible d'un coup d'œil, mais « Manche 2 » ne rappelle pas
+          ce qu'on y a joué.</p>
+        <p class="plus"><b>B</b><span class="reco">ma reco</span> — on revit la partie
+          (« ah oui, le mime »). Libellés plus longs : vérifié, ça tient jusqu'à 5 manches
+          sur 360 px de large.</p>
+        <p class="plus"><b>C</b> — l'écran garde son allure d'aujourd'hui, le détail est là
+          pour qui le cherche. Un tiroir de plus, alors qu'on en a déjà deux en fin de tour.</p>
+        <p class="minus">Le total est <i>exactement</i> la somme des lignes au-dessus.
+          Redite assumée : elle évite au groupe de compter de tête.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================================================ -->
+  <!-- PAGE 3 — FIN DE PARTIE                                        -->
+  <!-- ============================================================ -->
+  <div class="page" id="p3">
+    <h2>Écran de fin de partie</h2>
+    <p class="us">Aujourd'hui : « Cette partie », « Soirée » si ce n'est pas la première,
+      et un tableau des joueurs <b>qui existe déjà</b> (Joueur / Équipe / Trouvés).
+      Ce qu'on ajoute : le détail manche par manche.
+      Le second sélecteur pousse l'écran dans ses retranchements.</p>
+
+    <div class="tabs" id="tabs3">
+      <button class="tab on" data-cible="c1">A — Joueurs : total</button>
+      <button class="tab" data-cible="c2">B — Joueurs : par manche</button>
+      <button class="tab" data-cible="c3">C — Joueurs repliés</button>
+    </div>
+    <div class="tabs" id="tailles3">
+      <button class="tab on" data-jeu="court">3 manches · 6 joueurs</button>
+      <button class="tab" data-jeu="long">5 manches · 10 joueurs</button>
+    </div>
+
+    <div class="stage">
+      <div class="phone" id="phone3"><span class="close">✕</span></div>
+
+      <div class="notes">
+        <h3>Ce qui les sépare</h3>
+        <p class="plus"><b>A</b> — ce qui existe déjà, remis au propre : un classement,
+          la pastille de couleur remplace la colonne « Équipe ». On sait qui a gagné,
+          pas comment.</p>
+        <p class="plus"><b>B</b> — chaque joueur manche par manche : c'est là qu'on voit
+          qui porte le mime et qui s'écroule sur le mot unique. Les joueurs restent
+          groupés par équipe, donc pas de classement.</p>
+        <p class="plus"><b>C</b><span class="reco">ma reco</span> — même contenu que B,
+          mais replié : le podium garde la vedette et l'écran reste court quel que soit
+          le format de la partie. Un tap pour le détail.</p>
+        <p class="minus"><b>Hauteurs mesurées</b> (largeur 360, tiroir fermé).
+          3 manches · 6 joueurs : A 714, B 715, C 505.
+          5 manches · 10 joueurs : A 922, B 923, C 583 — et 948 une fois C ouvert.
+          A et B font donc exactement la même longueur : le nombre de joueurs pèse,
+          pas le nombre de colonnes.</p>
+        <p class="minus">Un écran de téléphone offre 640 à 750 px utiles. Au format
+          maximum, A et B obligent à faire défiler avant d'atteindre « Rejouer ».
+          C non.</p>
+        <p class="minus">Aucun débordement horizontal, même à 320 px de large sur
+          7 colonnes. Vérifié aussi avec « Marie-Angélique » : la colonne des prénoms
+          s'élargit, les chiffres se resserrent, rien ne déborde.</p>
+        <p class="minus">Le tableau des joueurs n'existe qu'en <b>mode nominatif</b> :
+          en mode simple, il n'y a personne à lister.</p>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+document.querySelector('.pages').addEventListener('click', e => {
+  const onglet = e.target.closest('.page-tab');
+  if (!onglet) return;
+  document.querySelectorAll('.page-tab').forEach(t => t.classList.toggle('on', t === onglet));
+  document.querySelectorAll('.page').forEach(p => p.classList.toggle('on', p.id === onglet.dataset.page));
+});
+
+document.querySelectorAll('.tabs:not([id])').forEach(groupe => {
+  groupe.addEventListener('click', e => {
+    const onglet = e.target.closest('.tab');
+    if (!onglet) return;
+    groupe.querySelectorAll('.tab').forEach(t => t.classList.toggle('on', t === onglet));
+    const phone = groupe.parentElement.querySelector('.stage .phone');
+    phone.querySelectorAll('.variant').forEach(v =>
+      v.classList.toggle('on', v.id === onglet.dataset.cible));
+  });
+});
+/* ---- Écran de fin de partie : contenu calculé, pour pouvoir changer de format ---- */
+const JEUX = {
+  court: {
+    manches: [
+      { icone: '🗣️', nom: 'Description', s: [8, 6] },
+      { icone: '1️⃣', nom: 'Un seul mot', s: [5, 7] },
+      { icone: '🤫', nom: 'Mime',        s: [7, 4] }
+    ],
+    total: [20, 17], soiree: [38, 35], parties: 2,
+    joueurs: [
+      { n: 'Marc', e: 0, m: [3, 2, 3] }, { n: 'Sam', e: 0, m: [3, 1, 2] },
+      { n: 'Léa',  e: 0, m: [2, 2, 2] }, { n: 'Inès', e: 1, m: [2, 3, 1] },
+      { n: 'Jo',   e: 1, m: [2, 2, 2] }, { n: 'Tom',  e: 1, m: [2, 2, 1] }
+    ]
+  },
+  long: {
+    manches: [
+      { icone: '🗣️', nom: 'Description', s: [12, 10] },
+      { icone: '1️⃣', nom: 'Un seul mot', s: [9, 11] },
+      { icone: '🤫', nom: 'Mime',        s: [11, 8] },
+      { icone: '🗿', nom: 'Pose figée',  s: [7, 9] },
+      { icone: '🎭', nom: 'Pantin',      s: [8, 7] }
+    ],
+    total: [47, 45], soiree: [88, 83], parties: 2,
+    joueurs: [
+      { n: 'Marc', e: 0, m: [3, 2, 3, 1, 2] }, { n: 'Sam', e: 0, m: [2, 2, 2, 2, 1] },
+      { n: 'Léa',  e: 0, m: [3, 1, 2, 1, 2] }, { n: 'Ali', e: 0, m: [2, 2, 2, 2, 1] },
+      { n: 'Zoé',  e: 0, m: [2, 2, 2, 1, 2] }, { n: 'Inès', e: 1, m: [2, 3, 2, 2, 1] },
+      { n: 'Jo',   e: 1, m: [2, 2, 1, 2, 2] }, { n: 'Tom', e: 1, m: [2, 2, 2, 1, 1] },
+      { n: 'Rim',  e: 1, m: [2, 2, 2, 2, 2] }, { n: 'Ben', e: 1, m: [2, 2, 1, 2, 1] }
+    ]
+  }
+};
+
+const somme = t => t.reduce((a, b) => a + b, 0);
+
+function tableauEquipes(jeu) {
+  const lignes = jeu.manches.map(m =>
+    `<tr class="past"><th>${m.icone} ${m.nom}</th><td>${m.s[0]}</td><td>${m.s[1]}</td></tr>`).join('');
+  return `<table class="scores">
+    <thead><tr><th></th><th class="e1">Équipe 1</th><th class="e2">Équipe 2</th></tr></thead>
+    <tbody>
+      ${lignes}
+      <tr class="total"><th>Cette partie</th><td>${jeu.total[0]}</td><td>${jeu.total[1]}</td></tr>
+      <tr class="soiree"><th>Soirée (${jeu.parties} parties)</th>
+        <td>${jeu.soiree[0]}</td><td>${jeu.soiree[1]}</td></tr>
+    </tbody></table>`;
+}
+
+// Variante A : le classement d'aujourd'hui, la pastille tenant lieu de colonne « équipe »
+function joueursTotal(jeu) {
+  const lignes = [...jeu.joueurs]
+    .map(j => ({ ...j, t: somme(j.m) }))
+    .sort((a, b) => b.t - a.t)
+    .map(j => `<tr><th><span class="puce p${j.e + 1}"></span>${j.n}</th>
+                   <td class="tot">${j.t}</td></tr>`).join('');
+  return `<table class="joueurs">
+    <thead><tr><th>Joueur</th><th>Trouvés</th></tr></thead>
+    <tbody>${lignes}</tbody></table>`;
+}
+
+// Variantes B et C : une colonne par manche, joueurs groupés par équipe
+function joueursParManche(jeu) {
+  const entetes = jeu.manches.map(m => `<th>${m.icone}</th>`).join('');
+  const lignes = jeu.joueurs.map((j, i) => {
+    const separe = i > 0 && jeu.joueurs[i - 1].e !== j.e ? ' class="sep"' : '';
+    const cases = j.m.map(v => `<td>${v}</td>`).join('');
+    return `<tr${separe}><th><span class="puce p${j.e + 1}"></span>${j.n}</th>
+              ${cases}<td class="tot">${somme(j.m)}</td></tr>`;
+  }).join('');
+  return `<table class="joueurs">
+    <thead><tr><th>Joueur</th>${entetes}<th>Tot.</th></tr></thead>
+    <tbody>${lignes}</tbody></table>`;
+}
+
+function meilleur(jeu) {
+  return [...jeu.joueurs].map(j => ({ n: j.n, t: somme(j.m) })).sort((a, b) => b.t - a.t)[0];
+}
+
+const boutonsFin = `<button class="btn">🔄 Rejouer avec les mêmes joueurs</button>
+                    <button class="btn sec">Nouvelle partie</button>`;
+
+function rendreFinDePartie(cible, jeu) {
+  const tete = `<p class="screen-title">🏆 Fin de la partie !</p>
+                <p class="winner">🎉 Équipe 1 gagne !</p>${tableauEquipes(jeu)}`;
+  const as = meilleur(jeu);
+  document.getElementById(cible).innerHTML = `
+    <span class="close">✕</span>
+    <div class="variant${variante3 === 'c1' ? ' on' : ''}" id="c1">
+      ${tete}<p class="bloc-titre">📊 Les joueurs</p>${joueursTotal(jeu)}${boutonsFin}
+    </div>
+    <div class="variant${variante3 === 'c2' ? ' on' : ''}" id="c2">
+      ${tete}<p class="bloc-titre">📊 Les joueurs, manche par manche</p>
+      ${joueursParManche(jeu)}${boutonsFin}
+    </div>
+    <div class="variant${variante3 === 'c3' ? ' on' : ''}" id="c3">
+      ${tete}
+      <details class="detail">
+        <summary>📊 Les joueurs — ${as.n} en tête avec ${as.t}</summary>
+        ${joueursParManche(jeu)}
+      </details>
+      ${boutonsFin}
+    </div>`;
+}
+
+let variante3 = 'c1';
+let format3 = 'court';
+rendreFinDePartie('phone3', JEUX[format3]);
+
+document.getElementById('tabs3').addEventListener('click', e => {
+  const onglet = e.target.closest('.tab');
+  if (!onglet) return;
+  variante3 = onglet.dataset.cible;
+  rendreFinDePartie('phone3', JEUX[format3]);
+});
+
+document.getElementById('tailles3').addEventListener('click', e => {
+  const onglet = e.target.closest('.tab');
+  if (!onglet) return;
+  document.querySelectorAll('#tailles3 .tab').forEach(t => t.classList.toggle('on', t === onglet));
+  format3 = onglet.dataset.jeu;
+  rendreFinDePartie('phone3', JEUX[format3]);
+});
+</script>
+</body>
+</html>

@@ -16,7 +16,7 @@ export const game = {
     { name: "Équipe 2", score: 0, players: [], currentPlayerIndex: 0, color: "#33c26a" }
   ],
   players: [],             // liste de tous les joueurs
-  playerStats: {},         // { playerName: { found: 0 } }
+  playerStats: {},         // { playerName: { found: 0, parManche: { <indice de manche>: n } } }
   playerAssignments: {},   // { playerName: teamIndex }
   nominativeMode: true,    // true = avec noms de joueurs
   cardSource: 'themes',    // 'themes' | 'custom'
@@ -42,6 +42,7 @@ export const game = {
   turnTeam: 0,             // équipe qui joue le tour en cours
   turnPlayer: null,        // joueur qui fait deviner (mode nominatif)
   roundStartScores: [0, 0],// scores au début de la manche, pour isoler le score de la manche
+  roundHistory: [],        // score de chaque manche terminée, dans l'ordre où elles ont été jouées
   sessionScores: [0, 0],   // total des parties déjà terminées avec les mêmes équipes
   gamesPlayed: 0,          // nombre de parties déjà terminées dans la série en cours
   timerInterval: null,
@@ -74,6 +75,7 @@ export function resetGame({ keepSession = false } = {}) {
   game.turnTeam = game.startingTeam;
   game.turnPlayer = null;
   game.roundStartScores = [0, 0];
+  game.roundHistory = [];
   if (!keepSession) {
     game.sessionScores = [0, 0];
     game.gamesPlayed = 0;
@@ -81,7 +83,7 @@ export function resetGame({ keepSession = false } = {}) {
   // Reset player stats
   game.playerStats = {};
   game.players.forEach(p => {
-    game.playerStats[p] = { found: 0 };
+    game.playerStats[p] = { found: 0, parManche: {} };
   });
 }
 
@@ -219,6 +221,43 @@ export function getSessionScores() {
   return game.teams.map((team, index) => (game.sessionScores?.[index] || 0) + team.score);
 }
 
+// Fige le score de la manche qui s'achève. On écrit à l'indice de la manche
+// plutôt que d'ajouter en fin de liste : réafficher l'écran de fin de manche
+// (reprise après coupure) réécrit alors la même case au lieu d'en créer une seconde.
+export function recordRound() {
+  if (!Array.isArray(game.roundHistory)) game.roundHistory = [];
+  game.roundHistory[game.currentRound] = getRoundScores();
+}
+
+// Les manches déjà jouées, avec leur intitulé : [{ round, scores: [e1, e2] }]
+export function getRoundHistory() {
+  return (game.roundHistory || [])
+    .map((scores, index) => ({
+      round: ROUNDS[game.activeRounds[index]],
+      scores: scores || [0, 0]
+    }))
+    .filter(ligne => ligne.round);
+}
+
+// Un joueur par ligne, groupés par équipe, avec le détail manche par manche.
+// L'ordre suit les équipes : le tableau montre des formations, pas un classement.
+export function getPlayerBreakdown() {
+  const manches = (game.roundHistory || []).length;
+  const lignes = [];
+  game.teams.forEach((team, indexEquipe) => {
+    team.players.forEach(nom => {
+      const parManche = game.playerStats?.[nom]?.parManche || {};
+      lignes.push({
+        name: nom,
+        team: indexEquipe,
+        perRound: Array.from({ length: manches }, (_, i) => parManche[i] || 0),
+        total: game.playerStats?.[nom]?.found || 0
+      });
+    });
+  });
+  return lignes;
+}
+
 export function getCurrentCard() {
   if (game.currentCardIndex >= game.deck.length) return null;
   return game.deck[game.currentCardIndex];
@@ -273,11 +312,25 @@ function remettreCarteEnJeu() {
   }
 }
 
+// Crée la fiche à la volée : en saisie partagée les joueurs arrivent après
+// resetGame, et une partie sauvegardée avant cette version n'a pas de parManche.
+function statsDe(nom) {
+  let stats = game.playerStats[nom];
+  if (!stats) {
+    stats = { found: 0, parManche: {} };
+    game.playerStats[nom] = stats;
+  }
+  if (!stats.parManche) stats.parManche = {};
+  return stats;
+}
+
 function creditTurn(word) {
   game.teams[game.turnTeam].score++;
   game.turnScore++;
-  if (game.turnPlayer && game.playerStats[game.turnPlayer]) {
-    game.playerStats[game.turnPlayer].found++;
+  if (game.turnPlayer) {
+    const stats = statsDe(game.turnPlayer);
+    stats.found++;
+    stats.parManche[game.currentRound] = (stats.parManche[game.currentRound] || 0) + 1;
   }
   game.turnFound.push(word);
 }
@@ -286,8 +339,10 @@ function debitTurn() {
   const team = game.teams[game.turnTeam];
   if (team) team.score = Math.max(0, team.score - 1);
   game.turnScore = Math.max(0, game.turnScore - 1);
-  if (game.turnPlayer && game.playerStats[game.turnPlayer]) {
-    game.playerStats[game.turnPlayer].found = Math.max(0, game.playerStats[game.turnPlayer].found - 1);
+  if (game.turnPlayer) {
+    const stats = statsDe(game.turnPlayer);
+    stats.found = Math.max(0, stats.found - 1);
+    stats.parManche[game.currentRound] = Math.max(0, (stats.parManche[game.currentRound] || 0) - 1);
   }
 }
 

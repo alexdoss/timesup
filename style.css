@@ -557,6 +557,32 @@ body {
 }
 
 /* ===== SCOREBOARD ===== */
+/* Écran de lancement de tour : le grand chiffre est celui de la manche,
+   le total de la partie tient dans le rappel juste dessous. Les trois éléments
+   sont regroupés pour ne compter que pour un dans l'espacement de la colonne. */
+.bloc-score {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.score-cap {
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.score-rappel {
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+.bloc-score .score-board {
+  margin: 4px 0 6px;
+}
+
 .score-board {
   display: flex;
   gap: 24px;
@@ -967,7 +993,33 @@ body {
   text-align: center;
 }
 
-/* La ligne de synthèse — total de la partie, ou cumul de la soirée */
+/* Les manches déjà jouées : lisibles, mais en retrait du total.
+   Le libellé peut revenir à la ligne — « Faire bouger un partenaire » ne tient
+   pas sur une ligne, et le nowrap hérité le ferait déborder. */
+.score-table .manche-passee th,
+.score-table .manche-en-cours th {
+  white-space: normal;
+}
+
+.score-table .manche-passee .score {
+  font-size: 1.25rem;
+  color: var(--muted);
+}
+
+/* La manche qui vient de s'achever, mise en évidence parmi les précédentes */
+.score-table .manche-en-cours {
+  background: var(--primary-soft);
+}
+
+.score-table .manche-en-cours th {
+  color: var(--muted-strong);
+}
+
+.score-table .manche-en-cours .score {
+  font-size: 1.5rem;
+}
+
+/* La ligne de synthèse — total de la partie, ou cumul des parties enchaînées */
 .score-table .score-total {
   border-top: 1px solid var(--line);
 }
@@ -979,6 +1031,20 @@ body {
 .score-table .score-total .score {
   font-size: 2.6rem;
   color: var(--accent, var(--brand));
+}
+
+/* Le cumul des parties enchaînées : séparé du reste, il ne concerne pas celle-ci */
+.score-table .score-cumul {
+  border-top: 1px dashed var(--line);
+}
+
+.score-table .score-cumul th {
+  color: var(--secondary);
+}
+
+.score-table .score-cumul .score {
+  font-size: 1.4rem;
+  color: var(--muted-strong);
 }
 
 /* ===== TIROIRS (correction de fin de tour) ===== */
@@ -1498,8 +1564,65 @@ h2 {
 /* ===== PLAYER STATS ===== */
 .player-stats {
   width: 100%;
-  max-width: 350px;
+  max-width: 380px;
   margin-top: 8px;
+}
+
+/* Le détail des joueurs, dans un tiroir replié : une ligne par joueur et une
+   colonne par manche. Aucune largeur minimale — à 10 joueurs et 5 manches sur
+   un écran étroit, les colonnes se resserrent plutôt que de déborder. */
+.boite-joueurs {
+  padding-bottom: 12px;
+}
+
+.table-joueurs {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.table-joueurs th,
+.table-joueurs td {
+  padding: 7px 4px;
+  font-size: 0.85rem;
+}
+
+.table-joueurs thead th {
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.table-joueurs tbody th {
+  text-align: left;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.table-joueurs td {
+  text-align: center;
+  color: var(--muted-strong);
+}
+
+.table-joueurs .total-joueur {
+  font-weight: 800;
+  color: var(--ink);
+}
+
+/* Un trait à la bascule d'équipe : le tableau groupe, il ne classe pas */
+.table-joueurs .change-equipe th,
+.table-joueurs .change-equipe td {
+  border-top: 1px solid var(--line);
+}
+
+.puce-equipe {
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  margin-right: 6px;
+  vertical-align: middle;
 }
 
 .player-stats h3 {

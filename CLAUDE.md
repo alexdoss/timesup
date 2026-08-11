@@ -50,6 +50,11 @@ mode (thèmes prédéfinis / cartes perso) → thèmes → équipes & joueurs �
   - **séquentielle** — on se passe le téléphone, input en `type="password"` + liste masquée (`••••`). Fonctionne hors ligne, et sert de repli quand la session partagée échoue.
 - Le nombre de cartes par joueur vient du réglage « Cartes saisies par joueur » de l'étape *Déroulement* (`game.numCards`, minimum 3, défaut 5) — il n'existe qu'à cet endroit.
 - Le même `masterDeck` est rebattu à chaque manche (`startNewRound`), le score est cumulatif.
+- Trois échelles de score coexistent : la **manche** (`getRoundScores`), la **partie** (`team.score`)
+  et la **soirée** (`getSessionScores`, cumul des parties enchaînées par « Rejouer »). L'écran de
+  lancement de tour affiche manche + partie, la fin de manche et la fin de partie détaillent chaque
+  manche jouée (`recordRound` / `getRoundHistory`), et la fin de partie ajoute le détail par joueur
+  et par manche (`getPlayerBreakdown`, replié dans un tiroir).
 
 ## Conventions
 
@@ -73,5 +78,6 @@ mode (thèmes prédéfinis / cartes perso) → thèmes → équipes & joueurs �
 
 ## Fichiers hors app
 
-`rush-app.html` et `proto-sprint2.html` sont des prototypes autonomes (design de référence), pas du code servi.
+`rush-app.html`, `proto-sprint2.html` et `proto-scores.html` sont des prototypes autonomes
+(design de référence), pas du code servi.
 `Rush.docx`, `theme people.txt` et le PNG à la racine sont des sources de contenu / specs, pas des assets de l'app.

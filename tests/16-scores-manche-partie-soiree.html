@@ -18,8 +18,16 @@ document.getElementById('f').addEventListener('load', async () => {
   const sauvegarde = () => JSON.parse(w.localStorage.getItem('timesup_partie_en_cours') || 'null');
 
   const val = id => parseInt($(id).textContent, 10);
-  const scoreManche = e => val(`end-team${e + 1}-round`);
+
+  // Le tableau de fin de manche porte desormais une ligne par manche jouee :
+  // la manche qui vient de s achever est la seule marquee « en cours ».
+  const lignesManches = () =>
+    [...d.querySelectorAll('#end-scores .manche-passee, #end-scores .manche-en-cours')];
+  const scoreManche = e =>
+    parseInt(d.querySelector('#end-scores .manche-en-cours').children[e + 1].textContent, 10);
   const scorePartie = e => val(`end-team${e + 1}-score`);
+  const sommeDesManches = e =>
+    lignesManches().reduce((t, tr) => t + parseInt(tr.children[e + 1].textContent, 10), 0);
 
   // La rotation continue par-dessus les manches : chaque manche est ouverte par
   // l'equipe suivante. On lit donc qui joue, au lieu de le supposer.
@@ -61,9 +69,18 @@ document.getElementById('f').addEventListener('load', async () => {
     check('l equipe adverse est a zero',
           scoreManche(1 - ouvre1) === 0 && scorePartie(1 - ouvre1) === 0);
     check('le titre nomme la manche', $('round-end-title').textContent.includes('1/3'));
+    check('une seule ligne de manche apres la manche 1', lignesManches().length === 1);
+    check('elle est nommee, pas numerotee',
+          lignesManches()[0].querySelector('th').textContent.includes('Description'));
 
     // --- Manche 2 : c'est a l'autre equipe d'ouvrir ---
     $('btn-next-round').click();
+    check('le lancement de tour repart de zero sur la manche',
+          $('round-team1-score').textContent === '0' && $('round-team2-score').textContent === '0');
+    const rappel = $('round-total').textContent.match(/(\d+)\D+(\d+)/);
+    log('       rappel du total : "' + $('round-total').textContent + '"');
+    check('mais rappelle le total de la partie',
+          parseInt(rappel[1], 10) === total1[0] && parseInt(rappel[2], 10) === total1[1]);
     const ouvre2 = equipeQuiJoue();
     check('la manche 2 est ouverte par l autre equipe', ouvre2 === 1 - ouvre1);
     await jouerLaManche();
@@ -75,6 +92,11 @@ document.getElementById('f').addEventListener('load', async () => {
           scorePartie(0) === total1[0] && scorePartie(1) === total1[1]);
     check('manche et total sont bien distincts pour l equipe 1',
           scoreManche(ouvre1) !== scorePartie(ouvre1));
+    check('les deux manches sont listees', lignesManches().length === 2);
+    check('une seule manche est mise en evidence',
+          d.querySelectorAll('#end-scores .manche-en-cours').length === 1);
+    check('la precedente est passee en retrait',
+          lignesManches()[0].classList.contains('manche-passee'));
 
     // --- Manche 3 : la rotation ramene la premiere equipe ---
     $('btn-next-round').click();
@@ -87,6 +109,12 @@ document.getElementById('f').addEventListener('load', async () => {
           scorePartie(0) === total1[0] && scorePartie(1) === total1[1]);
     check('le paquet complet a ete distribue', total1[0] + total1[1] === paquet * 3);
     check('personne n a ouvert les trois manches', total1[0] > 0 && total1[1] > 0);
+    check('les trois manches sont detaillees', lignesManches().length === 3);
+    check('leur somme vaut exactement le total',
+          sommeDesManches(0) === scorePartie(0) && sommeDesManches(1) === scorePartie(1));
+    log('       lignes : ' + lignesManches().map(tr =>
+      tr.querySelector('th').textContent + ' ' +
+      tr.children[1].textContent + '/' + tr.children[2].textContent).join('  |  '));
 
     // ===== FIN DE LA PREMIERE PARTIE =====
     $('btn-next-round').click();
@@ -94,6 +122,9 @@ document.getElementById('f').addEventListener('load', async () => {
     check('le score de la partie est reporte',
           val('final-team1-score') === total1[0] && val('final-team2-score') === total1[1]);
     check('aucun cumul de soiree a la premiere partie', $('session-row').style.display === 'none');
+    check('la fin de partie detaille aussi les trois manches',
+          d.querySelectorAll('#final-scores .manche-passee').length === 3);
+    check('aucun tableau de joueurs en mode simple', $('player-stats').children.length === 0);
     check('un vainqueur est annonce', $('winner').textContent.includes('gagne'));
     check('on peut rejouer avec les memes joueurs', !!$('btn-replay'));
     check('on peut aussi repartir de zero', !!$('btn-restart'));
@@ -129,6 +160,8 @@ document.getElementById('f').addEventListener('load', async () => {
     check('le cumul de soiree apparait', $('session-row').style.display !== 'none');
     log('       libelle : "' + $('session-label').textContent + '"');
     check('il annonce le nombre de parties', $('session-label').textContent.includes('2 parties'));
+    check('sans supposer qu on joue le soir',
+          !$('session-label').textContent.toLowerCase().includes('soir'));
     check('le score de la partie en cours reste celui de la partie 2',
           val('final-team1-score') === total2[0] && val('final-team2-score') === total2[1]);
 

@@ -37,7 +37,10 @@ $mime = @{
 # Meme contrat que api/session.js, en beaucoup plus court : pas de plafond par
 # adresse, pas d'expiration reelle. Ne sert qu'au developpement et aux tests.
 $sessions = @{}
+$suivis = @{}   # etat publie par l'organisateur, lu par les invites en mode lecture
 $ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
+
+function Get-HorodatageMs { [DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds() }
 
 function New-Code {
   -join (1..4 | ForEach-Object { $ALPHABET[(Get-Random -Maximum $ALPHABET.Length)] })
@@ -92,6 +95,34 @@ function Invoke-FausseSession($corps) {
 
   $code = ([string]$corps.code).ToUpper().Trim()
   if ($code.Length -ne 4) { return @{ statut = 400; corps = @{ error = 'Code de partie invalide.' } } }
+
+  # Suivi de partie : traite avant la session, comme dans api/session.js, ou
+  # c'est ce qui rend la lecture repetee bon marche.
+  if ($action -eq 'suivre') {
+    return @{ statut = 200; corps = [ordered]@{
+      suivi = $suivis[$code]; serveur = (Get-HorodatageMs) } }
+  }
+  if ($action -eq 'publier') {
+    if (-not $sessions.ContainsKey($code)) {
+      return @{ statut = 404; corps = @{ error = 'Aucune partie ne porte ce code.' } }
+    }
+    if ($corps.jeton -ne $sessions[$code].jeton) {
+      return @{ statut = 403; corps = @{ error = "Action reservee a l'organisateur." } }
+    }
+    if ($null -eq $corps.etat) {
+      return @{ statut = 400; corps = @{ error = 'Etat de partie manquant.' } }
+    }
+    $publieA = Get-HorodatageMs
+    $version = [int]($corps.v ?? 0)
+    $charge = [ordered]@{ v = $version; publieA = $publieA; etat = $corps.etat }
+    $json = $charge | ConvertTo-Json -Depth 12 -Compress
+    if ($json.Length -gt 4096) {
+      return @{ statut = 413; corps = @{ error = 'Etat de partie trop volumineux.' } }
+    }
+    $suivis[$code] = ($json | ConvertFrom-Json)
+    return @{ statut = 200; corps = [ordered]@{ v = $version; publieA = $publieA } }
+  }
+
   if (-not $sessions.ContainsKey($code)) {
     return @{ statut = 404; corps = @{ error = "Aucune partie ne porte ce code. Verifie-le, ou demande-le a l'organisateur." } }
   }

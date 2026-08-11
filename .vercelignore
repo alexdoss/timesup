@@ -15,3 +15,9 @@ proto-*.html
 rush-app.html
 file_*.png
 CLAUDE.md
+
+# EXCEPTION TEMPORAIRE — épreuve du « mode lecture » (août 2026).
+# Ces deux pages doivent être en ligne pour être mesurées depuis un vrai
+# téléphone sur un vrai réseau. À retirer une fois la mesure faite.
+!proto-suivi-organisateur.html
+!proto-suivi-invite.html

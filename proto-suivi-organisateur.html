@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Rush — épreuve : organisateur</title>
+<style>
+:root {
+  --primary: #6D28D9; --primary-hover: #7C3AED;
+  --background: #0F172A; --surface: #1E293B; --surface-2: #273449;
+  --border: #334155; --text: #F8FAFC; --muted: #94A3B8; --muted-strong: #CBD5E1;
+  --success: #22C55E; --secondary: #F59E0B; --error: #EF4444;
+  --t1: #d6336c; --t2: #33c26a;
+  --r-md: 12px; --r-lg: 16px;
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  background: #060B18; color: var(--text); padding: 20px 16px 60px; line-height: 1.5;
+}
+.wrap { max-width: 640px; margin: 0 auto; }
+h1 { font-size: 1.4rem; }
+.sous { color: var(--muted); font-size: .9rem; margin-bottom: 20px; }
+.carte {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--r-lg); padding: 18px; margin-bottom: 16px;
+}
+.carte h2 { font-size: .78rem; text-transform: uppercase; letter-spacing: .05em;
+  color: var(--muted); margin-bottom: 12px; }
+.btn {
+  background: var(--primary); color: #fff; border: 0; border-radius: var(--r-md);
+  padding: 12px 16px; font-size: .95rem; font-weight: 700; font-family: inherit; cursor: pointer;
+}
+.btn:disabled { opacity: .35; cursor: default; }
+.btn.sec { background: var(--surface-2); color: var(--text); border: 1px solid var(--border); }
+.btn.plein { width: 100%; }
+.rangee { display: flex; gap: 8px; flex-wrap: wrap; }
+.rangee .btn { flex: 1; min-width: 130px; }
+
+.code { font-size: 2.6rem; font-weight: 800; letter-spacing: .28em; text-align: center;
+  color: var(--secondary); margin: 4px 0 10px; }
+.lien { display: block; text-align: center; font-size: .82rem; color: var(--muted-strong);
+  word-break: break-all; margin-bottom: 12px; }
+.qr { display: flex; justify-content: center; background: #fff; padding: 10px;
+  border-radius: var(--r-md); width: fit-content; margin: 0 auto 12px; }
+
+.tableau { display: flex; justify-content: center; gap: 30px; margin: 6px 0 14px; }
+.eq { text-align: center; }
+.eq .nom { font-size: .72rem; font-weight: 700; text-transform: uppercase; letter-spacing: .03em; }
+.eq.e1 .nom { color: var(--t1); } .eq.e2 .nom { color: var(--t2); }
+.eq .gros { font-size: 2.2rem; font-weight: 800; }
+.eq .petit { font-size: .78rem; color: var(--muted); }
+.etat-ligne { text-align: center; font-size: .95rem; margin-bottom: 4px; }
+.chrono { text-align: center; font-size: 3rem; font-weight: 800; color: var(--secondary); }
+.chrono.off { color: var(--border); }
+
+.mesures { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 10px; }
+.mesure { background: var(--surface-2); border-radius: var(--r-md); padding: 10px 12px; }
+.mesure .lbl { font-size: .68rem; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); }
+.mesure .val { font-size: 1.3rem; font-weight: 800; }
+.journal { font-family: ui-monospace, Menlo, Consolas, monospace; font-size: .76rem;
+  color: var(--muted-strong); max-height: 190px; overflow-y: auto; white-space: pre-wrap; }
+.alerte { background: rgba(239,68,68,.12); border: 1px solid var(--error);
+  color: #fecaca; border-radius: var(--r-md); padding: 10px 12px; font-size: .85rem; margin-bottom: 12px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <h1>Épreuve du mode lecture — organisateur</h1>
+  <p class="sous">Partie simulée. Chaque action publie l'état sur le vrai serveur.
+    Ouvre la page invité sur un autre appareil et compare.</p>
+
+  <div id="erreur" class="alerte" style="display:none"></div>
+
+  <div class="carte">
+    <h2>1 · La session</h2>
+    <button id="btn-ouvrir" class="btn plein">Ouvrir une session</button>
+    <div id="bloc-code" style="display:none">
+      <p class="code" id="code">----</p>
+      <div class="qr" id="qr"></div>
+      <a class="lien" id="lien" href="#" target="_blank"></a>
+    </div>
+  </div>
+
+  <div class="carte" id="bloc-jeu" style="display:none">
+    <h2>2 · La partie</h2>
+    <p class="etat-ligne" id="ligne-manche">Manche 1/3 — 💬 Description libre</p>
+    <p class="etat-ligne" id="ligne-tour">En attente du premier tour</p>
+    <p class="chrono off" id="chrono">--</p>
+    <div class="tableau">
+      <div class="eq e1"><span class="nom">Équipe 1</span>
+        <div class="gros" id="s1">0</div><div class="petit">manche <span id="m1">0</span></div></div>
+      <div class="eq e2"><span class="nom">Équipe 2</span>
+        <div class="gros" id="s2">0</div><div class="petit">manche <span id="m2">0</span></div></div>
+    </div>
+    <div class="rangee" style="margin-bottom:8px">
+      <button id="btn-tour" class="btn">▶ Démarrer le tour</button>
+      <button id="btn-trouve" class="btn sec" disabled>＋1 trouvé</button>
+    </div>
+    <div class="rangee">
+      <button id="btn-fin-tour" class="btn sec" disabled>Terminer le tour</button>
+      <button id="btn-manche" class="btn sec">Manche suivante</button>
+      <button id="btn-fin" class="btn sec">Fin de partie</button>
+    </div>
+  </div>
+
+  <div class="carte" id="bloc-mesures" style="display:none">
+    <h2>3 · Ce que ça coûte, côté organisateur</h2>
+    <div class="mesures">
+      <div class="mesure"><div class="lbl">Publications</div><div class="val" id="m-pub">0</div></div>
+      <div class="mesure"><div class="lbl">Aller-retour médian</div><div class="val" id="m-rtt">–</div></div>
+      <div class="mesure"><div class="lbl">Le plus lent</div><div class="val" id="m-max">–</div></div>
+      <div class="mesure"><div class="lbl">Échecs</div><div class="val" id="m-ko">0</div></div>
+    </div>
+  </div>
+
+  <div class="carte">
+    <h2>Journal</h2>
+    <div class="journal" id="journal">en attente…</div>
+  </div>
+</div>
+
+<script type="module">
+import { creerQrSvg } from './js/qr.js';
+
+const $ = id => document.getElementById(id);
+const lignes = [];
+function noter(texte) {
+  const h = new Date().toLocaleTimeString('fr-FR');
+  lignes.unshift(`${h}  ${texte}`);
+  $('journal').textContent = lignes.slice(0, 60).join('\n');
+}
+function erreur(texte) {
+  $('erreur').style.display = texte ? '' : 'none';
+  $('erreur').textContent = texte || '';
+}
+
+async function appel(corps) {
+  const reponse = await fetch('/api/session', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(corps)
+  });
+  const donnees = await reponse.json().catch(() => ({}));
+  if (!reponse.ok) throw new Error(donnees.error || `HTTP ${reponse.status}`);
+  return donnees;
+}
+
+// ===== La partie simulée =====
+const MANCHES = [
+  { nom: 'Description libre', icone: '💬' },
+  { nom: 'Un mot', icone: '🔤' },
+  { nom: 'Mime', icone: '🎭' }
+];
+const JOUEURS = [['Marc', 'Léa'], ['Inès', 'Jo']];
+const DUREE = 40;
+
+const partie = {
+  code: null, jeton: null, v: 0,
+  manche: 0, equipe: 0, tourDe: 0,
+  scores: [0, 0], scoresManche: [0, 0],
+  etape: 'attente',
+  debutClientA: null,   // heure du DÉPART, prise sur l'horloge de CE téléphone
+  finPrevueA: null
+};
+
+// Mesures des publications
+const rtts = [];
+let publications = 0, echecs = 0;
+
+function mediane(valeurs) {
+  if (!valeurs.length) return null;
+  const t = [...valeurs].sort((a, b) => a - b);
+  return t[Math.floor(t.length / 2)];
+}
+
+function restantMaintenant() {
+  if (partie.etape !== 'tour' || !partie.finPrevueA) return 0;
+  return Math.max(0, (partie.finPrevueA - Date.now()) / 1000);
+}
+
+// L'état envoyé aux invités. Aucun mot du paquet : ils ne doivent rien deviner ici.
+function etatPublie() {
+  const m = MANCHES[partie.manche];
+  return {
+    etape: partie.etape,
+    manche: { numero: partie.manche + 1, sur: MANCHES.length, nom: m.nom, icone: m.icone },
+    equipes: [
+      { nom: 'Équipe 1', couleur: '#d6336c', partie: partie.scores[0], manche: partie.scoresManche[0] },
+      { nom: 'Équipe 2', couleur: '#33c26a', partie: partie.scores[1], manche: partie.scoresManche[1] }
+    ],
+    tour: partie.etape === 'tour' ? {
+      equipe: partie.equipe,
+      joueur: JOUEURS[partie.equipe][partie.tourDe % 2],
+      duree: DUREE,
+      // Le temps restant AU MOMENT de la publication. L'invité le rejoue à partir
+      // de l'heure serveur : aucune horloge de téléphone n'intervient.
+      restant: Math.round(restantMaintenant() * 10) / 10,
+      // Le même départ, mais vu par l'horloge de CE téléphone. Sert uniquement à
+      // montrer l'erreur que ferait un invité qui s'y fierait directement.
+      debutClientA: partie.debutClientA
+    } : null
+  };
+}
+
+async function publier(motif) {
+  if (!partie.code) return;
+  partie.v++;
+  const t0 = performance.now();
+  try {
+    await appel({ action: 'publier', code: partie.code, jeton: partie.jeton, v: partie.v, etat: etatPublie() });
+    const rtt = Math.round(performance.now() - t0);
+    rtts.push(rtt);
+    publications++;
+    noter(`publié v${partie.v} (${motif}) — ${rtt} ms`);
+    erreur('');
+  } catch (e) {
+    echecs++;
+    noter(`ÉCHEC publication v${partie.v} (${motif}) : ${e.message}`);
+    erreur(`Publication impossible : ${e.message}`);
+  }
+  majMesures();
+}
+
+function majMesures() {
+  $('m-pub').textContent = publications;
+  $('m-rtt').textContent = rtts.length ? `${mediane(rtts)} ms` : '–';
+  $('m-max').textContent = rtts.length ? `${Math.max(...rtts)} ms` : '–';
+  $('m-ko').textContent = echecs;
+}
+
+function majEcran() {
+  const m = MANCHES[partie.manche];
+  $('ligne-manche').textContent = `Manche ${partie.manche + 1}/${MANCHES.length} — ${m.icone} ${m.nom}`;
+  $('s1').textContent = partie.scores[0];
+  $('s2').textContent = partie.scores[1];
+  $('m1').textContent = partie.scoresManche[0];
+  $('m2').textContent = partie.scoresManche[1];
+
+  if (partie.etape === 'tour') {
+    $('ligne-tour').textContent = `Équipe ${partie.equipe + 1} — ${JOUEURS[partie.equipe][partie.tourDe % 2]} fait deviner`;
+    $('chrono').textContent = Math.ceil(restantMaintenant());
+    $('chrono').classList.remove('off');
+  } else {
+    const libelles = {
+      attente: 'En attente du premier tour',
+      'entre-tours': 'Entre deux tours',
+      'fin-manche': 'Fin de manche',
+      'fin-partie': 'Partie terminée'
+    };
+    $('ligne-tour').textContent = libelles[partie.etape] || partie.etape;
+    $('chrono').textContent = '--';
+    $('chrono').classList.add('off');
+  }
+
+  $('btn-tour').disabled = partie.etape === 'tour' || partie.etape === 'fin-partie';
+  $('btn-trouve').disabled = partie.etape !== 'tour';
+  $('btn-fin-tour').disabled = partie.etape !== 'tour';
+}
+
+setInterval(() => {
+  if (partie.etape !== 'tour') return;
+  if (restantMaintenant() <= 0) { terminerTour('chrono écoulé'); return; }
+  $('chrono').textContent = Math.ceil(restantMaintenant());
+}, 200);
+
+function terminerTour(motif) {
+  partie.etape = 'entre-tours';
+  partie.finPrevueA = null;
+  partie.equipe = 1 - partie.equipe;
+  partie.tourDe++;
+  majEcran();
+  publier(motif);
+}
+
+// ===== Actions =====
+$('btn-ouvrir').addEventListener('click', async () => {
+  $('btn-ouvrir').disabled = true;
+  try {
+    const r = await appel({ action: 'creer', cartesParJoueur: 5, mode: 'nominatif' });
+    partie.code = r.code;
+    partie.jeton = r.jeton;
+    $('code').textContent = r.code;
+    const lien = new URL(`proto-suivi-invite.html?c=${r.code}`, location.href).href;
+    $('lien').textContent = lien;
+    $('lien').href = lien;
+    $('qr').innerHTML = '';
+    $('qr').appendChild(creerQrSvg(lien, { taille: 200 }));
+    $('bloc-code').style.display = '';
+    $('bloc-jeu').style.display = '';
+    $('bloc-mesures').style.display = '';
+    $('btn-ouvrir').textContent = 'Session ouverte';
+    noter(`session ${r.code} ouverte`);
+    erreur('');
+    majEcran();
+    await publier('ouverture');
+  } catch (e) {
+    $('btn-ouvrir').disabled = false;
+    erreur(`Impossible d'ouvrir la session : ${e.message}`);
+    noter(`ÉCHEC ouverture : ${e.message}`);
+  }
+});
+
+$('btn-tour').addEventListener('click', () => {
+  partie.etape = 'tour';
+  partie.debutClientA = Date.now();
+  partie.finPrevueA = Date.now() + DUREE * 1000;
+  majEcran();
+  publier('début du tour');
+});
+
+$('btn-trouve').addEventListener('click', () => {
+  partie.scores[partie.equipe]++;
+  partie.scoresManche[partie.equipe]++;
+  majEcran();
+  publier('carte trouvée');
+});
+
+$('btn-fin-tour').addEventListener('click', () => terminerTour('tour arrêté'));
+
+$('btn-manche').addEventListener('click', () => {
+  if (partie.manche < MANCHES.length - 1) {
+    partie.manche++;
+    partie.scoresManche = [0, 0];
+    partie.etape = 'fin-manche';
+  } else {
+    partie.etape = 'fin-partie';
+  }
+  partie.finPrevueA = null;
+  majEcran();
+  publier('changement de manche');
+});
+
+$('btn-fin').addEventListener('click', () => {
+  partie.etape = 'fin-partie';
+  partie.finPrevueA = null;
+  majEcran();
+  publier('fin de partie');
+});
+
+majEcran();
+noter('prêt — ouvre une session pour commencer');
+</script>
+</body>
+</html>

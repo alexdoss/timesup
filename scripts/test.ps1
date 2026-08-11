@@ -51,6 +51,7 @@ $SCENARIOS = @(
   @{ f = '23-cartes-remises-en-jeu.html';          b = 20000; p = 'w' }
   @{ f = '24-rejouer-cartes-perso.html';           b = 45000; p = 'x' }
   @{ f = '25-detail-par-joueur.html';              b = 30000; p = 'y' }
+  @{ f = '26-suivi-de-partie.html';                b = 15000; p = 'z' }
 )
 
 function Resolve-Chrome {

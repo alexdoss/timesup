@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head><meta charset="utf-8"><title>Test Rush — suivi de partie (mode lecture)</title></head>
+<body>
+<pre id="log">demarrage...</pre>
+<script>
+const out = [];
+function log(s) { out.push(s); document.getElementById('log').textContent = out.join('\n'); }
+function check(name, cond) { log((cond ? 'PASS' : 'FAIL') + ' -- ' + name); }
+const wait = ms => new Promise(r => setTimeout(r, ms));
+
+async function api(corps) {
+  const r = await fetch('/api/session', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(corps)
+  });
+  const texte = await r.text();
+  let json = {};
+  try { json = JSON.parse(texte); } catch { /* corps non JSON */ }
+  return { statut: r.status, corps: json, octets: new Blob([texte]).size };
+}
+
+// Ce que l'organisateur publierait : jamais un seul mot du paquet
+function etatExemple(numero, scores) {
+  return {
+    etape: 'tour',
+    manche: { numero, sur: 3, nom: 'Un mot', icone: '🔤' },
+    equipes: [
+      { nom: 'Équipe 1', couleur: '#d6336c', partie: scores[0], manche: scores[0] },
+      { nom: 'Équipe 2', couleur: '#33c26a', partie: scores[1], manche: scores[1] }
+    ],
+    tour: { equipe: 0, joueur: 'Marc', duree: 40, restant: 31.5, debutClientA: 1700000000000 }
+  };
+}
+
+(async () => {
+  try {
+    // ===== Une session, comme pour la saisie partagee =====
+    const creation = await api({ action: 'creer', cartesParJoueur: 5, mode: 'nominatif' });
+    check('une session s ouvre', creation.statut === 200 && !!creation.corps.code);
+    const code = creation.corps.code;
+    const jeton = creation.corps.jeton;
+    log('       code : ' + code);
+
+    // ===== Avant toute publication, l invite attend sans erreur =====
+    const vide = await api({ action: 'suivre', code });
+    check('suivre repond avant toute publication', vide.statut === 200);
+    check('il n y a simplement rien a voir', vide.corps.suivi === null);
+    check('le serveur donne quand meme son heure', typeof vide.corps.serveur === 'number');
+
+    // ===== Seul l organisateur publie =====
+    const usurpe = await api({ action: 'publier', code, jeton: 'pas-le-bon', v: 1, etat: etatExemple(1, [0, 0]) });
+    check('publier sans le bon jeton est refuse', usurpe.statut === 403);
+
+    const sansEtat = await api({ action: 'publier', code, jeton, v: 1 });
+    check('publier sans etat est refuse', sansEtat.statut === 400);
+
+    // ===== Publication, puis lecture =====
+    const pub = await api({ action: 'publier', code, jeton, v: 1, etat: etatExemple(1, [4, 3]) });
+    check('l organisateur publie', pub.statut === 200);
+    check('la version est renvoyee', pub.corps.v === 1);
+    check('le serveur horodate la publication', typeof pub.corps.publieA === 'number');
+
+    const lu = await api({ action: 'suivre', code });
+    check('l invite recoit la publication', lu.statut === 200 && !!lu.corps.suivi);
+    check('la version correspond', lu.corps.suivi.v === 1);
+    check('l etat est complet', lu.corps.suivi.etat.manche.nom === 'Un mot');
+    check('les scores sont la', lu.corps.suivi.etat.equipes[0].partie === 4);
+    check('le joueur du tour est nomme', lu.corps.suivi.etat.tour.joueur === 'Marc');
+
+    // Les deux horodatages viennent du serveur : le delai est mesurable sans
+    // dependre de l heure des telephones, qui ne sont pas synchronises.
+    const delai = lu.corps.suivi.publieA !== undefined ? lu.corps.serveur - lu.corps.suivi.publieA : null;
+    log('       delai serveur mesure : ' + delai + ' ms, charge : ' + lu.octets + ' octets');
+    check('le delai se calcule sur la seule horloge du serveur', delai !== null && delai >= 0);
+    check('la charge reste legere', lu.octets < 1024);
+
+    // ===== Une nouvelle publication remplace la precedente =====
+    await api({ action: 'publier', code, jeton, v: 2, etat: etatExemple(2, [9, 7]) });
+    const relu = await api({ action: 'suivre', code });
+    check('la version avance', relu.corps.suivi.v === 2);
+    check('l ancien etat a bien ete remplace', relu.corps.suivi.etat.equipes[0].partie === 9);
+    check('la manche a change', relu.corps.suivi.etat.manche.numero === 2);
+
+    // ===== Le corps vient d un navigateur : il est borne =====
+    const enorme = await api({ action: 'publier', code, jeton, v: 3, etat: { bourrage: 'x'.repeat(5000) } });
+    check('un etat trop volumineux est refuse', enorme.statut === 413);
+    const apresRefus = await api({ action: 'suivre', code });
+    check('le refus n a rien casse', apresRefus.corps.suivi.v === 2);
+
+    // ===== Codes inconnus =====
+    const publieInconnu = await api({ action: 'publier', code: 'ZZZZ', jeton, v: 1, etat: etatExemple(1, [0, 0]) });
+    check('publier sur un code inconnu est refuse', publieInconnu.statut === 404);
+
+    // Suivre un code inconnu ne doit pas alarmer : l invite a pu arriver en avance
+    const suivreInconnu = await api({ action: 'suivre', code: 'ZZZZ' });
+    check('suivre un code inconnu repond sans erreur', suivreInconnu.statut === 200);
+    check('et signale simplement qu il n y a rien', suivreInconnu.corps.suivi === null);
+
+    const codeCourt = await api({ action: 'suivre', code: 'AB' });
+    check('un code mal forme est refuse', codeCourt.statut === 400);
+
+    log('SCENARIO 26 TERMINE');
+  } catch (e) { log('EXCEPTION: ' + e.message + '\n' + e.stack); }
+})();
+</script>
+</body>
+</html>

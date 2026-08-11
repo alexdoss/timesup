@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Rush — épreuve : invité</title>
+<style>
+:root {
+  --primary: #6D28D9; --primary-hover: #7C3AED;
+  --background: #0F172A; --surface: #1E293B; --surface-2: #273449;
+  --border: #334155; --text: #F8FAFC; --muted: #94A3B8; --muted-strong: #CBD5E1;
+  --success: #22C55E; --secondary: #F59E0B; --error: #EF4444;
+  --t1: #d6336c; --t2: #33c26a;
+  --r-md: 12px; --r-lg: 16px;
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  background: #060B18; color: var(--text); padding: 20px 14px 60px; line-height: 1.5;
+}
+.wrap { max-width: 560px; margin: 0 auto; }
+h1 { font-size: 1.3rem; }
+.sous { color: var(--muted); font-size: .88rem; margin-bottom: 18px; }
+.carte {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--r-lg); padding: 18px; margin-bottom: 14px;
+}
+.carte h2 { font-size: .75rem; text-transform: uppercase; letter-spacing: .05em;
+  color: var(--muted); margin-bottom: 12px; }
+.btn {
+  background: var(--primary); color: #fff; border: 0; border-radius: var(--r-md);
+  padding: 12px 16px; font-size: .95rem; font-weight: 700; font-family: inherit; cursor: pointer;
+}
+input, select {
+  background: var(--surface-2); color: var(--text); border: 1px solid var(--border);
+  border-radius: var(--r-md); padding: 11px 12px; font-size: 1rem; font-family: inherit;
+}
+#saisie-code { width: 130px; text-transform: uppercase; letter-spacing: .2em; text-align: center; }
+
+.bandeau { display: flex; align-items: center; gap: 8px; font-size: .82rem;
+  color: var(--muted); margin-bottom: 14px; flex-wrap: wrap; }
+.pastille { width: 9px; height: 9px; border-radius: 50%; background: var(--muted); }
+.pastille.ok { background: var(--success); } .pastille.ko { background: var(--error); }
+.pastille.veille { background: var(--secondary); }
+
+/* Ce que verrait vraiment un invité */
+.vue { text-align: center; }
+.vue .manche { font-size: .8rem; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; }
+.vue .icone { font-size: 2.6rem; margin: 2px 0; }
+.vue .qui { font-size: 1.05rem; font-weight: 700; }
+.vue .chrono { font-size: 4rem; font-weight: 800; color: var(--secondary); line-height: 1.1; }
+.vue .chrono.off { color: var(--border); }
+.tableau { display: flex; justify-content: center; gap: 34px; margin-top: 8px; }
+.eq { text-align: center; }
+.eq .nom { font-size: .7rem; font-weight: 700; text-transform: uppercase; letter-spacing: .03em; }
+.eq .gros { font-size: 2rem; font-weight: 800; }
+.eq .petit { font-size: .74rem; color: var(--muted); }
+
+.duo { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; text-align: center; }
+.duo .bloc { background: var(--surface-2); border-radius: var(--r-md); padding: 12px 8px; }
+.duo .lbl { font-size: .68rem; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); }
+.duo .val { font-size: 1.9rem; font-weight: 800; }
+.duo .bon { color: var(--success); } .duo .faux { color: var(--error); }
+.ecart { text-align: center; font-size: .82rem; color: var(--muted); margin-top: 8px; }
+
+.mesures { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 9px; }
+.mesure { background: var(--surface-2); border-radius: var(--r-md); padding: 10px 11px; }
+.mesure .lbl { font-size: .66rem; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); }
+.mesure .val { font-size: 1.22rem; font-weight: 800; }
+.projection { margin-top: 12px; font-size: .84rem; color: var(--muted-strong);
+  background: rgba(109,40,217,.14); border-radius: var(--r-md); padding: 11px 13px; }
+.journal { font-family: ui-monospace, Menlo, Consolas, monospace; font-size: .74rem;
+  color: var(--muted-strong); max-height: 200px; overflow-y: auto; white-space: pre-wrap; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <h1>Épreuve du mode lecture — invité</h1>
+  <p class="sous">Ce que verrait un joueur sur son téléphone, plus tout ce qu'il ne verrait pas :
+    délais, horloges, consommation.</p>
+
+  <div class="carte" id="bloc-connexion">
+    <h2>Rejoindre</h2>
+    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+      <input id="saisie-code" maxlength="4" placeholder="CODE" autocomplete="off">
+      <button id="btn-suivre" class="btn">Suivre la partie</button>
+    </div>
+  </div>
+
+  <div id="tout" style="display:none">
+    <div class="bandeau">
+      <span class="pastille" id="pastille"></span>
+      <span id="etat-liaison">connexion…</span>
+      <span style="margin-left:auto">Lecture toutes les</span>
+      <select id="intervalle">
+        <option value="2000">2 s</option>
+        <option value="3000" selected>3 s</option>
+        <option value="5000">5 s</option>
+        <option value="10000">10 s</option>
+      </select>
+    </div>
+
+    <div class="carte">
+      <h2>Ce que voit l'invité</h2>
+      <div class="vue">
+        <p class="manche" id="v-manche">—</p>
+        <div class="icone" id="v-icone">⏳</div>
+        <p class="qui" id="v-qui">En attente de l'organisateur</p>
+        <p class="chrono off" id="v-chrono">--</p>
+        <div class="tableau">
+          <div class="eq"><span class="nom" id="v-n1" style="color:var(--t1)">Équipe 1</span>
+            <div class="gros" id="v-s1">0</div><div class="petit">manche <span id="v-m1">0</span></div></div>
+          <div class="eq"><span class="nom" id="v-n2" style="color:var(--t2)">Équipe 2</span>
+            <div class="gros" id="v-s2">0</div><div class="petit">manche <span id="v-m2">0</span></div></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="carte">
+      <h2>Le piège des horloges</h2>
+      <div class="duo">
+        <div class="bloc"><div class="lbl">Recalé sur le serveur</div>
+          <div class="val bon" id="c-ancre">--</div></div>
+        <div class="bloc"><div class="lbl">Horloge de l'organisateur</div>
+          <div class="val faux" id="c-naif">--</div></div>
+      </div>
+      <p class="ecart" id="ecart-chronos">
+        Le premier ne dépend d'aucune horloge de téléphone. Le second croit l'organisateur sur parole.
+      </p>
+    </div>
+
+    <div class="carte">
+      <h2>Mesures</h2>
+      <div class="mesures">
+        <div class="mesure"><div class="lbl">Lectures</div><div class="val" id="m-lectures">0</div></div>
+        <div class="mesure"><div class="lbl">Évitées (veille)</div><div class="val" id="m-evitees">0</div></div>
+        <div class="mesure"><div class="lbl">Aller-retour médian</div><div class="val" id="m-rtt">–</div></div>
+        <div class="mesure"><div class="lbl">Délai bout-en-bout</div><div class="val" id="m-delai">–</div></div>
+        <div class="mesure"><div class="lbl">Pire délai</div><div class="val" id="m-delai-max">–</div></div>
+        <div class="mesure"><div class="lbl">Écart d'horloge</div><div class="val" id="m-horloge">–</div></div>
+        <div class="mesure"><div class="lbl">Coupures</div><div class="val" id="m-coupures">0</div></div>
+        <div class="mesure"><div class="lbl">Poids par lecture</div><div class="val" id="m-poids">–</div></div>
+      </div>
+      <p class="projection" id="projection">…</p>
+    </div>
+
+    <div class="carte">
+      <h2>Journal</h2>
+      <div class="journal" id="journal">…</div>
+    </div>
+  </div>
+</div>
+
+<script>
+const $ = id => document.getElementById(id);
+const lignes = [];
+function noter(texte) {
+  lignes.unshift(`${new Date().toLocaleTimeString('fr-FR')}  ${texte}`);
+  $('journal').textContent = lignes.slice(0, 80).join('\n');
+}
+
+// ===== État de la mesure =====
+let code = null;
+let intervalle = 3000;
+let minuteur = null;
+
+let lectures = 0, evitees = 0, coupures = 0;
+let enLigne = false;
+const rtts = [];
+const delais = [];
+let poidsDernier = 0;
+
+// Écart d'horloge : on garde l'estimation issue de l'aller-retour le plus court,
+// c'est celle qui a le moins de chances d'être faussée par le réseau.
+let ecartHorloge = null, meilleurRtt = Infinity;
+
+let versionVue = -1;
+let dernierEtat = null;
+// Point d'ancrage du décompte : « il restait X secondes, et je l'ai su à l'instant Y
+// de MA propre montre ». Ensuite on ne compte que des écarts locaux, jamais des
+// heures absolues — c'est ce qui rend le chrono juste malgré les horloges décalées.
+let ancre = null;
+
+const mediane = t => t.length ? [...t].sort((a, b) => a - b)[Math.floor(t.length / 2)] : null;
+
+function pastille(classe, texte) {
+  $('pastille').className = `pastille ${classe}`;
+  $('etat-liaison').textContent = texte;
+}
+
+async function lire() {
+  const t0 = Date.now();
+  const p0 = performance.now();
+  try {
+    const reponse = await fetch('/api/session', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'suivre', code })
+    });
+    const texte = await reponse.text();
+    poidsDernier = new Blob([texte]).size;
+    if (!reponse.ok) throw new Error(`HTTP ${reponse.status}`);
+    const donnees = JSON.parse(texte);
+
+    const rtt = Math.round(performance.now() - p0);
+    rtts.push(rtt);
+    lectures++;
+
+    // Heure serveur supposée atteinte à mi-chemin de l'aller-retour
+    if (rtt < meilleurRtt) {
+      meilleurRtt = rtt;
+      ecartHorloge = Math.round(donnees.serveur - (t0 + rtt / 2));
+    }
+
+    if (!enLigne) { enLigne = true; pastille('ok', 'en ligne'); }
+
+    const suivi = donnees.suivi;
+    if (suivi && suivi.v !== versionVue) {
+      // Les deux horodatages viennent du serveur : ce délai est exact, sans
+      // dépendre de l'heure d'aucun téléphone.
+      const delai = donnees.serveur - suivi.publieA;
+      delais.push(delai);
+      versionVue = suivi.v;
+      dernierEtat = suivi.etat;
+      poserAncre(suivi, donnees.serveur);
+      noter(`v${suivi.v} reçue — ${delai} ms après publication (${suivi.etat.etape})`);
+      afficher();
+    }
+    majMesures();
+  } catch (e) {
+    if (enLigne || lectures === 0) { coupures++; noter(`coupure : ${e.message}`); }
+    enLigne = false;
+    pastille('ko', 'hors ligne — nouvelle tentative');
+    majMesures();
+  }
+}
+
+function poserAncre(suivi, heureServeur) {
+  const tour = suivi.etat.tour;
+  if (!tour) { ancre = null; return; }
+  // Ce qu'il restait quand le serveur nous a répondu
+  const restantALaReponse = tour.restant - (heureServeur - suivi.publieA) / 1000;
+  ancre = {
+    restant: restantALaReponse,
+    recuA: performance.now(),
+    duree: tour.duree,
+    debutClientA: tour.debutClientA
+  };
+}
+
+function afficher() {
+  if (!dernierEtat) return;
+  const e = dernierEtat;
+  $('v-manche').textContent = `Manche ${e.manche.numero}/${e.manche.sur} — ${e.manche.nom}`;
+  $('v-icone').textContent = e.manche.icone;
+  $('v-n1').textContent = e.equipes[0].nom;
+  $('v-n2').textContent = e.equipes[1].nom;
+  $('v-s1').textContent = e.equipes[0].partie;
+  $('v-s2').textContent = e.equipes[1].partie;
+  $('v-m1').textContent = e.equipes[0].manche;
+  $('v-m2').textContent = e.equipes[1].manche;
+
+  const libelles = {
+    attente: "En attente du premier tour",
+    'entre-tours': 'Entre deux tours',
+    'fin-manche': 'Fin de manche',
+    'fin-partie': '🏆 Partie terminée'
+  };
+  $('v-qui').textContent = e.tour
+    ? `${e.equipes[e.tour.equipe].nom} — ${e.tour.joueur} fait deviner`
+    : (libelles[e.etape] || e.etape);
+}
+
+// Le décompte tourne en local, sans rien demander au serveur
+setInterval(() => {
+  const enTour = dernierEtat && dernierEtat.etape === 'tour' && ancre;
+  if (!enTour) {
+    $('v-chrono').textContent = '--';
+    $('v-chrono').classList.add('off');
+    $('c-ancre').textContent = '--';
+    $('c-naif').textContent = '--';
+    return;
+  }
+
+  const restantAncre = Math.max(0, ancre.restant - (performance.now() - ancre.recuA) / 1000);
+  $('v-chrono').textContent = Math.ceil(restantAncre);
+  $('v-chrono').classList.remove('off');
+  $('c-ancre').textContent = restantAncre.toFixed(1);
+
+  // La méthode naïve : croire l'heure de départ envoyée par l'organisateur,
+  // alors que nos deux montres ne sont pas à la même heure.
+  if (ancre.debutClientA) {
+    const restantNaif = Math.max(0, ancre.duree - (Date.now() - ancre.debutClientA) / 1000);
+    $('c-naif').textContent = restantNaif.toFixed(1);
+    const ecart = Math.abs(restantNaif - restantAncre);
+    $('ecart-chronos').textContent = ecart < 0.6
+      ? `Les deux coïncident (${ecart.toFixed(1)} s d'écart) : les horloges de ces appareils sont bien réglées.`
+      : `⚠️ ${ecart.toFixed(1)} s d'écart entre les deux méthodes — la seconde afficherait un chrono faux.`;
+  }
+}, 100);
+
+function majMesures() {
+  $('m-lectures').textContent = lectures;
+  $('m-evitees').textContent = evitees;
+  $('m-rtt').textContent = rtts.length ? `${mediane(rtts)} ms` : '–';
+  $('m-delai').textContent = delais.length ? `${mediane(delais)} ms` : '–';
+  $('m-delai-max').textContent = delais.length ? `${Math.max(...delais)} ms` : '–';
+  $('m-horloge').textContent = ecartHorloge === null ? '–' : `${ecartHorloge > 0 ? '+' : ''}${ecartHorloge} ms`;
+  $('m-coupures').textContent = coupures;
+  $('m-poids').textContent = poidsDernier ? `${poidsDernier} o` : '–';
+
+  const parMinute = 60000 / intervalle;
+  const pourUnePartie = Math.round(9 * parMinute * 45);
+  $('projection').textContent =
+    `À ce rythme : ${parMinute.toFixed(0)} lectures par minute et par invité. `
+    + `Pour 9 invités pendant 45 minutes, environ ${pourUnePartie.toLocaleString('fr-FR')} commandes, `
+    + `soit ${(500000 / pourUnePartie).toFixed(0)} parties par mois dans le forfait gratuit `
+    + `— avant l'économie de la mise en veille.`;
+}
+
+// ===== Boucle, veille, reprise =====
+function demarrerBoucle() {
+  arreterBoucle();
+  lire();
+  minuteur = setInterval(lire, intervalle);
+}
+function arreterBoucle() {
+  if (minuteur) clearInterval(minuteur);
+  minuteur = null;
+}
+
+// Un téléphone dans une poche n'a aucune raison d'interroger le serveur.
+// C'est la plus grosse économie possible, et ça ménage la batterie des invités.
+let veilleDepuis = null;
+document.addEventListener('visibilitychange', () => {
+  if (!code) return;
+  if (document.hidden) {
+    arreterBoucle();
+    veilleDepuis = Date.now();
+    pastille('veille', 'en veille — lectures suspendues');
+    noter('écran éteint : lectures suspendues');
+  } else {
+    if (veilleDepuis) {
+      const economisees = Math.floor((Date.now() - veilleDepuis) / intervalle);
+      evitees += economisees;
+      noter(`écran rallumé après ${Math.round((Date.now() - veilleDepuis) / 1000)} s — ${economisees} lectures évitées`);
+      veilleDepuis = null;
+    }
+    pastille('', 'reprise…');
+    demarrerBoucle();
+  }
+});
+
+$('intervalle').addEventListener('change', e => {
+  intervalle = Number(e.target.value);
+  noter(`rythme de lecture : ${intervalle / 1000} s`);
+  if (code && !document.hidden) demarrerBoucle();
+  majMesures();
+});
+
+function suivre(codeDemande) {
+  code = String(codeDemande || '').toUpperCase().trim();
+  if (code.length !== 4) { alert('Le code fait 4 caractères.'); return; }
+  $('bloc-connexion').style.display = 'none';
+  $('tout').style.display = '';
+  noter(`suivi de la partie ${code}`);
+  majMesures();
+  demarrerBoucle();
+}
+
+$('btn-suivre').addEventListener('click', () => suivre($('saisie-code').value));
+$('saisie-code').addEventListener('keydown', e => { if (e.key === 'Enter') suivre(e.target.value); });
+
+const depuisUrl = new URLSearchParams(location.search).get('c');
+if (depuisUrl) suivre(depuisUrl);
+</script>
+</body>
+</html>

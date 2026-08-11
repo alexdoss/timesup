@@ -331,6 +331,59 @@ async function fermer(req, res, session, code) {
   });
 }
 
+// ===== Suivi de partie (les invités regardent, ils n'écrivent pas) =====
+// Une clé séparée de la session, volontairement : un invité qui suit la partie
+// lit une seule petite valeur en une seule commande, au lieu de charger tous
+// les joueurs et toutes leurs cartes. À dix invités interrogeant toutes les
+// trois secondes pendant trois quarts d'heure, l'écart se compte en milliers
+// de commandes.
+//
+// Rien de ce qui est publié ici n'est secret : n'y mettre aucun mot du paquet,
+// sous peine de le rendre lisible par les joueurs eux-mêmes.
+
+const DUREE_SUIVI_S = 3 * 60 * 60;   // une partie tient largement dedans
+const TAILLE_SUIVI_MAX = 4096;       // le corps vient d'un navigateur : on le borne
+
+function cleSuivi(code) {
+  return `rush:suivi:${code}`;
+}
+
+async function publier(req, res, code) {
+  // HGET du seul champ utile plutôt que la session entière : publier arrive
+  // souvent, et les cartes des joueurs n'ont rien à faire dans cet échange.
+  const config = analyser(await commandeKV(['HGET', cleSession(code), 'config']));
+  if (!config) {
+    return res.status(404).json({ error: 'Aucune partie ne porte ce code.' });
+  }
+  if (req.body.jeton !== config.jeton) {
+    return res.status(403).json({ error: "Action réservée à l'organisateur." });
+  }
+
+  const etat = req.body.etat;
+  if (!etat || typeof etat !== 'object') {
+    return res.status(400).json({ error: 'État de partie manquant.' });
+  }
+
+  // L'heure vient du serveur, jamais du téléphone : c'est ce qui permet de
+  // mesurer un délai réel entre deux appareils dont les horloges diffèrent.
+  const publieA = Date.now();
+  const version = Number(req.body.v) || 0;
+  const charge = JSON.stringify({ v: version, publieA, etat });
+  if (charge.length > TAILLE_SUIVI_MAX) {
+    return res.status(413).json({ error: 'État de partie trop volumineux.' });
+  }
+
+  await commandeKV(['SET', cleSuivi(code), charge, 'EX', DUREE_SUIVI_S]);
+  return res.status(200).json({ v: version, publieA });
+}
+
+async function suivre(req, res, code) {
+  const charge = analyser(await commandeKV(['GET', cleSuivi(code)]));
+  // `serveur` donne l'heure du serveur : le téléphone s'en sert pour corriger
+  // sa propre horloge, sans quoi le décompte qu'il calcule serait faux.
+  return res.status(200).json({ suivi: charge, serveur: Date.now() });
+}
+
 // ===== Point d'entrée =====
 
 export default async function handler(req, res) {
@@ -354,6 +407,11 @@ export default async function handler(req, res) {
     if (code.length !== LONGUEUR_CODE) {
       return res.status(400).json({ error: 'Code de partie invalide.' });
     }
+
+    // Le suivi se traite avant de charger la session : c'est exactement ce qui
+    // le rend peu coûteux quand dix invités interrogent en boucle.
+    if (action === 'suivre') return await suivre(req, res, code);
+    if (action === 'publier') return await publier(req, res, code);
 
     const session = await lireSession(code);
     if (!session) {

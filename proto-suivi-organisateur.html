@@ -98,10 +98,16 @@ h1 { font-size: 1.4rem; }
       <button id="btn-tour" class="btn">▶ Démarrer le tour</button>
       <button id="btn-trouve" class="btn sec" disabled>＋1 trouvé</button>
     </div>
-    <div class="rangee">
+    <div class="rangee" style="margin-bottom:8px">
+      <button id="btn-pause" class="btn sec" disabled>⏸ Mettre en pause</button>
       <button id="btn-fin-tour" class="btn sec" disabled>Terminer le tour</button>
+    </div>
+    <div class="rangee" style="margin-bottom:8px">
       <button id="btn-manche" class="btn sec">Manche suivante</button>
       <button id="btn-fin" class="btn sec">Fin de partie</button>
+    </div>
+    <div class="rangee">
+      <button id="btn-muet" class="btn sec">🔇 Simuler une coupure de l'organisateur</button>
     </div>
   </div>
 
@@ -162,7 +168,9 @@ const partie = {
   scores: [0, 0], scoresManche: [0, 0],
   etape: 'attente',
   debutClientA: null,   // heure du DÉPART, prise sur l'horloge de CE téléphone
-  finPrevueA: null
+  finPrevueA: null,
+  restantGele: 0,       // temps figé pendant une pause
+  muet: false           // simule un organisateur qui ne publie plus rien
 };
 
 // Mesures des publications
@@ -176,6 +184,7 @@ function mediane(valeurs) {
 }
 
 function restantMaintenant() {
+  if (partie.etape === 'pause') return partie.restantGele;
   if (partie.etape !== 'tour' || !partie.finPrevueA) return 0;
   return Math.max(0, (partie.finPrevueA - Date.now()) / 1000);
 }
@@ -190,7 +199,9 @@ function etatPublie() {
       { nom: 'Équipe 1', couleur: '#d6336c', partie: partie.scores[0], manche: partie.scoresManche[0] },
       { nom: 'Équipe 2', couleur: '#33c26a', partie: partie.scores[1], manche: partie.scoresManche[1] }
     ],
-    tour: partie.etape === 'tour' ? {
+    // La pause garde le bloc « tour » : l'invité doit continuer à voir qui joue
+    // et combien il reste, simplement figé.
+    tour: (partie.etape === 'tour' || partie.etape === 'pause') ? {
       equipe: partie.equipe,
       joueur: JOUEURS[partie.equipe][partie.tourDe % 2],
       duree: DUREE,
@@ -206,6 +217,9 @@ function etatPublie() {
 
 async function publier(motif) {
   if (!partie.code) return;
+  // Organisateur « muet » : on simule un téléphone verrouillé ou une app fermée.
+  // Rien n'est envoyé, et c'est à l'invité de s'en apercevoir tout seul.
+  if (partie.muet) { noter(`(muet) publication retenue : ${motif}`); return; }
   partie.v++;
   const t0 = performance.now();
   try {
@@ -238,9 +252,14 @@ function majEcran() {
   $('m1').textContent = partie.scoresManche[0];
   $('m2').textContent = partie.scoresManche[1];
 
+  const joueur = JOUEURS[partie.equipe][partie.tourDe % 2];
   if (partie.etape === 'tour') {
-    $('ligne-tour').textContent = `Équipe ${partie.equipe + 1} — ${JOUEURS[partie.equipe][partie.tourDe % 2]} fait deviner`;
+    $('ligne-tour').textContent = `Équipe ${partie.equipe + 1} — ${joueur} fait deviner`;
     $('chrono').textContent = Math.ceil(restantMaintenant());
+    $('chrono').classList.remove('off');
+  } else if (partie.etape === 'pause') {
+    $('ligne-tour').textContent = `⏸ En pause — ${joueur} reprendra`;
+    $('chrono').textContent = Math.ceil(partie.restantGele);
     $('chrono').classList.remove('off');
   } else {
     const libelles = {
@@ -254,9 +273,16 @@ function majEcran() {
     $('chrono').classList.add('off');
   }
 
-  $('btn-tour').disabled = partie.etape === 'tour' || partie.etape === 'fin-partie';
-  $('btn-trouve').disabled = partie.etape !== 'tour';
-  $('btn-fin-tour').disabled = partie.etape !== 'tour';
+  const enTour = partie.etape === 'tour';
+  const enPause = partie.etape === 'pause';
+  $('btn-tour').disabled = enTour || enPause || partie.etape === 'fin-partie';
+  $('btn-trouve').disabled = !enTour;
+  $('btn-fin-tour').disabled = !enTour && !enPause;
+  $('btn-pause').disabled = !enTour && !enPause;
+  $('btn-pause').textContent = enPause ? '▶ Reprendre' : '⏸ Mettre en pause';
+  $('btn-muet').textContent = partie.muet
+    ? '🔊 Rétablir les publications'
+    : "🔇 Simuler une coupure de l'organisateur";
 }
 
 setInterval(() => {
@@ -315,6 +341,32 @@ $('btn-trouve').addEventListener('click', () => {
   partie.scoresManche[partie.equipe]++;
   majEcran();
   publier('carte trouvée');
+});
+
+$('btn-pause').addEventListener('click', () => {
+  if (partie.etape === 'tour') {
+    // On fige le temps restant : c'est lui que l'invité affichera, sans le décompter
+    partie.restantGele = restantMaintenant();
+    partie.etape = 'pause';
+    partie.finPrevueA = null;
+    majEcran();
+    publier('mise en pause');
+  } else if (partie.etape === 'pause') {
+    partie.finPrevueA = Date.now() + partie.restantGele * 1000;
+    partie.debutClientA = Date.now() - (DUREE - partie.restantGele) * 1000;
+    partie.etape = 'tour';
+    majEcran();
+    publier('reprise');
+  }
+});
+
+$('btn-muet').addEventListener('click', () => {
+  partie.muet = !partie.muet;
+  noter(partie.muet
+    ? 'organisateur muet : plus rien n\'est publié'
+    : 'publications rétablies');
+  majEcran();
+  if (!partie.muet) publier('retour de l\'organisateur');
 });
 
 $('btn-fin-tour').addEventListener('click', () => terminerTour('tour arrêté'));

@@ -50,6 +50,11 @@ input, select {
 .vue .qui { font-size: 1.05rem; font-weight: 700; }
 .vue .chrono { font-size: 4rem; font-weight: 800; color: var(--secondary); line-height: 1.1; }
 .vue .chrono.off { color: var(--border); }
+.vue .chrono.gele { color: var(--muted-strong); }
+.vue .signal { font-size: .85rem; font-weight: 700; border-radius: var(--r-md);
+  padding: 8px 10px; margin-top: 6px; }
+.vue .signal.pause { background: rgba(245,158,11,.15); color: var(--secondary); }
+.vue .signal.perdu { background: rgba(239,68,68,.14); color: #fca5a5; }
 .tableau { display: flex; justify-content: center; gap: 34px; margin-top: 8px; }
 .eq { text-align: center; }
 .eq .nom { font-size: .7rem; font-weight: 700; text-transform: uppercase; letter-spacing: .03em; }
@@ -108,6 +113,7 @@ input, select {
         <div class="icone" id="v-icone">⏳</div>
         <p class="qui" id="v-qui">En attente de l'organisateur</p>
         <p class="chrono off" id="v-chrono">--</p>
+        <p class="signal" id="v-signal" style="display:none"></p>
         <div class="tableau">
           <div class="eq"><span class="nom" id="v-n1" style="color:var(--t1)">Équipe 1</span>
             <div class="gros" id="v-s1">0</div><div class="petit">manche <span id="v-m1">0</span></div></div>
@@ -141,6 +147,7 @@ input, select {
         <div class="mesure"><div class="lbl">Écart d'horloge</div><div class="val" id="m-horloge">–</div></div>
         <div class="mesure"><div class="lbl">Coupures</div><div class="val" id="m-coupures">0</div></div>
         <div class="mesure"><div class="lbl">Poids par lecture</div><div class="val" id="m-poids">–</div></div>
+        <div class="mesure"><div class="lbl">Âge de l'état</div><div class="val" id="m-age">–</div></div>
       </div>
       <p class="projection" id="projection">…</p>
     </div>
@@ -177,6 +184,10 @@ let ecartHorloge = null, meilleurRtt = Infinity;
 
 let versionVue = -1;
 let dernierEtat = null;
+// Depuis combien de temps l'organisateur n'a-t-il rien publié ? Rafraîchi à
+// chaque lecture, même quand rien n'a changé : c'est le seul moyen de repérer
+// un organisateur dont le téléphone s'est verrouillé.
+let ageEtat = null;
 // Point d'ancrage du décompte : « il restait X secondes, et je l'ai su à l'instant Y
 // de MA propre montre ». Ensuite on ne compte que des écarts locaux, jamais des
 // heures absolues — c'est ce qui rend le chrono juste malgré les horloges décalées.
@@ -216,6 +227,8 @@ async function lire() {
     if (!enLigne) { enLigne = true; pastille('ok', 'en ligne'); }
 
     const suivi = donnees.suivi;
+    // L'âge se recalcule à chaque lecture, y compris quand la version n'a pas bougé
+    if (suivi) ageEtat = { ms: donnees.serveur - suivi.publieA, mesureA: performance.now() };
     if (suivi && suivi.v !== versionVue) {
       // Les deux horodatages viennent du serveur : ce délai est exact, sans
       // dépendre de l'heure d'aucun téléphone.
@@ -239,10 +252,13 @@ async function lire() {
 function poserAncre(suivi, heureServeur) {
   const tour = suivi.etat.tour;
   if (!tour) { ancre = null; return; }
-  // Ce qu'il restait quand le serveur nous a répondu
-  const restantALaReponse = tour.restant - (heureServeur - suivi.publieA) / 1000;
+  // Pendant une pause le temps ne s'écoule pas : on prend la valeur telle quelle.
+  // Sinon on retranche ce qui s'est écoulé entre la publication et la réponse,
+  // les deux horodatages venant du serveur.
+  const enPause = suivi.etat.etape === 'pause';
   ancre = {
-    restant: restantALaReponse,
+    restant: enPause ? tour.restant : tour.restant - (heureServeur - suivi.publieA) / 1000,
+    gele: enPause,
     recuA: performance.now(),
     duree: tour.duree,
     debutClientA: tour.debutClientA
@@ -274,18 +290,41 @@ function afficher() {
 
 // Le décompte tourne en local, sans rien demander au serveur
 setInterval(() => {
-  const enTour = dernierEtat && dernierEtat.etape === 'tour' && ancre;
-  if (!enTour) {
-    $('v-chrono').textContent = '--';
-    $('v-chrono').classList.add('off');
+  const chrono = $('v-chrono');
+  const signal = $('v-signal');
+  const etape = dernierEtat && dernierEtat.etape;
+  const suitUnTour = (etape === 'tour' || etape === 'pause') && ancre;
+
+  const age = ageEtat ? ageEtat.ms + (performance.now() - ageEtat.mesureA) : null;
+  $('m-age').textContent = age === null ? '–' : `${Math.round(age / 1000)} s`;
+
+  if (!suitUnTour) {
+    chrono.textContent = '--';
+    chrono.className = 'chrono off';
     $('c-ancre').textContent = '--';
     $('c-naif').textContent = '--';
+    signal.style.display = 'none';
     return;
   }
 
-  const restantAncre = Math.max(0, ancre.restant - (performance.now() - ancre.recuA) / 1000);
-  $('v-chrono').textContent = Math.ceil(restantAncre);
-  $('v-chrono').classList.remove('off');
+  // ===== Pause : le décompte est figé, il ne descend pas =====
+  if (ancre.gele) {
+    chrono.textContent = Math.ceil(ancre.restant);
+    chrono.className = 'chrono gele';
+    $('c-ancre').textContent = ancre.restant.toFixed(1);
+    $('c-naif').textContent = '—';
+    signal.className = 'signal pause';
+    signal.style.display = '';
+    signal.textContent = "⏸ L'organisateur a mis la partie en pause";
+    $('ecart-chronos').textContent =
+      "En pause, le temps ne s'écoule plus : aucune horloge n'intervient dans l'affichage.";
+    return;
+  }
+
+  const ecoule = (performance.now() - ancre.recuA) / 1000;
+  const restantAncre = Math.max(0, ancre.restant - ecoule);
+  chrono.textContent = Math.ceil(restantAncre);
+  chrono.className = 'chrono';
   $('c-ancre').textContent = restantAncre.toFixed(1);
 
   // La méthode naïve : croire l'heure de départ envoyée par l'organisateur,
@@ -297,6 +336,20 @@ setInterval(() => {
     $('ecart-chronos').textContent = ecart < 0.6
       ? `Les deux coïncident (${ecart.toFixed(1)} s d'écart) : les horloges de ces appareils sont bien réglées.`
       : `⚠️ ${ecart.toFixed(1)} s d'écart entre les deux méthodes — la seconde afficherait un chrono faux.`;
+  }
+
+  // ===== Silence : le tour aurait dû se terminer, et rien n'est arrivé =====
+  // C'est la seule façon, sans battement de cœur, de repérer un organisateur
+  // dont le téléphone s'est verrouillé au milieu d'un tour.
+  const depuisLaFin = ecoule - ancre.restant;
+  if (depuisLaFin > 4) {
+    signal.className = 'signal perdu';
+    signal.style.display = '';
+    signal.textContent = age !== null && age > 90000
+      ? `⚠️ Aucune nouvelle de l'organisateur depuis ${Math.round(age / 1000)} s`
+      : "Le tour devrait être fini — en attente de l'organisateur…";
+  } else {
+    signal.style.display = 'none';
   }
 }, 100);
 

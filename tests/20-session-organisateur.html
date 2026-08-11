@@ -303,6 +303,10 @@ f.addEventListener('load', async () => {
     await wait(900);
     check('la partie demarre', ecran() === 'screen-round');
 
+    // Sans les noms, il n y a pas d equipes a montrer
+    check('aucun acces aux equipes en mode simple',
+          $('btn-voir-equipes').style.display === 'none');
+
     const sauvegarde = JSON.parse(w.localStorage.getItem('timesup_partie_en_cours')).state;
     log('       paquet : ' + sauvegarde.masterDeck.length + ' cartes');
     check('le paquet est fait des cartes saisies', sauvegarde.masterDeck.length === 9);

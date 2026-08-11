@@ -828,6 +828,42 @@ body {
   font-weight: 500;
 }
 
+/* Composition des équipes, consultée en cours de partie */
+.equipes-vue {
+  display: flex;
+  gap: 18px;
+  text-align: left;
+  margin-top: 4px;
+}
+
+.equipes-vue .equipe-bloc {
+  flex: 1;
+  min-width: 0;
+}
+
+.equipes-vue h4 {
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 8px;
+}
+
+.equipes-vue ul {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.equipes-vue li {
+  font-size: 0.92rem;
+  color: var(--text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 /* ===== BOÎTE DE DIALOGUE ===== */
 .dialog-overlay {
   position: fixed;

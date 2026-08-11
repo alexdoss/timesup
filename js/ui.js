@@ -528,6 +528,46 @@ export function renderRepartition(joueurs, teams, onBasculer) {
   });
 }
 
+// ===== COMPOSITION DES ÉQUIPES =====
+// Consultable depuis le début de tour. En lecture seule : déplacer un joueur en
+// cours de partie fausserait les points déjà marqués et la rotation.
+export function afficherEquipes(teams) {
+  const contenu = document.getElementById('equipes-contenu');
+  contenu.innerHTML = '';
+
+  teams.forEach(equipe => {
+    const bloc = document.createElement('div');
+    bloc.className = 'equipe-bloc';
+
+    const titre = document.createElement('h4');
+    titre.textContent = equipe.name;
+    titre.style.color = equipe.color;
+    bloc.appendChild(titre);
+
+    const liste = document.createElement('ul');
+    equipe.players.forEach(joueur => {
+      const item = document.createElement('li');
+      item.textContent = joueur;
+      liste.appendChild(item);
+    });
+    bloc.appendChild(liste);
+
+    contenu.appendChild(bloc);
+  });
+
+  document.getElementById('equipes-overlay').style.display = '';
+}
+
+export function masquerEquipes() {
+  document.getElementById('equipes-overlay').style.display = 'none';
+}
+
+// Il n'y a rien à montrer sans les noms : l'app ne connaît que deux équipes
+export function afficherBoutonEquipes(visible) {
+  const bouton = document.getElementById('btn-voir-equipes');
+  if (bouton) bouton.style.display = visible ? '' : 'none';
+}
+
 // ===== BOÎTE DE DIALOGUE =====
 // Remplace alert() et confirm() : ceux du navigateur sortent du design, et sur
 // iPhone ils affichent l'adresse du site en titre, ce qui inquiète les joueurs.

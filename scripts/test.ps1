@@ -110,7 +110,11 @@ try {
     if ($brut -match '(?s)<pre id="log">(.*?)</pre>') {
       $bloc = $Matches[1] -replace '&lt;', '<' -replace '&gt;', '>' -replace '&amp;', '&' -replace '&quot;', '"'
       $ok = ([regex]::Matches($bloc, 'PASS --')).Count
-      $ko = ([regex]::Matches($bloc, 'FAIL --')).Count
+      # Une exception interrompt le scenario en silence : sans ce comptage, un
+      # fichier a moitie joue affichait « 0 echec » et passait pour vert.
+      $ko = ([regex]::Matches($bloc, 'FAIL --')).Count `
+          + ([regex]::Matches($bloc, 'EXCEPTION:')).Count `
+          + ([regex]::Matches($bloc, 'ERREUR APP:')).Count
       $totalOk += $ok; $totalKo += $ko
       Write-Output ("{0,-42} : {1,3} ok, {2} echec(s)" -f $s.f, $ok, $ko)
       if ($Detail) { ($bloc -split "`n") | ForEach-Object { "      $_" } }

@@ -5,7 +5,8 @@ import { loadThemes } from './themes.js';
 import { game, ROUNDS, shuffle, resetGame, replayGame, buildDeck, startNewRound, getCurrentCard, cardFound, cardPassed, switchTeam, isRoundOver, isGameOver, nextRound, getCardsRemaining, addPlayer, removePlayer, assignTeamsRoundRobin, getCurrentPlayer, advancePlayer, getActiveRound, setPlayerTeam, syncChosenTeams, canPass, getPlannedTeamSizes, beginTurn, closeTurn, uncountCard, countCard, getRoundScores, getSessionScores, playerExists } from './game.js';
 import { showScreen, updateTimer, showCard, updateRoundScreen, updateTurnInfo, updateGameHeader, showTurnResult, showRoundEnd, showFinalScreen, renderThemeButtons, renderPlayerList, updateCurrentPlayer, renderPlayerStats, renderRoundsSelector, renderAssignMode, applyTeamAccent, showResumeOption, renderSoundSetting, renderRules, showPauseOverlay, showPauseCountdown, hidePause, showPuppetConfirm, setRoundsNextEnabled, renderThemeEditor, showThemeEditError, renderCustomThemes, showDialog,
          afficherInvitation, renderSession, renderBoutonMesCartes, renderSaisieLocale,
-         showSaisieError, renderRepartition } from './ui.js';
+         showSaisieError, renderRepartition,
+         afficherEquipes, masquerEquipes, afficherBoutonEquipes } from './ui.js';
 import { ouvrirSession, sessionCourante, oublierSession, adresseInvitation, adresseLisible,
          inscrire, deposerCartes, retirerJoueur, fermerSession, lireEtat,
          suivre, arreterSuivi } from './session.js';
@@ -502,6 +503,13 @@ function setupListeners() {
   document.getElementById('btn-settings').addEventListener('click', () => openSettings('home'));
   document.getElementById('btn-pause-settings').addEventListener('click', () => openSettings('pause'));
   document.getElementById('btn-settings-back').addEventListener('click', closeSettings);
+
+  // Composition des équipes, consultable avant de lancer un tour
+  document.getElementById('btn-voir-equipes').addEventListener('click', () => afficherEquipes(game.teams));
+  document.getElementById('btn-equipes-fermer').addEventListener('click', masquerEquipes);
+  document.getElementById('equipes-overlay').addEventListener('click', event => {
+    if (event.target.id === 'equipes-overlay') masquerEquipes();
+  });
 
   // Next turn
   document.getElementById('btn-next-turn').addEventListener('click', onNextTurn);
@@ -1272,6 +1280,7 @@ function showRoundScreen() {
   updateRoundScreen(round, game.teams, getRoundLabel());
   updateTurnInfo(game.teams[game.currentTeam].name);
   updateCurrentPlayer(game.nominativeMode ? getCurrentPlayer() : null);
+  afficherBoutonEquipes(game.nominativeMode && game.teams.some(e => e.players.length > 0));
   showScreen('screen-round');
 }
 

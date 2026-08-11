@@ -535,6 +535,7 @@
         <p id="current-team-turn" class="turn-info"></p>
         <p id="current-player" class="player-info"></p>
         <button id="btn-start-turn" class="btn btn-primary">Lancer le tour ▶️</button>
+        <button id="btn-voir-equipes" class="btn-link">👥 Les équipes</button>
       </div>
     </div>
 
@@ -663,6 +664,17 @@
       </div>
     </div>
 
+  </div>
+
+  <!-- COMPOSITION DES ÉQUIPES — consultable en cours de partie, en lecture seule -->
+  <div id="equipes-overlay" class="dialog-overlay" style="display:none">
+    <div class="dialog-panel" role="dialog" aria-modal="true" aria-labelledby="equipes-titre">
+      <h3 id="equipes-titre">👥 Les équipes</h3>
+      <div id="equipes-contenu" class="equipes-vue"></div>
+      <div class="dialog-actions">
+        <button id="btn-equipes-fermer" type="button" class="btn btn-primary">Fermer</button>
+      </div>
+    </div>
   </div>
 
   <!-- BOÎTE DE DIALOGUE — remplace alert() et confirm() du navigateur -->

@@ -170,6 +170,36 @@ f.addEventListener('load', async () => {
     await wait(700);
     check('la partie demarre', ecran() === 'screen-round');
 
+    // ===== La composition des equipes reste consultable =====
+    check('un acces aux equipes est propose', !!$('btn-voir-equipes') && visible('btn-voir-equipes'));
+    check('il est place sous le lancement du tour',
+          $('btn-start-turn').nextElementSibling === $('btn-voir-equipes'));
+    check('il est discret', $('btn-voir-equipes').classList.contains('btn-link'));
+
+    $('btn-voir-equipes').click();
+    check('la fenetre s ouvre', visible('equipes-overlay'));
+    const blocs = [...d.querySelectorAll('#equipes-contenu .equipe-bloc')];
+    check('les deux equipes sont affichees', blocs.length === 2);
+    const affiches = blocs.flatMap(b => [...b.querySelectorAll('li')].map(li => li.textContent));
+    log('       equipes : ' + blocs.map(b =>
+      b.querySelector('h4').textContent + ' = ' +
+      [...b.querySelectorAll('li')].map(li => li.textContent).join(', ')).join('  |  '));
+    check('les 4 joueurs y figurent', affiches.length === 4);
+    check('ce sont ceux de la partie',
+          ['Marc', 'Inès', 'Sam', 'Jo'].every(p => affiches.includes(p)));
+    check('chaque equipe porte son nom',
+          blocs.every(b => b.querySelector('h4').textContent.includes('Équipe')));
+    check('aucun moyen de modifier depuis cette fenetre',
+          d.querySelectorAll('#equipes-contenu button').length === 0);
+
+    $('btn-equipes-fermer').click();
+    check('la fenetre se referme', !visible('equipes-overlay'));
+    check('et on reste sur le debut de tour', ecran() === 'screen-round');
+
+    $('btn-voir-equipes').click();
+    $('equipes-overlay').click();
+    check('un clic a cote referme aussi', !visible('equipes-overlay'));
+
     const etat = JSON.parse(w.localStorage.getItem('timesup_partie_en_cours')).state;
     log('       paquet : ' + etat.masterDeck.length + ' cartes, joueurs : ' + JSON.stringify(etat.players));
     check('la manche pantin a bien ete retiree', !etat.activeRounds.includes(4));

@@ -450,9 +450,7 @@ export function renderSession(etat, onRetirer, rejeu = false) {
   } else if (enCours.length > 1) {
     bouton.textContent = `⏳ ${enCours.length} joueurs saisissent encore…`;
   } else {
-    bouton.textContent = rejeu
-      ? `🔄 Rejouer (${etat.total} cartes)`
-      : `Continuer la configuration ▶️ (${etat.total} cartes)`;
+    bouton.textContent = rejeu ? `🔄 Rejouer (${etat.total} cartes)` : 'Suivant ▶️';
   }
 }
 

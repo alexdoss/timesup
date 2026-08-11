@@ -821,11 +821,14 @@ async function partagerLien() {
   if (!session) return;
 
   const lien = adresseInvitation();
-  const texte = `Rejoins la partie de Rush ! Code ${session.code}`;
 
+  // On ne transmet que l'adresse, sans texte d'accompagnement : c'est le système
+  // qui décide quoi faire de ce qu'on lui donne, et beaucoup de téléphones
+  // collent le texte devant l'adresse — y compris quand l'utilisateur choisit
+  // « Copier ». Le code d'accès est déjà dans l'adresse, rien n'est perdu.
   if (navigator.share) {
     try {
-      await navigator.share({ title: 'Rush', text: texte, url: lien });
+      await navigator.share({ title: 'Rush', url: lien });
       return;
     } catch (err) {
       // L'utilisateur a fermé le menu de partage : ce n'est pas une erreur
@@ -834,7 +837,7 @@ async function partagerLien() {
   }
 
   try {
-    await navigator.clipboard.writeText(`${texte} — ${lien}`);
+    await navigator.clipboard.writeText(lien);
     showDialog({
       title: 'Lien copié',
       message: 'Colle-le dans ta messagerie pour inviter les autres joueurs.',

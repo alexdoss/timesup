@@ -126,8 +126,10 @@ f.addEventListener('load', async () => {
     log('       partage : ' + JSON.stringify(partage));
     check('le partage natif est utilise quand il existe', !!partage);
     check('il transmet le lien de la partie', partage.url.includes('c=' + code));
-    check('le message rappelle le code', partage.text.includes(code));
     check('et nomme le jeu', partage.title === 'Rush');
+    // Aucun texte : certains telephones le collent devant l adresse, y compris
+    // quand l utilisateur choisit « Copier »
+    check('aucun texte n accompagne le lien', partage.text === undefined);
 
     // Sans partage natif, on retombe sur le presse-papier
     let copie = null;
@@ -138,6 +140,8 @@ f.addEventListener('load', async () => {
     $('session-adresse').click();
     await wait(300);
     check('sans partage natif, le lien est copie', !!copie && copie.includes(code));
+    check('et rien que le lien', copie === partage.url);
+    check('il est directement ouvrable', copie.startsWith('http'));
     check('l utilisateur en est informe', $('dialog-title').textContent.includes('copié'));
     $('dialog-confirm').click();
     await wait(100);
@@ -165,7 +169,9 @@ f.addEventListener('load', async () => {
     await wait(2600);
     check('Marc est marque comme pret', connectes().some(t => t.includes('3 cartes ✓')));
     check('la suite devient possible', !$('btn-session-lancer').disabled);
-    check('le bouton propose de configurer', $('btn-session-lancer').textContent.includes('configuration'));
+    log('       bouton : ' + $('btn-session-lancer').textContent);
+    check('le bouton propose simplement de continuer',
+          $('btn-session-lancer').textContent.trim() === 'Suivant ▶️');
 
     // ===== Les cartes de l organisateur =====
     check('un acces a ses propres cartes est propose', !!$('btn-mes-cartes'));

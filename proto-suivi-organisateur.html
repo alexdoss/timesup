@@ -415,6 +415,10 @@ $('btn-fin').addEventListener('click', () => {
 
 majEcran();
 noter('prêt — ouvre une session pour commencer');
+
+// ?auto=1 ouvre la session sans clic : sert à vérifier la page automatiquement,
+// et à enchaîner les essais sans repasser par le bouton.
+if (new URLSearchParams(location.search).get('auto')) $('btn-ouvrir').click();
 </script>
 </body>
 </html>

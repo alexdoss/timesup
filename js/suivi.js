@@ -102,7 +102,10 @@ function resume(etape) {
       nom: equipe.name,
       couleur: equipe.color,
       partie: equipe.score,
-      manche: scoresManche[index]
+      manche: scoresManche[index],
+      // Les prénoms, pour que les invités puissent consulter la composition.
+      // En mode simple il n'y a personne à nommer.
+      joueurs: game.nominativeMode ? [...equipe.players] : []
     })),
     tour: enTour ? {
       equipe: game.turnTeam,

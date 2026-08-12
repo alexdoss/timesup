@@ -434,15 +434,72 @@ document.addEventListener('visibilitychange', () => {
   }
 });
 
+// Tant que la saisie est ouverte on lit la liste des joueurs ; une fois close,
+// elle ne bougera plus et c'est l'état publié par l'organisateur qui devient
+// intéressant — les équipes, puis la partie.
+let saisieClose = false;
+
 async function rafraichirAttente() {
-  let etat;
   try {
-    etat = await appeler('etat', { code: session.code });
+    if (!saisieClose) {
+      const etat = await appeler('etat', { code: session.code });
+      rendreAttente(etat);
+      if (etat.ouverte !== false) return;
+      saisieClose = true;
+    }
+    const reponse = await appeler('suivre', { code: session.code });
+    rendreConfiguration(reponse.suivi);
   } catch {
     // Coupure passagère : on garde le dernier affichage plutôt que de le vider
-    return;
   }
-  rendreAttente(etat);
+}
+
+// L'organisateur poursuit sa configuration. Dès qu'il a réparti les joueurs,
+// les invités peuvent consulter les équipes.
+function rendreConfiguration(suivi) {
+  const equipes = suivi?.etat?.equipes || [];
+  const nommees = equipes.filter(e => (e.joueurs || []).length > 0);
+  const bouton = document.getElementById('btn-voir-equipes');
+  bouton.style.display = nommees.length ? '' : 'none';
+  equipesConnues = nommees.length ? equipes : null;
+}
+
+let equipesConnues = null;
+
+function afficherEquipes() {
+  if (!equipesConnues) return;
+  const contenu = document.getElementById('equipes-contenu');
+  contenu.innerHTML = '';
+
+  equipesConnues.forEach(equipe => {
+    const bloc = document.createElement('div');
+    bloc.className = 'equipe-bloc';
+
+    const titre = document.createElement('h4');
+    titre.textContent = equipe.nom;
+    titre.style.color = equipe.couleur;
+    bloc.appendChild(titre);
+
+    const liste = document.createElement('ul');
+    (equipe.joueurs || []).forEach(joueur => {
+      const item = document.createElement('li');
+      // textContent : les prénoms viennent du téléphone des autres invités
+      item.textContent = joueur;
+      // On souligne le sien : c'est la première chose qu'on cherche
+      if (joueur.toLocaleLowerCase() === (session.prenom || '').toLocaleLowerCase()) {
+        item.className = 'moi';
+      }
+      liste.appendChild(item);
+    });
+    bloc.appendChild(liste);
+    contenu.appendChild(bloc);
+  });
+
+  document.getElementById('equipes-overlay').style.display = '';
+}
+
+function masquerEquipes() {
+  document.getElementById('equipes-overlay').style.display = 'none';
 }
 
 function rendreAttente(etat) {
@@ -455,11 +512,20 @@ function rendreAttente(etat) {
   // alors faux pendant quelques secondes.
   const configEnCours = etat.ouverte === false;
   document.getElementById('attente-titre').textContent =
-    configEnCours ? '⚙️ Configuration de la partie en cours' : 'En attente du départ';
+    configEnCours ? 'Configuration de la partie en cours' : 'En attente du départ';
   document.getElementById('attente-sous').textContent = configEnCours
     ? "L'organisateur règle les équipes et les manches. La partie démarre juste après."
     : "On attend que tout le monde ait saisi ses cartes.";
   document.getElementById('btn-attente-retour').style.display = configEnCours ? 'none' : '';
+  document.getElementById('attente-roue').style.display = configEnCours ? '' : 'none';
+
+  // Le décompte des cartes n'a plus d'objet une fois la saisie close : il ne
+  // bougerait plus, et l'écran doit dire qu'on attend, pas afficher un bilan.
+  document.getElementById('attente-joueurs').style.display = configEnCours ? 'none' : '';
+  document.getElementById('attente-total').style.display = configEnCours ? 'none' : '';
+  // En configuration, c'est rendreConfiguration() qui décide d'afficher le bouton
+  if (configEnCours) return;
+  document.getElementById('btn-voir-equipes').style.display = 'none';
 
   const liste = document.getElementById('attente-joueurs');
   liste.innerHTML = '';
@@ -588,6 +654,11 @@ function brancherEvenements() {
     document.getElementById('btn-suivre').addEventListener('click', ouvrirAttente);
   }
   document.getElementById('btn-attente-retour').addEventListener('click', quitterAttente);
+  document.getElementById('btn-voir-equipes').addEventListener('click', afficherEquipes);
+  document.getElementById('btn-equipes-fermer').addEventListener('click', masquerEquipes);
+  document.getElementById('equipes-overlay').addEventListener('click', e => {
+    if (e.target.id === 'equipes-overlay') masquerEquipes();
+  });
   document.getElementById('btn-modifier').addEventListener('click', modifier);
 
   // Le réseau revient : on renvoie ce qui n'était pas passé

@@ -181,9 +181,54 @@ async function sonder(adresse) {
           $('attente-sous').textContent.includes('équipes'));
     check('le retour disparait : on ne modifie plus rien',
           $('btn-attente-retour').style.display === 'none');
-    // 4 joueurs x 3 cartes depuis l arrivee de Dan
-    log('       total : "' + $('attente-total').textContent + '"');
-    check('le paquet complet est annonce', $('attente-total').textContent.includes('12 cartes'));
+    check('une roue signale que ca travaille',
+          $('attente-roue').style.display !== 'none');
+    check('le tableau des joueurs disparait',
+          $('attente-joueurs').style.display === 'none');
+    check('le decompte des cartes aussi',
+          $('attente-total').style.display === 'none');
+
+    // ===== Les equipes, une fois que l organisateur les a reparties =====
+    check('aucun acces aux equipes tant qu elles n existent pas',
+          $('btn-voir-equipes').style.display === 'none');
+
+    await api('publier', { code, jeton, v: 1, etat: {
+      etape: 'configuration',
+      manche: { numero: 1, sur: 3, nom: 'Description libre', icone: '💬' },
+      equipes: [
+        { nom: 'Équipe 1', couleur: '#d6336c', partie: 0, manche: 0, joueurs: ['Ana', 'Cleo'] },
+        { nom: 'Équipe 2', couleur: '#33c26a', partie: 0, manche: 0, joueurs: ['Bob', 'Dan'] }
+      ],
+      tour: null
+    } });
+    await wait(2600);
+    check('le bouton apparait une fois les equipes definies',
+          $('btn-voir-equipes').style.display !== 'none');
+
+    $('btn-voir-equipes').click();
+    await wait(200);
+    check('la fenetre des equipes s ouvre', $('equipes-overlay').style.display !== 'none');
+    const blocs = [...d.querySelectorAll('#equipes-contenu .equipe-bloc')];
+    check('les deux equipes sont affichees', blocs.length === 2);
+    const noms = blocs.flatMap(b => [...b.querySelectorAll('li')].map(li => li.textContent));
+    log('       equipes : ' + blocs.map(b =>
+      b.querySelector('h4').textContent + ' = ' +
+      [...b.querySelectorAll('li')].map(li => li.textContent).join(', ')).join('  |  '));
+    check('les quatre joueurs y figurent', noms.length === 4);
+    check('ce sont bien ceux de la partie',
+          ['Ana', 'Bob', 'Cleo', 'Dan'].every(p => noms.includes(p)));
+    check('l invite retrouve son propre prenom en evidence',
+          d.querySelector('#equipes-contenu li.moi')?.textContent === 'Cleo');
+    check('rien n est modifiable depuis cette fenetre',
+          d.querySelectorAll('#equipes-contenu button').length === 0);
+
+    $('btn-equipes-fermer').click();
+    await wait(200);
+    check('la fenetre se referme', $('equipes-overlay').style.display === 'none');
+    $('btn-voir-equipes').click();
+    $('equipes-overlay').click();
+    await wait(200);
+    check('un clic a cote la referme aussi', $('equipes-overlay').style.display === 'none');
 
     // ===== On peut aussi eteindre l interrupteur =====
     check('beta=0 retire la marque', !(await sonder('/rejoindre.html?beta=0')));

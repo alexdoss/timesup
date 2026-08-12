@@ -677,6 +677,29 @@ body {
   background: var(--surface-2);
 }
 
+/* Son propre prénom dans la liste des équipes : ce qu'on cherche en premier */
+.equipes-vue li.moi {
+  color: var(--accent, var(--brand));
+  font-weight: 800;
+}
+
+/* La roue de la configuration : elle tourne lentement, pour dire « ça avance »
+   sans capter l'attention d'un invité qui n'a rien à faire. */
+.roue-config {
+  font-size: 3rem;
+  line-height: 1;
+  margin-bottom: 6px;
+  animation: roue-tourne 4s linear infinite;
+}
+
+@keyframes roue-tourne {
+  to { transform: rotate(360deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .roue-config { animation: none; }
+}
+
 /* Champ figé — un prénom déjà inscrit dans la session ne se renomme pas */
 input[readonly] {
   opacity: 0.65;

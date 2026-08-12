@@ -105,12 +105,25 @@
     <div id="screen-attente" class="screen">
       <div class="rejoindre-content">
         <button id="btn-attente-retour" class="btn-back" type="button">←</button>
+        <div id="attente-roue" class="roue-config" style="display:none">⚙️</div>
         <div class="wizard-header">
           <h2 id="attente-titre">En attente du départ</h2>
           <p id="attente-sous" class="wizard-hint">On attend que tout le monde ait saisi ses cartes.</p>
         </div>
+        <button id="btn-voir-equipes" class="btn btn-secondary" style="display:none">👥 Voir les équipes</button>
         <div id="attente-joueurs" class="connectes"></div>
         <p id="attente-total" class="wizard-hint"></p>
+      </div>
+    </div>
+
+    <!-- COMPOSITION DES ÉQUIPES — en lecture seule, comme dans le jeu -->
+    <div id="equipes-overlay" class="dialog-overlay" style="display:none">
+      <div class="dialog-panel" role="dialog" aria-modal="true" aria-labelledby="equipes-titre">
+        <h3 id="equipes-titre">👥 Les équipes</h3>
+        <div id="equipes-contenu" class="equipes-vue"></div>
+        <div class="dialog-actions">
+          <button id="btn-equipes-fermer" type="button" class="btn btn-primary">Fermer</button>
+        </div>
       </div>
     </div>
 

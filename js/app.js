@@ -1117,6 +1117,11 @@ function validerRepartition() {
   game.playerAssignments = {};
   repartition.forEach(j => { game.playerAssignments[j.prenom] = j.equipe; });
   game.assignMode = 'chosen';
+  // Les équipes sont peuplées maintenant, et non plus seulement au lancement :
+  // les invités doivent pouvoir les consulter pendant que la configuration
+  // se poursuit. `startGame()` refait l'opération, qui est sans effet de bord.
+  syncChosenTeams();
+  publierEtat('configuration');
   openRoundsStep();
 }
 

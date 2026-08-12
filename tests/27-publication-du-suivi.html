@@ -79,7 +79,25 @@ f.addEventListener('load', async () => {
     $('btn-next-players').click();
     await wait(300);
     $('btn-repartition-jouer').click();
-    await wait(300);
+    await wait(500);
+
+    // ===== Les equipes sont publiees des leur validation =====
+    // Les invites doivent pouvoir les consulter pendant que la configuration
+    // se poursuit, sans attendre le lancement.
+    const config = await suivi();
+    check('les equipes sont publiees avant meme le lancement', !!config);
+    check('l etape dit que la configuration se poursuit',
+          config.etat.etape === 'configuration');
+    const parEquipe = config.etat.equipes.map(e => (e.joueurs || []).length);
+    log('       equipes : ' + config.etat.equipes.map(e =>
+      `${e.nom} = ${(e.joueurs || []).join(', ')}`).join('  |  '));
+    check('chaque equipe annonce ses joueurs', parEquipe.every(n => n > 0));
+    check('les quatre joueurs sont repartis',
+          parEquipe.reduce((a, b) => a + b, 0) === 4);
+    check('ce sont ceux de la session',
+          ['Ana', 'Bob', 'Cleo', 'Dan'].every(p =>
+            config.etat.equipes.some(e => (e.joueurs || []).includes(p))));
+    check('aucun tour n est en cours', config.etat.tour === null);
     $('btn-next-rounds').click();
     $('btn-play').click();
     await wait(800);

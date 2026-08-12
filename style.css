@@ -677,6 +677,12 @@ body {
   background: var(--surface-2);
 }
 
+/* Champ figé — un prénom déjà inscrit dans la session ne se renomme pas */
+input[readonly] {
+  opacity: 0.65;
+  cursor: default;
+}
+
 .connectes {
   display: flex;
   flex-direction: column;

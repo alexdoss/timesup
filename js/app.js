@@ -939,9 +939,44 @@ function rafraichirSaisieLocale() {
     masque: saisieLocale.masque,
     demanderPrenom: saisieLocale.demanderPrenom
   }, retirerCarteLocale);
+
+  // Une fois inscrit, le prénom se fige : le changer créerait un second joueur
+  // dans la session au lieu de renommer le premier.
+  const champ = document.getElementById('saisie-prenom');
+  champ.readOnly = !!saisieLocale.id;
+  champ.title = saisieLocale.id ? 'Ton prénom est enregistré dans la partie' : '';
 }
 
-function ajouterCarteLocale() {
+// Inscrit le joueur s'il ne l'est pas encore, puis pousse ses cartes.
+// Les invités font exactement cela au fil de leur frappe : sans ça,
+// l'organisateur restait invisible dans la salle d'attente jusqu'à sa
+// validation, puis y apparaissait d'un coup, déjà terminé.
+async function synchroniserSaisieLocale(fini) {
+  const prenom = document.getElementById('saisie-prenom').value.trim();
+  if (!prenom) return false;
+
+  try {
+    if (!saisieLocale.id) {
+      const reponse = await inscrire(prenom, saisieLocale.role);
+      saisieLocale.id = reponse.idJoueur;
+      saisieLocale.prenom = prenom;
+      if (saisieLocale.role === 'organisateur') moiJoueur = { id: reponse.idJoueur, prenom };
+    }
+    await deposerCartes(saisieLocale.id, saisieLocale.cartes, fini);
+    rafraichirSaisieLocale();
+    return true;
+  } catch (err) {
+    // Prénom déjà pris : on corrige sur place plutôt que d'ouvrir une boîte
+    if (err.details?.motif === 'prenom-pris') {
+      showSaisieError(err.message);
+      return false;
+    }
+    showDialog({ title: 'Envoi impossible', message: err.message, confirmLabel: 'Réessayer' });
+    return false;
+  }
+}
+
+async function ajouterCarteLocale() {
   const champ = document.getElementById('saisie-carte');
   const mot = champ.value.trim();
   showSaisieError('');
@@ -953,16 +988,25 @@ function ajouterCarteLocale() {
   if (saisieLocale.cartes.length >= saisieLocale.cible) {
     return showSaisieError(`${saisieLocale.cible} cartes suffisent.`);
   }
+  // Le prénom précède la première carte : c'est lui qui inscrit le joueur,
+  // et donc ce qui le rend visible aux autres pendant qu'il tape.
+  if (!saisieLocale.id && !document.getElementById('saisie-prenom').value.trim()) {
+    return showSaisieError(saisieLocale.role === 'organisateur'
+      ? "Indique d'abord ton prénom : les autres verront que tu saisis tes cartes."
+      : "Indique d'abord son prénom.");
+  }
 
   saisieLocale.cartes.push(mot);
   champ.value = '';
   champ.focus();
   rafraichirSaisieLocale();
+  await synchroniserSaisieLocale(false);
 }
 
-function retirerCarteLocale(index) {
+async function retirerCarteLocale(index) {
   saisieLocale.cartes.splice(index, 1);
   rafraichirSaisieLocale();
+  await synchroniserSaisieLocale(false);
 }
 
 async function finirSaisieLocale() {
@@ -974,22 +1018,11 @@ async function finirSaisieLocale() {
       : 'Indique le prénom de ce joueur.');
   }
 
-  try {
-    // L'organisateur ne s'inscrit qu'une fois ; ensuite il ne fait que redéposer
-    let id = saisieLocale.id;
-    if (!id) {
-      const reponse = await inscrire(prenom, saisieLocale.role);
-      id = reponse.idJoueur;
-      if (saisieLocale.role === 'organisateur') moiJoueur = { id, prenom };
-    }
-    await deposerCartes(id, saisieLocale.cartes, true);
-    showScreen('screen-session');
-    surEtatSession(await lireEtatSansAttendre());
-  } catch (err) {
-    // Prénom déjà pris : on corrige sur place plutôt que d'ouvrir une boîte
-    if (err.details?.motif === 'prenom-pris') return showSaisieError(err.message);
-    showDialog({ title: 'Envoi impossible', message: err.message, confirmLabel: 'Réessayer' });
-  }
+  // L'inscription a déjà eu lieu à la première carte : il ne reste qu'à
+  // marquer la saisie terminée.
+  if (!(await synchroniserSaisieLocale(true))) return;
+  showScreen('screen-session');
+  surEtatSession(await lireEtatSansAttendre());
 }
 
 // ===== Lancement =====

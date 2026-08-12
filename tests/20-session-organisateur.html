@@ -183,21 +183,33 @@ f.addEventListener('load', async () => {
     check('le libelle le tutoie', $('saisie-label-prenom').textContent === 'Ton prénom');
     check('terminer est bloque tant que le compte n y est pas', $('btn-saisie-fini').disabled);
 
-    for (const mot of ['Alpha', 'Beta', 'Gamma']) {
-      $('saisie-carte').value = mot;
-      $('btn-saisie-ajouter').click();
-    }
-    const miennes = [...d.querySelectorAll('#saisie-liste .player-name')].map(e => e.textContent);
-    check('les 3 cartes sont saisies', JSON.stringify(miennes) === JSON.stringify(['Alpha', 'Beta', 'Gamma']));
-    check('terminer devient possible', !$('btn-saisie-fini').disabled);
-
-    $('btn-saisie-fini').click();
-    await wait(400);
-    check('sans prenom, la saisie ne part pas', ecran() === 'screen-saisie-locale');
+    // Le prenom precede la premiere carte : c est lui qui inscrit l organisateur
+    // dans la session, donc ce qui le rend visible aux invites pendant qu il tape.
+    $('saisie-carte').value = 'Alpha';
+    $('btn-saisie-ajouter').click();
+    await wait(300);
+    check('sans prenom, la premiere carte est refusee',
+          d.querySelectorAll('#saisie-liste .player-name').length === 0);
     log('       message : "' + $('saisie-erreur').textContent + '"');
     check('un message explique pourquoi', $('saisie-erreur').textContent.includes('prénom'));
 
     $('saisie-prenom').value = 'Alex';
+    for (const mot of ['Alpha', 'Beta', 'Gamma']) {
+      $('saisie-carte').value = mot;
+      $('btn-saisie-ajouter').click();
+      await wait(250);
+    }
+    const miennes = [...d.querySelectorAll('#saisie-liste .player-name')].map(e => e.textContent);
+    check('les 3 cartes sont saisies', JSON.stringify(miennes) === JSON.stringify(['Alpha', 'Beta', 'Gamma']));
+    check('terminer devient possible', !$('btn-saisie-fini').disabled);
+    check('son prenom se fige une fois inscrit', $('saisie-prenom').readOnly);
+
+    // Avant meme de valider, il apparait comme les autres, saisie en cours
+    const enCours = (await api('etat', { code })).corps.joueurs.find(j => j.prenom === 'Alex');
+    check('il est deja inscrit dans la session', !!enCours);
+    check('ses cartes remontent au fil de la frappe', enCours.nbCartes === 3);
+    check('mais il n est pas encore marque termine', enCours.fini === false);
+
     $('btn-saisie-fini').click();
     await wait(800);
     check('avec son prenom, la saisie part', ecran() === 'screen-session');
@@ -213,19 +225,22 @@ f.addEventListener('load', async () => {
     check('ses cartes sont masquees', $('saisie-carte').type === 'password');
     check('un bouton permet de les devoiler', visible('btn-saisie-visibilite'));
 
+    $('saisie-carte').value = 'Zeta';
+    $('btn-saisie-ajouter').click();
+    await wait(300);
+    check('sans prenom, sa premiere carte est refusee aussi',
+          d.querySelectorAll('#saisie-liste .player-name').length === 0);
+    check('un message le demande', $('saisie-erreur').textContent.includes('prénom'));
+
+    $('saisie-prenom').value = 'Jo';
     for (const mot of ['Zeta', 'Eta', 'Theta']) {
       $('saisie-carte').value = mot;
       $('btn-saisie-ajouter').click();
+      await wait(250);
     }
     const masquees = [...d.querySelectorAll('#saisie-liste .player-name')].map(e => e.textContent);
     check('la liste ne devoile pas les mots', masquees.every(t => /^•+$/.test(t)));
 
-    $('btn-saisie-fini').click();
-    await wait(300);
-    check('sans prenom, la saisie ne se termine pas', ecran() === 'screen-saisie-locale');
-    check('un message le demande', $('saisie-erreur').textContent.includes('prénom'));
-
-    $('saisie-prenom').value = 'Jo';
     $('btn-saisie-fini').click();
     await wait(800);
     check('avec un prenom, la saisie est envoyee', ecran() === 'screen-session');

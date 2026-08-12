@@ -371,6 +371,138 @@ async function terminer() {
   montrer('screen-envoye');
 }
 
+// ===== INTERRUPTEUR D'ESSAI =====
+// Le suivi de partie est en chantier : le code part en production, mais son
+// bouton n'apparaît que sur un appareil marqué. Ouvrir `?beta=1` une seule
+// fois suffit à poser la marque, `?beta=0` à la retirer.
+//
+// Rideau et non verrou : le code est bien téléchargé par tout le monde, il est
+// seulement masqué. Suffisant pour ne pas montrer un chantier, pas davantage.
+// À supprimer — ainsi que l'appel dans brancherEvenements() — le jour où la
+// fonction est finie.
+
+const CLE_ESSAI = 'timesup_beta';
+
+function reglerInterrupteurEssai() {
+  const demande = new URLSearchParams(location.search).get('beta');
+  try {
+    if (demande === '1') localStorage.setItem(CLE_ESSAI, '1');
+    else if (demande === '0') localStorage.removeItem(CLE_ESSAI);
+  } catch {
+    // stockage indisponible : la marque ne tiendra pas, tant pis
+  }
+
+  let actif = false;
+  try { actif = localStorage.getItem(CLE_ESSAI) === '1'; } catch { /* idem */ }
+
+  // Retiré du document, pas seulement masqué : rien ne traîne dans la page
+  if (!actif) document.getElementById('btn-suivre')?.remove();
+  return actif;
+}
+
+// ===== SALLE D'ATTENTE =====
+// La même vue que celle de l'organisateur, en lecture seule : chacun voit qui
+// a fini et qui est encore en train de saisir. Rien n'y est modifiable, et le
+// bouton de retrait réservé à l'organisateur n'y figure pas.
+
+const RYTHME_ATTENTE_MS = 2000;
+let minuterieAttente = null;
+
+function ouvrirAttente() {
+  montrer('screen-attente');
+  rafraichirAttente();
+  clearInterval(minuterieAttente);
+  minuterieAttente = setInterval(rafraichirAttente, RYTHME_ATTENTE_MS);
+}
+
+function quitterAttente() {
+  clearInterval(minuterieAttente);
+  minuterieAttente = null;
+  montrer('screen-envoye');
+}
+
+// Un téléphone rangé dans une poche n'a aucune raison d'interroger le serveur
+document.addEventListener('visibilitychange', () => {
+  // On se fie à l'écran affiché, jamais à la minuterie : en partant en veille
+  // on la vide, et s'en servir comme témoin rendait la relance inatteignable.
+  if (!document.getElementById('screen-attente').classList.contains('active')) return;
+  if (document.hidden) {
+    clearInterval(minuterieAttente);
+    minuterieAttente = null;
+  } else {
+    ouvrirAttente();
+  }
+});
+
+async function rafraichirAttente() {
+  let etat;
+  try {
+    etat = await appeler('etat', { code: session.code });
+  } catch {
+    // Coupure passagère : on garde le dernier affichage plutôt que de le vider
+    return;
+  }
+  rendreAttente(etat);
+}
+
+function rendreAttente(etat) {
+  // Une session fermée veut dire que l'organisateur a lancé. Les vrais écrans
+  // de suivi viendront ensuite ; d'ici là on le dit simplement.
+  const lancee = etat.ouverte === false;
+  document.getElementById('attente-titre').textContent =
+    lancee ? '🚀 La partie a commencé' : 'En attente du départ';
+  document.getElementById('attente-sous').textContent = lancee
+    ? 'Bonne partie ! Repose ton téléphone et écoute bien.'
+    : "On attend que tout le monde ait saisi ses cartes.";
+  document.getElementById('btn-attente-retour').style.display = lancee ? 'none' : '';
+
+  const liste = document.getElementById('attente-joueurs');
+  liste.innerHTML = '';
+
+  if (!etat.joueurs.length) {
+    const vide = document.createElement('div');
+    vide.className = 'connecte vide';
+    vide.textContent = "Personne n'a encore rejoint";
+    liste.appendChild(vide);
+  }
+
+  // Ordre alphabétique, et non celui du stockage : rien ne garantit que le
+  // serveur rende les joueurs toujours dans le même ordre, et une liste qui se
+  // réordonne toutes les deux secondes serait illisible.
+  const ordonnes = [...etat.joueurs].sort((a, b) => a.prenom.localeCompare(b.prenom, 'fr'));
+
+  ordonnes.forEach(joueur => {
+    const ligne = document.createElement('div');
+    ligne.className = 'connecte' + (joueur.fini ? ' fini' : '');
+
+    const qui = document.createElement('span');
+    qui.className = 'qui';
+    // textContent : les prénoms viennent du téléphone des autres invités
+    qui.textContent = `${joueur.fini ? '●' : '○'} ${joueur.prenom} `;
+    if (joueur.id === session.idJoueur) {
+      const marque = document.createElement('span');
+      marque.className = 'sans-tel';
+      marque.textContent = '· toi';
+      qui.appendChild(marque);
+    }
+
+    const compte = document.createElement('span');
+    compte.className = 'etat';
+    compte.textContent = joueur.fini
+      ? `${joueur.nbCartes} cartes ✓`
+      : `${joueur.nbCartes}/${etat.cartesParJoueur}…`;
+
+    ligne.appendChild(qui);
+    ligne.appendChild(compte);
+    liste.appendChild(ligne);
+  });
+
+  const prets = etat.joueurs.filter(j => j.fini).length;
+  document.getElementById('attente-total').textContent = lancee
+    ? `${etat.total} cartes dans le paquet`
+    : `${prets} joueur(s) sur ${etat.joueurs.length} ont terminé · ${etat.total} cartes`;
+}
+
 // Revenir modifier repasse le joueur en saisie : côté organisateur, le
 // lancement se rebloque aussitôt.
 async function modifier() {
@@ -446,6 +578,11 @@ function brancherEvenements() {
   });
 
   document.getElementById('btn-terminer').addEventListener('click', terminer);
+  // Le bouton disparaît du document quand l'essai n'est pas activé
+  if (reglerInterrupteurEssai()) {
+    document.getElementById('btn-suivre').addEventListener('click', ouvrirAttente);
+  }
+  document.getElementById('btn-attente-retour').addEventListener('click', quitterAttente);
   document.getElementById('btn-modifier').addEventListener('click', modifier);
 
   // Le réseau revient : on renvoie ce qui n'était pas passé

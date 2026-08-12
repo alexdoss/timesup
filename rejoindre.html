@@ -91,11 +91,26 @@
         <div class="grand-emoji">✅</div>
         <div class="wizard-header"><h2>C'est envoyé !</h2></div>
         <p class="wizard-hint">
-          Tes <b id="total-envoye">0</b> cartes sont bien arrivées.<br>
-          Range ton téléphone, la partie va commencer.
+          Tes <b id="total-envoye">0</b> cartes sont bien arrivées.
         </p>
-        <button id="btn-modifier" class="btn btn-secondary" style="margin-top:20px">Modifier mes cartes</button>
+        <!-- Fonction en chantier : retirée de l'écran sauf sur un appareil
+             marqué (voir « interrupteur d'essai » dans js/rejoindre.js) -->
+        <button id="btn-suivre" class="btn btn-primary" style="margin-top:20px">📡 Suivre la partie</button>
+        <button id="btn-modifier" class="btn btn-secondary" style="margin-top:10px">Modifier mes cartes</button>
         <p class="wizard-hint" style="margin-top:12px">Tant que tu modifies, l'organisateur ne peut pas lancer la partie.</p>
+      </div>
+    </div>
+
+    <!-- SALLE D'ATTENTE — la même vue que celle de l'organisateur, en lecture seule -->
+    <div id="screen-attente" class="screen">
+      <div class="rejoindre-content">
+        <button id="btn-attente-retour" class="btn-back" type="button">←</button>
+        <div class="wizard-header">
+          <h2 id="attente-titre">En attente du départ</h2>
+          <p id="attente-sous" class="wizard-hint">On attend que tout le monde ait saisi ses cartes.</p>
+        </div>
+        <div id="attente-joueurs" class="connectes"></div>
+        <p id="attente-total" class="wizard-hint"></p>
       </div>
     </div>
 

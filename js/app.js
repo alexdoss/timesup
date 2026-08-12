@@ -7,6 +7,7 @@ import { showScreen, updateTimer, showCard, updateRoundScreen, updateTurnInfo, u
          afficherInvitation, renderSession, renderBoutonMesCartes, renderSaisieLocale,
          showSaisieError, renderRepartition,
          afficherEquipes, masquerEquipes, afficherBoutonEquipes } from './ui.js';
+import { activerSuivi, couperSuivi, publierEtat } from './suivi.js';
 import { ouvrirSession, sessionCourante, oublierSession, adresseInvitation, adresseLisible,
          inscrire, deposerCartes, retirerJoueur, fermerSession, lireEtat,
          suivre, arreterSuivi } from './session.js';
@@ -70,6 +71,9 @@ function preparerNouvellePartie() {
   modeRejeu = false;
   listeJoueurs = [];
   oublierSession();
+  // Une nouvelle configuration abandonne la partie précédente : ceux qui la
+  // suivaient ne doivent pas recevoir les états d'une partie qui n'est plus la leur.
+  couperSuivi();
 
   updateSimpleCustomBlock();
   refreshThemeSelector();
@@ -533,6 +537,7 @@ function setupListeners() {
 
   // Nouvelle partie : retour à l'accueil, le cumul de la soirée s'arrête là
   document.getElementById('btn-restart').addEventListener('click', () => {
+    couperSuivi();
     refreshResumeOption();
     showScreen('screen-home');
   });
@@ -1013,8 +1018,13 @@ async function terminerSaisieEtConfigurer() {
       if (!continuer) return;
     }
 
+    // La session de saisie change de métier : elle servait à collecter les
+    // cartes, elle sert maintenant aux invités à suivre la partie. On retient
+    // le code avant `oublierSession()`, qui efface tout un peu plus bas.
+    const sessionFinie = sessionCourante();
     const resultat = await fermerSession();
     arreterSuivi();
+    if (sessionFinie) activerSuivi(sessionFinie.code, sessionFinie.jeton);
     game.customCards = resultat.cartes;
 
     // En rejeu, équipes et réglages n'ont pas bougé : on relance directement
@@ -1282,12 +1292,16 @@ function showRoundScreen() {
   updateCurrentPlayer(game.nominativeMode ? getCurrentPlayer() : null);
   afficherBoutonEquipes(game.nominativeMode && game.teams.some(e => e.players.length > 0));
   showScreen('screen-round');
+  // Le tout premier écran de la partie n'est pas « entre deux tours »
+  publierEtat(game.currentRound === 0 && getRoundScores().every(s => s === 0)
+    ? 'attente' : 'entre-tours');
 }
 
 function startTurn() {
   beginTurn();
   unlockAudio();   // le clic sur « Lancer le tour » est le geste qui autorise l'audio
   saveGame(game);
+  publierEtat('tour');
   runTurn();
 }
 
@@ -1333,6 +1347,7 @@ function displayCurrentCard() {
 function onFound() {
   cardFound();
   saveGame(game);
+  publierEtat('tour');
   displayCurrentCard();
 }
 
@@ -1399,6 +1414,9 @@ function pauseTurn(auto = false) {
   if (!isTurnRunning()) return;
   stopTimer();
   saveGame(game);
+  // Le chrono est arrêté : `game.timeLeft` ne bouge plus, et les battements
+  // republieront donc la même valeur figée jusqu'à la reprise.
+  publierEtat('pause');
   showPause(auto);
 }
 
@@ -1435,6 +1453,7 @@ function startResumeCountdown() {
       clearInterval(resumeCountdown);
       resumeCountdown = null;
       hidePause();
+      publierEtat('tour');
       runTurn();
     }
   }, 1000);
@@ -1467,6 +1486,8 @@ async function abandonGame() {
   hidePause();
   game.turnActive = false;
   clearSavedGame();
+  // Plus de partie, plus rien à publier : les invités verront le silence
+  couperSuivi();
   refreshResumeOption();
   showScreen('screen-home');
 }
@@ -1485,6 +1506,7 @@ function endTurn(paquetVide = false) {
   if (game.nominativeMode) advancePlayer();
   switchTeam();
   saveGame(game);
+  publierEtat('entre-tours');
   renderTurnEnd();
   showScreen('screen-turn-end');
 }
@@ -1504,15 +1526,19 @@ function renderTurnEnd() {
   );
 }
 
+// Une correction change le score : les invités doivent voir la même chose que
+// l'organisateur, sans quoi ils garderaient un total démenti à l'écran suivant.
 function onUncountCard(word) {
   if (!uncountCard(word)) return;
   saveGame(game);
+  publierEtat('entre-tours');
   renderTurnEnd();
 }
 
 function onCountCard(word) {
   if (!countCard(word)) return;
   saveGame(game);
+  publierEtat('entre-tours');
   renderTurnEnd();
 }
 
@@ -1531,6 +1557,7 @@ function endRound() {
   // écran ne doit pas faire disparaître la ligne qu'on vient d'afficher.
   recordRound();
   saveGame(game);
+  publierEtat('fin-manche');
   showRoundEnd(`${game.currentRound + 1}/${game.activeRounds.length}`, game.teams, getRoundHistory());
 
   const btnNext = document.getElementById('btn-next-round');
@@ -1542,6 +1569,7 @@ function endRound() {
       const session = game.gamesPlayed > 0
         ? { totals: getSessionScores(), parties: game.gamesPlayed + 1 }
         : null;
+      publierEtat('fin-partie');
       showFinalScreen(game.teams, session, getRoundHistory());
       if (game.nominativeMode) {
         renderPlayerStats(getPlayerBreakdown(), game.teams, getRoundHistory());

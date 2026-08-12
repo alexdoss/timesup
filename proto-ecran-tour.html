@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Rush — l'écran de l'invité pendant un tour</title>
+<style>
+:root {
+  --primary: #6D28D9; --primary-hover: #7C3AED; --primary-soft: rgba(109,40,217,.16);
+  --background: #0F172A; --surface: #1E293B; --surface-2: #273449;
+  --border: #334155; --text: #F8FAFC; --muted: #94A3B8; --muted-strong: #CBD5E1;
+  --success: #22C55E; --secondary: #F59E0B;
+  --t1: #d6336c; --t2: #33c26a;
+  --r-sm: 8px; --r-md: 12px; --r-lg: 16px;
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  background: #060B18; color: var(--text); padding: 24px 16px 60px; line-height: 1.5;
+}
+.wrap { max-width: 980px; margin: 0 auto; }
+h1 { font-size: 1.4rem; margin-bottom: 4px; }
+.intro { color: var(--muted); font-size: .93rem; margin-bottom: 22px; }
+.intro b { color: var(--muted-strong); }
+
+.stage { display: flex; gap: 30px; align-items: flex-start; flex-wrap: wrap; }
+
+/* ---- panneau de composition ---- */
+.panneau { flex: 1; min-width: 290px; }
+.groupe { background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--r-md); padding: 14px 16px; margin-bottom: 12px; }
+.groupe h2 { font-size: .72rem; text-transform: uppercase; letter-spacing: .05em;
+  color: var(--muted); margin-bottom: 4px; }
+.groupe .pourquoi { font-size: .82rem; color: var(--muted); margin-bottom: 10px; }
+.choix { display: flex; gap: 7px; flex-wrap: wrap; }
+.choix button {
+  background: var(--surface-2); color: var(--muted-strong); border: 1px solid var(--border);
+  border-radius: 999px; padding: 7px 14px; font-size: .84rem; font-weight: 600;
+  font-family: inherit; cursor: pointer;
+}
+.choix button.on { background: var(--primary); border-color: var(--primary-hover); color: #fff; }
+.bascule { display: flex; align-items: center; gap: 10px; cursor: pointer; font-size: .9rem; }
+.bascule input { width: 17px; height: 17px; accent-color: var(--primary); cursor: pointer; }
+
+/* ---- téléphone ---- */
+.phone { width: 340px; flex-shrink: 0; background: var(--background);
+  border: 1px solid var(--border); border-radius: 30px; overflow: hidden;
+  box-shadow: 0 14px 44px rgba(0,0,0,.55); position: sticky; top: 20px; }
+.barre { display: flex; align-items: center; gap: 8px; padding: 13px 18px 11px;
+  border-bottom: 1px solid var(--border); font-size: .74rem; color: var(--muted); }
+.barre .marque { font-weight: 800; color: var(--text); }
+.barre .code { margin-left: auto; font-family: ui-monospace, Menlo, monospace; letter-spacing: .12em; }
+.corps { padding: 18px 18px 26px; text-align: center; min-height: 400px; }
+
+.manche-cap { font-size: .74rem; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); }
+.regle { font-size: .82rem; color: var(--muted-strong); background: var(--surface);
+  border-radius: var(--r-sm); padding: 8px 10px; margin: 10px 0 2px; }
+.icone { font-size: 2.6rem; margin: 6px 0 0; }
+.qui { font-size: 1.06rem; font-weight: 700; margin-top: 4px; }
+.qui .e1 { color: var(--t1); } .qui .e2 { color: var(--t2); }
+.chrono { font-weight: 800; color: var(--secondary); line-height: 1.05; }
+.chrono.grand { font-size: 4.4rem; margin: 4px 0 0; }
+.chrono.discret { font-size: 1.6rem; margin: 8px 0 0; }
+.jauge { height: 5px; background: var(--surface-2); border-radius: 99px;
+  overflow: hidden; margin: 8px 22px 0; }
+.jauge > div { height: 100%; background: var(--secondary); border-radius: 99px; transition: width .3s linear; }
+
+.scores { display: flex; justify-content: center; gap: 28px; margin-top: 16px; }
+.eq { text-align: center; padding: 6px 10px; border-radius: var(--r-md); }
+.eq.mienne { background: var(--primary-soft); box-shadow: inset 0 0 0 1px var(--primary-hover); }
+.eq .nom { font-size: .67rem; font-weight: 700; text-transform: uppercase; letter-spacing: .03em; display: block; }
+.eq.e1 .nom { color: var(--t1); } .eq.e2 .nom { color: var(--t2); }
+.eq .gros { font-size: 2.2rem; font-weight: 800; }
+.eq .petit { font-size: .72rem; color: var(--muted); }
+.eq .toi { font-size: .6rem; font-weight: 800; color: var(--primary-hover);
+  text-transform: uppercase; letter-spacing: .06em; display: block; margin-top: 2px; }
+.legende { font-size: .67rem; text-transform: uppercase; letter-spacing: .05em;
+  color: var(--muted); margin-top: 12px; }
+.bandeau-toi { background: var(--primary); color: #fff; border-radius: var(--r-md);
+  padding: 11px 12px; font-size: 1rem; font-weight: 800; margin-bottom: 10px; }
+
+.mesure-h { margin-top: 14px; font-size: .8rem; color: var(--muted); }
+.mesure-h b { color: var(--muted-strong); }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <h1>L'écran de l'invité, pendant un tour</h1>
+  <p class="intro">Compose-le à gauche, regarde à droite. Tu es <b>Inès</b>, équipe 2.
+    C'est Marc, de l'équipe 1, qui fait deviner.</p>
+
+  <div class="stage">
+    <div class="panneau">
+
+      <div class="groupe">
+        <h2>Le chrono</h2>
+        <p class="pourquoi">C'est l'information qui change le plus vite. En grand, il crée
+          la tension ; discret, il laisse la place au score.</p>
+        <div class="choix" data-reglage="chrono">
+          <button data-v="grand" class="on">En grand</button>
+          <button data-v="discret">Discret</button>
+          <button data-v="aucun">Pas de chrono</button>
+        </div>
+      </div>
+
+      <div class="groupe">
+        <h2>Le grand score</h2>
+        <p class="pourquoi">Un seul des deux peut dominer. La manche, c'est le combat en cours ;
+          la partie, c'est le match.</p>
+        <div class="choix" data-reglage="score">
+          <button data-v="manche" class="on">Score de la manche</button>
+          <button data-v="partie">Score de la partie</button>
+        </div>
+      </div>
+
+      <div class="groupe">
+        <h2>Ce qu'on ajoute</h2>
+        <p class="pourquoi">Chaque ligne coûte de la hauteur. Coche pour voir.</p>
+        <label class="bascule"><input type="checkbox" id="opt-regle">
+          Rappeler la règle de la manche</label>
+        <label class="bascule" style="margin-top:8px"><input type="checkbox" id="opt-equipe" checked>
+          Signaler mon équipe</label>
+        <label class="bascule" style="margin-top:8px"><input type="checkbox" id="opt-jauge" checked>
+          Barre de temps sous le chrono</label>
+        <label class="bascule" style="margin-top:8px"><input type="checkbox" id="opt-toi">
+          C'est <b>moi</b> qui fais deviner</label>
+      </div>
+
+      <div class="groupe">
+        <h2>Ce que je retiendrais</h2>
+        <p class="pourquoi" style="margin:0">
+          Chrono en grand, score de la manche, mon équipe signalée, barre de temps.
+          La règle de la manche seulement quand c'est à moi — sinon elle occupe
+          de la place pour quelqu'un qui n'en a pas besoin.</p>
+      </div>
+    </div>
+
+    <div class="phone">
+      <div class="barre"><span class="marque">Rush</span><span>tu suis la partie</span>
+        <span class="code">7KP2</span></div>
+      <div class="corps" id="corps"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+const REGLAGES = { chrono: 'grand', score: 'manche' };
+const opt = id => document.getElementById(id).checked;
+
+const DONNEES = {
+  manche: { numero: 2, sur: 3, nom: 'Un mot', icone: '🔤',
+            regle: 'Un seul mot par carte, pas un de plus.' },
+  joueur: 'Marc', equipeQuiJoue: 0,
+  monEquipe: 1, moi: 'Inès',
+  scores: { manche: [4, 3], partie: [17, 16] },
+  duree: 40
+};
+
+let restant = 23;
+
+function ligneScores() {
+  const grandeur = REGLAGES.score;             // 'manche' ou 'partie'
+  const petite = grandeur === 'manche' ? 'partie' : 'manche';
+  return `<div class="scores">${[0, 1].map(i => {
+    const mienne = opt('opt-equipe') && i === DONNEES.monEquipe;
+    return `<div class="eq e${i + 1}${mienne ? ' mienne' : ''}">
+      <span class="nom">Équipe ${i + 1}</span>
+      <div class="gros">${DONNEES.scores[grandeur][i]}</div>
+      <div class="petit">${petite} ${DONNEES.scores[petite][i]}</div>
+      ${mienne ? '<span class="toi">ton équipe</span>' : ''}
+    </div>`;
+  }).join('')}</div>
+  <p class="legende">Score de la ${grandeur === 'manche' ? 'manche' : 'partie'}</p>`;
+}
+
+function rendre() {
+  const d = DONNEES;
+  const cestMoi = opt('opt-toi');
+  const bloc = [];
+
+  bloc.push(`<p class="manche-cap">Manche ${d.manche.numero}/${d.manche.sur} · ${d.manche.nom}</p>`);
+  if (cestMoi) bloc.push('<div class="bandeau-toi">🎯 C\'est à toi de faire deviner !</div>');
+  if (opt('opt-regle') || cestMoi) bloc.push(`<p class="regle">${d.manche.regle}</p>`);
+
+  bloc.push(`<div class="icone">${d.manche.icone}</div>`);
+  bloc.push(cestMoi
+    ? '<p class="qui">Récupère le téléphone de la partie</p>'
+    : `<p class="qui"><span class="e${d.equipeQuiJoue + 1}">Équipe ${d.equipeQuiJoue + 1}</span>
+       · ${d.joueur} fait deviner</p>`);
+
+  if (REGLAGES.chrono !== 'aucun') {
+    bloc.push(`<p class="chrono ${REGLAGES.chrono}">${restant}</p>`);
+    if (opt('opt-jauge')) {
+      bloc.push(`<div class="jauge"><div style="width:${Math.round(restant / d.duree * 100)}%"></div></div>`);
+    }
+  }
+
+  bloc.push(ligneScores());
+  document.getElementById('corps').innerHTML = bloc.join('');
+}
+
+// Le chrono tourne, pour juger l'écran en mouvement plutôt qu'à l'arrêt
+setInterval(() => {
+  restant = restant > 0 ? restant - 1 : d0();
+  rendre();
+}, 1000);
+function d0() { return DONNEES.duree; }
+
+document.querySelectorAll('.choix').forEach(groupe => {
+  groupe.addEventListener('click', e => {
+    const b = e.target.closest('button');
+    if (!b) return;
+    REGLAGES[groupe.dataset.reglage] = b.dataset.v;
+    groupe.querySelectorAll('button').forEach(x => x.classList.toggle('on', x === b));
+    rendre();
+  });
+});
+document.querySelectorAll('.bascule input').forEach(c =>
+  c.addEventListener('change', rendre));
+
+rendre();
+</script>
+</body>
+</html>

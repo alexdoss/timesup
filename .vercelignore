@@ -14,7 +14,9 @@ theme people.txt
 proto-*.html
 rush-app.html
 file_*.png
-CLAUDE.md
+
+# Documentation interne : rien ne la référence depuis l'app
+*.md
 
 # EXCEPTION TEMPORAIRE — épreuve du « mode lecture » (août 2026).
 # Ces deux pages doivent être en ligne pour être mesurées depuis un vrai

@@ -1,0 +1,429 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Rush — proto : l'écran des invités</title>
+<style>
+:root {
+  --primary: #6D28D9; --primary-hover: #7C3AED; --primary-soft: rgba(109,40,217,.16);
+  --background: #0F172A; --surface: #1E293B; --surface-2: #273449;
+  --border: #334155; --text: #F8FAFC; --muted: #94A3B8; --muted-strong: #CBD5E1;
+  --success: #22C55E; --secondary: #F59E0B; --error: #EF4444;
+  --t1: #d6336c; --t2: #33c26a;
+  --r-sm: 8px; --r-md: 12px; --r-lg: 16px;
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  background: #060B18; color: var(--text); padding: 24px 16px 60px; line-height: 1.5;
+}
+.wrap { max-width: 1000px; margin: 0 auto; }
+h1 { font-size: 1.5rem; margin-bottom: 6px; }
+.intro { color: var(--muted); font-size: .95rem; margin-bottom: 22px; }
+.intro b { color: var(--muted-strong); }
+
+.tabs { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 18px; }
+.tab {
+  background: var(--surface); color: var(--muted-strong); border: 1px solid var(--border);
+  border-radius: 999px; padding: 8px 15px; font-size: .86rem; font-weight: 600;
+  cursor: pointer; font-family: inherit;
+}
+.tab.on { background: var(--primary); border-color: var(--primary-hover); color: #fff; }
+.tabs.variantes .tab { border-radius: var(--r-md); }
+.titre-groupe { font-size: .72rem; text-transform: uppercase; letter-spacing: .05em;
+  color: var(--muted); font-weight: 700; margin-bottom: 8px; }
+
+.stage { display: flex; gap: 30px; align-items: flex-start; flex-wrap: wrap; }
+.phone {
+  width: 340px; flex-shrink: 0; background: var(--background);
+  border: 1px solid var(--border); border-radius: 30px; padding: 0 0 22px;
+  box-shadow: 0 14px 44px rgba(0,0,0,.55); overflow: hidden;
+}
+.barre {
+  display: flex; align-items: center; gap: 8px; padding: 14px 18px 12px;
+  border-bottom: 1px solid var(--border); font-size: .76rem; color: var(--muted);
+}
+.barre .marque { font-weight: 800; color: var(--text); letter-spacing: .02em; }
+.barre .code { margin-left: auto; font-family: ui-monospace, Menlo, monospace;
+  letter-spacing: .12em; color: var(--muted-strong); }
+.corps { padding: 20px 18px 4px; text-align: center; min-height: 430px; }
+
+.manche-cap { font-size: .74rem; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); }
+.icone { font-size: 2.8rem; margin: 6px 0 2px; }
+.qui { font-size: 1.1rem; font-weight: 700; }
+.qui .eq1 { color: var(--t1); } .qui .eq2 { color: var(--t2); }
+.chrono { font-size: 4.6rem; font-weight: 800; color: var(--secondary); line-height: 1.05; margin: 2px 0; }
+.chrono.petit { font-size: 2.6rem; }
+.chrono.gele { color: var(--muted); }
+.jauge { height: 5px; background: var(--surface-2); border-radius: 99px; overflow: hidden; margin: 4px 24px 12px; }
+.jauge > div { height: 100%; background: var(--secondary); border-radius: 99px; }
+
+.scores { display: flex; justify-content: center; gap: 30px; margin-top: 12px; }
+.scores .eq { text-align: center; }
+.scores .nom { font-size: .68rem; font-weight: 700; text-transform: uppercase; letter-spacing: .03em; display: block; }
+.scores .e1 { color: var(--t1); } .scores .e2 { color: var(--t2); }
+.scores .gros { font-size: 2.1rem; font-weight: 800; }
+.scores .gros.xl { font-size: 3rem; }
+.scores .petit { font-size: .72rem; color: var(--muted); }
+.legende { font-size: .68rem; text-transform: uppercase; letter-spacing: .05em;
+  color: var(--muted); margin-top: 14px; }
+
+.bandeau { border-radius: var(--r-md); padding: 10px 12px; font-size: .86rem;
+  font-weight: 700; margin: 12px 0; }
+.bandeau.pause { background: rgba(245,158,11,.15); color: var(--secondary); }
+.bandeau.perdu { background: rgba(239,68,68,.14); color: #fca5a5; }
+.bandeau.toi { background: var(--primary); color: #fff; font-size: 1rem; }
+.bandeau.ok { background: rgba(34,197,94,.14); color: #86efac; }
+
+table.det { width: 100%; border-collapse: collapse; margin: 10px 0 4px; }
+table.det th, table.det td { padding: 6px 5px; }
+table.det thead th { font-size: .66rem; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); }
+table.det tbody th { text-align: left; font-size: .76rem; color: var(--muted); font-weight: 600; }
+table.det td { text-align: center; font-size: 1.05rem; font-weight: 700; color: var(--muted-strong); }
+table.det tr.total { border-top: 1px solid var(--border); }
+table.det tr.total th { color: var(--muted-strong); text-transform: uppercase; font-size: .68rem; font-weight: 800; }
+table.det tr.total td { font-size: 1.6rem; font-weight: 800; color: var(--text); }
+.vainqueur { font-size: 1.2rem; font-weight: 800; color: var(--secondary); margin: 6px 0 2px; }
+.attente-points { color: var(--muted); font-size: .9rem; }
+.grosse-info { font-size: 1.35rem; font-weight: 800; margin: 10px 0 4px; }
+
+.cta {
+  display: block; width: 100%; margin-top: 16px; padding: 13px;
+  background: var(--primary); color: #fff; border: 0; border-radius: var(--r-md);
+  font-size: .95rem; font-weight: 700; font-family: inherit; cursor: pointer;
+}
+.lien-discret { display: block; width: 100%; margin-top: 14px; background: none; border: 0;
+  color: var(--muted); font-size: .85rem; font-family: inherit;
+  text-decoration: underline; cursor: pointer; }
+.qr-boite { background: #fff; padding: 10px; border-radius: var(--r-md);
+  width: fit-content; margin: 12px auto 8px; }
+.code-gros { font-size: 2rem; font-weight: 800; letter-spacing: .26em;
+  color: var(--secondary); }
+.lien-proto { font-size: .78rem; color: var(--muted-strong); word-break: break-all;
+  background: var(--surface-2); border-radius: var(--r-sm); padding: 7px 9px; margin-top: 8px; }
+.choix-prenoms { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.choix-prenoms button {
+  background: var(--surface-2); color: var(--text); border: 1px solid var(--border);
+  border-radius: var(--r-md); padding: 12px 6px; font-size: .95rem; font-weight: 600;
+  font-family: inherit; cursor: pointer;
+}
+.choix-prenoms button.pris { border-color: var(--primary-hover); background: var(--primary-soft); }
+
+.notes { flex: 1; min-width: 260px; background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--r-md); padding: 16px; font-size: .9rem; }
+.notes h3 { font-size: .76rem; text-transform: uppercase; letter-spacing: .05em;
+  color: var(--muted); margin-bottom: 10px; }
+.notes p { margin-bottom: 10px; } .notes p:last-child { margin-bottom: 0; }
+.plus::before { content: '＋ '; color: var(--success); font-weight: 700; }
+.minus::before { content: '− '; color: var(--secondary); font-weight: 700; }
+.reco { display: inline-block; background: var(--success); color: #06210f; border-radius: 999px;
+  padding: 1px 8px; font-size: .68rem; font-weight: 800; text-transform: uppercase; margin-left: 6px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <h1>Rush — ce que voient les invités</h1>
+  <p class="intro">
+    L'écran de <b>suivi</b> : le joueur regarde la partie depuis son téléphone, il n'y joue pas.
+    Exemple : tu es <b>Inès</b>, équipe 2. Manche 2 sur 3, 17 à 16 pour l'équipe 1.
+  </p>
+
+  <p class="titre-groupe">Le moment de la partie</p>
+  <div class="tabs" id="etats"></div>
+
+  <div id="bloc-variantes" style="display:none">
+    <p class="titre-groupe">Mise en page pendant un tour</p>
+    <div class="tabs variantes" id="variantes">
+      <button class="tab on" data-v="chrono">A — Le chrono domine</button>
+      <button class="tab" data-v="scores">B — Le score domine</button>
+      <button class="tab" data-v="equilibre">C — Équilibré</button>
+    </div>
+  </div>
+
+  <div class="stage">
+    <div class="phone">
+      <div class="barre" id="barre"></div>
+      <div class="corps" id="corps"></div>
+    </div>
+    <div class="notes" id="notes"></div>
+  </div>
+</div>
+
+<script type="module">
+import { creerQrSvg } from './js/qr.js';
+
+const MANCHE = { numero: 2, sur: 3, nom: 'Un mot', icone: '🔤' };
+const S = { manche: [4, 3], partie: [17, 16] };
+
+const blocScores = (grosPartie = false) => `
+  <div class="scores">
+    <div class="eq"><span class="nom e1">Équipe 1</span>
+      <div class="gros ${grosPartie ? 'xl' : ''}">${grosPartie ? S.partie[0] : S.manche[0]}</div>
+      <div class="petit">${grosPartie ? `manche ${S.manche[0]}` : `partie ${S.partie[0]}`}</div></div>
+    <div class="eq"><span class="nom e2">Équipe 2</span>
+      <div class="gros ${grosPartie ? 'xl' : ''}">${grosPartie ? S.partie[1] : S.manche[1]}</div>
+      <div class="petit">${grosPartie ? `manche ${S.manche[1]}` : `partie ${S.partie[1]}`}</div></div>
+  </div>
+  <p class="legende">${grosPartie ? 'Score de la partie' : 'Score de la manche'}</p>`;
+
+const enTete = `<p class="manche-cap">Manche ${MANCHE.numero}/${MANCHE.sur} · ${MANCHE.nom}</p>`;
+const jauge = pct => `<div class="jauge"><div style="width:${pct}%"></div></div>`;
+
+const tableauManches = `
+  <table class="det">
+    <thead><tr><th></th><th style="color:var(--t1)">Éq. 1</th><th style="color:var(--t2)">Éq. 2</th></tr></thead>
+    <tbody>
+      <tr><th>💬 Description</th><td>8</td><td>6</td></tr>
+      <tr><th>🔤 Un mot</th><td>9</td><td>10</td></tr>
+      <tr><th>🎭 Mime</th><td>7</td><td>4</td></tr>
+      <tr class="total"><th>Total</th><td>24</td><td>20</td></tr>
+    </tbody>
+  </table>`;
+
+// ===== Les états =====
+const ETATS = {
+  cheminCartes: {
+    nom: '① Chemin 1 · cartes perso',
+    barre: ['Rush', 'tes cartes', '7KP2'],
+    corps: () => `
+      <div class="icone">✅</div>
+      <p class="grosse-info">Tes 5 cartes sont enregistrées</p>
+      <p class="attente-points">Merci Inès ! Il ne reste plus qu'à attendre les autres.</p>
+      <div class="bandeau ok">3 joueurs sur 6 ont terminé</div>
+      <button class="cta">📡 Suivre la partie sur ce téléphone</button>
+      <p class="attente-points" style="font-size:.8rem;margin-top:10px">
+        Tu verras le score, le chrono et à qui c'est le tour.</p>`,
+    notes: `<p class="plus">Le chemin le plus simple : l'invité <b>a déjà la page ouverte</b>
+      et le code en main. Rien à envoyer, rien à scanner.</p>
+      <p class="minus"><b>À trancher :</b> bouton explicite comme ici, ou bascule automatique
+        vers le suivi ? Le bouton laisse le choix de ranger son téléphone ;
+        l'automatique évite un geste de plus.</p>
+      <p class="minus">Aujourd'hui cet écran est un cul-de-sac : « c'est bon, attends ».</p>`
+  },
+
+  cheminLien: {
+    nom: '② Chemin 2 · l\'admin partage',
+    barre: ['Rush', "écran de l'organisateur", 'manche 2/3'],
+    corps: () => `
+      <p class="manche-cap">Suivi de partie</p>
+      <div class="qr-boite" id="qr-proto"></div>
+      <p class="code-gros">7KP2</p>
+      <p class="lien-proto">rush-alexina.vercel.app/suivre</p>
+      <button class="cta">📤 Partager le lien</button>
+      <p class="attente-points" style="font-size:.8rem;margin-top:12px">
+        Ceux qui scannent verront le score et le chrono, jamais les cartes.</p>`,
+    notes: `<p class="plus">Pour une partie sur <b>thèmes prédéfinis</b>, où aucune session
+      n'existe : le bouton « 📡 Suivi de partie » en ouvre une, uniquement pour regarder.</p>
+      <p class="plus">Placé sous « 👥 Les équipes » sur l'écran de lancement de tour,
+        au même niveau de discrétion.</p>
+      <p class="minus">La session n'est créée <b>qu'au moment du clic</b> : pas de réseau
+        exigé, pas de quota consommé pour une partie où personne ne suit.</p>
+      <p class="minus"><b>À trancher :</b> le lien doit-il rester valable d'une partie à
+        l'autre, ou repartir à zéro à chaque fois ?</p>`
+  },
+
+  cheminArrivee: {
+    nom: '③ Chemin 2 · l\'invité arrive',
+    barre: ['Rush', 'rejoindre le suivi', '7KP2'],
+    corps: () => `
+      <div class="icone">👋</div>
+      <p class="grosse-info">Qui es-tu ?</p>
+      <p class="attente-points" style="margin-bottom:12px">Pour qu'on te prévienne
+        quand ce sera à toi.</p>
+      <div class="choix-prenoms">
+        <button>Marc</button><button>Léa</button><button>Sam</button>
+        <button class="pris">Inès</button><button>Jo</button><button>Tom</button>
+      </div>
+      <button class="lien-discret">Je regarde seulement</button>`,
+    notes: `<p class="plus">La liste vient des joueurs déjà saisis par l'organisateur.
+      Un seul geste, aucune saisie au clavier.</p>
+      <p class="plus">C'est le mécanisme de liste fermée déjà construit pour
+        « rejouer avec les mêmes joueurs » — rien de neuf à inventer côté serveur.</p>
+      <p class="minus">Sans ce choix, l'app ne sait pas qui regarde, et l'écran
+        « 🎯 C'est à toi » devient impossible.</p>
+      <p class="minus">« Je regarde seulement » couvre le conjoint, l'enfant, le curieux —
+        et le cas de la partie <b>sans les noms</b>, où la liste n'existe pas.</p>`
+  },
+
+  attente: {
+    nom: '1 · Avant le départ',
+    corps: () => `
+      <div class="icone">✅</div>
+      <p class="grosse-info">Tes 5 cartes sont prêtes</p>
+      <p class="attente-points">On attend que tout le monde ait fini…</p>
+      <div class="bandeau ok">3 joueurs sur 6 ont terminé</div>
+      <p class="attente-points" style="font-size:.82rem">Garde cet écran ouvert :
+        il suivra la partie tout seul.</p>`,
+    notes: `<p class="plus">Le joueur vient de saisir ses cartes. Aujourd'hui il tombe sur un
+      cul-de-sac ; demain l'écran enchaîne de lui-même.</p>
+      <p class="minus">Question ouverte : affiche-t-on la progression des autres
+        (« 3 sur 6 ») ? Ça rassure, mais ça peut mettre la pression aux retardataires.</p>`
+  },
+
+  tour: {
+    nom: '2 · Pendant un tour',
+    variantes: true,
+    corps: v => {
+      const bloc = {
+        chrono: `${enTete}<div class="icone">${MANCHE.icone}</div>
+          <p class="qui"><span class="eq1">Équipe 1</span> · Marc fait deviner</p>
+          <p class="chrono">23</p>${jauge(57)}${blocScores(false)}`,
+        scores: `${enTete}
+          <p class="qui" style="margin-top:8px"><span class="eq1">Équipe 1</span> · Marc fait deviner</p>
+          ${blocScores(true)}
+          <p class="chrono petit" style="margin-top:14px">23</p>${jauge(57)}`,
+        equilibre: `${enTete}<div class="icone">${MANCHE.icone}</div>
+          <p class="qui"><span class="eq1">Équipe 1</span> · Marc fait deviner</p>
+          <p class="chrono petit">23</p>${jauge(57)}${blocScores(false)}`
+      };
+      return bloc[v];
+    },
+    notes: `<p class="plus"><b>A</b><span class="reco">ma reco</span> — le chrono crée la tension,
+      et c'est l'information qui change le plus vite. On lève les yeux, on sait s'il reste du temps.</p>
+      <p class="plus"><b>B</b> — pour ceux qui suivent le match plus que le tour. Le chrono passe
+        en second, alors que c'est lui qu'on regarde en pleine action.</p>
+      <p class="plus"><b>C</b> — tout est lisible, rien ne ressort. Sage, un peu terne.</p>
+      <p class="minus">Le score de la manche est affiché sous les grands chiffres dans A et C,
+        et l'inverse dans B. Un seul des deux peut dominer.</p>`
+  },
+
+  toi: {
+    nom: '3 · C\'est à toi',
+    corps: () => `${enTete}
+      <div class="bandeau toi">🎯 C'est à toi de faire deviner !</div>
+      <div class="icone">${MANCHE.icone}</div>
+      <p class="qui">Récupère le téléphone de la partie</p>
+      <p class="attente-points" style="margin-top:6px">Manche « Un mot » :
+        un seul mot par carte, pas un de plus.</p>
+      ${blocScores(false)}`,
+    notes: `<p class="plus">L'app connaît les prénoms et la rotation : elle peut prévenir
+      <b>le joueur concerné</b>, sur son propre téléphone. Personne ne demande plus « c'est à qui ? ».</p>
+      <p class="plus">Rappeler la règle de la manche au bon moment évite le « attends, on fait quoi
+        déjà ? » de début de tour.</p>
+      <p class="minus">À décider : prévient-on aussi <b>le suivant</b> (« tu passes après Marc ») ?
+        Utile pour se préparer, mais ça charge l'écran.</p>`
+  },
+
+  entre: {
+    nom: '4 · Entre deux tours',
+    corps: () => `${enTete}
+      <div class="icone">⏱️</div>
+      <p class="grosse-info"><span class="eq1" style="color:var(--t1)">Équipe 1</span> a marqué 4 cartes</p>
+      ${blocScores(true)}
+      <p class="attente-points" style="margin-top:16px">Au tour de
+        <b style="color:var(--t2)">l'équipe 2</b> — Jo fait deviner</p>`,
+    notes: `<p class="plus">Le moment où l'on commente. On montre le bilan du tour qui vient
+      de finir, puis qui enchaîne.</p>
+      <p class="plus">Le score de la partie passe en grand : entre deux tours, c'est le match
+        qui intéresse, pas la manche.</p>`
+  },
+
+  pause: {
+    nom: '5 · En pause',
+    corps: () => `${enTete}<div class="icone">⏸️</div>
+      <p class="qui"><span class="eq1">Équipe 1</span> · Marc fait deviner</p>
+      <p class="chrono gele">23</p>
+      <div class="bandeau pause">⏸ Partie en pause</div>
+      ${blocScores(false)}`,
+    notes: `<p class="plus">Le chrono se fige et devient gris : sans ça, l'invité verrait un
+      décompte continuer alors que le jeu est arrêté.</p>
+      <p class="plus">On garde le nom du joueur affiché : la pause finira, et c'est lui qui reprend.</p>`
+  },
+
+  finManche: {
+    nom: '6 · Fin de manche',
+    corps: () => `<p class="manche-cap">Fin de la manche 2 sur 3</p>
+      <div class="icone">🔤</div>
+      ${tableauManches}
+      <p class="attente-points" style="margin-top:12px">La manche « Mime » va commencer</p>`,
+    notes: `<p class="plus">Le même détail par manche que sur l'écran de l'organisateur —
+      cohérence entre les deux appareils.</p>
+      <p class="minus">On annonce la manche suivante pour que les joueurs anticipent la règle.</p>`
+  },
+
+  finPartie: {
+    nom: '7 · Fin de partie',
+    corps: () => `<div class="icone">🏆</div>
+      <p class="vainqueur">🎉 L'équipe 1 gagne !</p>
+      ${tableauManches}
+      <p class="attente-points" style="margin-top:10px">Tu as fait deviner <b>6 cartes</b> —
+        meilleur score de ton équipe</p>`,
+    notes: `<p class="plus">Le détail par manche, comme chez l'organisateur.</p>
+      <p class="plus">Et une ligne <b>personnelle</b> : l'app sait combien chacun a fait deviner.
+        C'est ce que le joueur veut savoir, et c'est ce qui donne envie de rejouer.</p>
+      <p class="minus">Faut-il montrer le classement complet des joueurs, ou seulement son propre
+        score ? Le classement peut piquer.</p>`
+  },
+
+  silence: {
+    nom: '8 · Organisateur absent',
+    corps: () => `${enTete}<div class="icone">📵</div>
+      <p class="qui">Partie en attente</p>
+      <p class="chrono gele">--</p>
+      <div class="bandeau perdu">⚠️ Aucune nouvelle de l'organisateur depuis 1 min</div>
+      ${blocScores(true)}
+      <p class="attente-points" style="font-size:.82rem">Son téléphone s'est peut-être
+        mis en veille. Les scores affichés sont les derniers connus.</p>`,
+    notes: `<p class="plus">Le cas que tu as éprouvé. Mieux vaut dire « je ne sais plus »
+      que d'afficher un état périmé avec aplomb.</p>
+      <p class="plus">On garde les derniers scores connus, en le disant clairement :
+        ils restent utiles, ils ne sont juste plus à jour.</p>
+      <p class="minus">Formulation à valider : « organisateur » est un mot d'app.
+        Peut-être « le téléphone de la partie » ?</p>`
+  }
+};
+
+// ===== Rendu =====
+// ?e=<clé> ouvre directement un écran, pour le partager ou le vérifier
+const demande = new URLSearchParams(location.search).get('e');
+let etatCourant = 'cheminCartes';
+let variante = 'chrono';
+
+if (demande && ETATS[demande]) etatCourant = demande;
+
+const tabsEtats = document.getElementById('etats');
+Object.entries(ETATS).forEach(([cle, e]) => {
+  const b = document.createElement('button');
+  b.className = 'tab' + (cle === etatCourant ? ' on' : '');
+  b.dataset.etat = cle;
+  b.textContent = e.nom;
+  tabsEtats.appendChild(b);
+});
+
+function rendre() {
+  const e = ETATS[etatCourant];
+  const barre = e.barre || ['Rush', 'tu suis la partie', '7KP2'];
+  document.getElementById('barre').innerHTML =
+    `<span class="marque">${barre[0]}</span><span>${barre[1]}</span>`
+    + `<span class="code">${barre[2]}</span>`;
+  document.getElementById('corps').innerHTML = e.corps(variante);
+  const boite = document.getElementById('qr-proto');
+  if (boite) boite.appendChild(creerQrSvg('https://rush-alexina.vercel.app/suivre?c=7KP2',
+    { taille: 150 }));
+  document.getElementById('notes').innerHTML = '<h3>Ce qu\'il faut décider</h3>' + e.notes;
+  document.getElementById('bloc-variantes').style.display = e.variantes ? '' : 'none';
+  document.querySelectorAll('#etats .tab').forEach(t =>
+    t.classList.toggle('on', t.dataset.etat === etatCourant));
+}
+
+tabsEtats.addEventListener('click', ev => {
+  const t = ev.target.closest('.tab');
+  if (!t) return;
+  etatCourant = t.dataset.etat;
+  rendre();
+});
+
+document.getElementById('variantes').addEventListener('click', ev => {
+  const t = ev.target.closest('.tab');
+  if (!t) return;
+  variante = t.dataset.v;
+  document.querySelectorAll('#variantes .tab').forEach(x => x.classList.toggle('on', x === t));
+  rendre();
+});
+
+rendre();
+</script>
+</body>
+</html>

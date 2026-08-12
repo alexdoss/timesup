@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head><meta charset="utf-8"><title>Test Rush — l'app publie son suivi</title></head>
+<body>
+<pre id="log">demarrage...</pre>
+<div id="hote"></div>
+<script>
+const out = [];
+function log(s) { out.push(s); document.getElementById('log').textContent = out.join('\n'); }
+function check(name, cond) { log((cond ? 'PASS' : 'FAIL') + ' -- ' + name); }
+const wait = ms => new Promise(r => setTimeout(r, ms));
+
+async function api(action, donnees = {}) {
+  const r = await fetch('/api/session', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ action, ...donnees })
+  });
+  return { statut: r.status, corps: await r.json().catch(() => ({})) };
+}
+
+localStorage.removeItem('timesup_partie_en_cours');
+localStorage.removeItem('timesup_suivi');
+
+const f = document.createElement('iframe');
+f.src = '/';
+f.style.cssText = 'width:420px;height:1100px;border:1px solid #ccc';
+document.getElementById('hote').appendChild(f);
+
+let demarre = false;
+f.addEventListener('load', async () => {
+  if (demarre) return;
+  demarre = true;
+
+  const d = f.contentDocument, w = f.contentWindow;
+  w.onerror = (m, s, l) => log('ERREUR APP: ' + m + ' @' + s + ':' + l);
+  const $ = id => d.getElementById(id);
+  const ecran = () => [...d.querySelectorAll('.screen')].find(s => s.classList.contains('active'))?.id;
+
+  let code = null;
+  const suivi = async () => (await api('suivre', { code })).corps.suivi;
+
+  async function invite(prenom, cartes) {
+    const r = await api('rejoindre', { code, prenom });
+    await api('deposer', { code, idJoueur: r.corps.idJoueur, cartes, fini: true });
+  }
+
+  try {
+    await wait(1200);
+
+    // ===== Rien n'est publie tant qu'aucune partie n'a demarre =====
+    check('aucun suivi en memoire au depart', !w.localStorage.getItem('timesup_suivi'));
+
+    // ===== Partie en cartes perso, saisie partagee =====
+    $('btn-start').click();
+    d.querySelector('[data-source="custom"]').click();
+    $('btn-next-mode').click();
+    for (let i = 0; i < 4; i++) $('btn-joueurs-plus').click();
+    $('btn-cartes-moins').click();
+    $('btn-cartes-moins').click();
+    $('btn-ouvrir-session').click();
+    await wait(900);
+    code = $('session-code').textContent.trim();
+    log('       session : ' + code);
+
+    check('rien n est encore publie pendant la saisie', (await suivi()) === null);
+
+    await invite('Ana', ['A1', 'A2', 'A3']);
+    await invite('Bob', ['B1', 'B2', 'B3']);
+    await invite('Cleo', ['C1', 'C2', 'C3']);
+    await invite('Dan', ['D1', 'D2', 'D3']);
+    await wait(2600);
+    $('btn-session-lancer').click();
+    await wait(500);
+    $('dialog-confirm').click();   // paquet court, on lance quand meme
+    await wait(700);
+
+    // Repartition, manches, deroulement
+    $('btn-next-players').click();
+    await wait(300);
+    $('btn-repartition-jouer').click();
+    await wait(300);
+    $('btn-next-rounds').click();
+    $('btn-play').click();
+    await wait(800);
+    check('la partie demarre', ecran() === 'screen-round');
+
+    // ===== L etat de depart est publie =====
+    const depart = await suivi();
+    check('un etat est publie des le premier ecran', !!depart);
+    log('       etape : ' + depart.etat.etape + ', v' + depart.v);
+    check('l etape est l attente du premier tour', depart.etat.etape === 'attente');
+    check('la manche est decrite', depart.etat.manche.numero === 1 && !!depart.etat.manche.nom);
+    check('les deux equipes sont la', depart.etat.equipes.length === 2);
+    check('les scores partent de zero',
+          depart.etat.equipes.every(e => e.partie === 0 && e.manche === 0));
+    check('aucun tour en cours', depart.etat.tour === null);
+
+    // ===== AUCUNE CARTE ne doit transiter =====
+    const paquet = JSON.parse(w.localStorage.getItem('timesup_partie_en_cours')).state.masterDeck;
+    const publieBrut = JSON.stringify(depart);
+    check('le paquet compte bien 12 cartes', paquet.length === 12);
+    check('aucun mot du paquet n est publie',
+          !paquet.some(mot => publieBrut.includes(mot)));
+
+    // ===== Debut de tour =====
+    $('btn-start-turn').click();
+    await wait(400);
+    const enTour = await suivi();
+    log('       etape : ' + enTour.etat.etape + ', v' + enTour.v
+        + ', restant ' + enTour.etat.tour?.restant);
+    check('le debut de tour est publie', enTour.etat.etape === 'tour');
+    check('la version a avance', enTour.v > depart.v);
+    check('le tour nomme son equipe', typeof enTour.etat.tour.equipe === 'number');
+    check('et son joueur', typeof enTour.etat.tour.joueur === 'string');
+    check('le temps restant est transmis', enTour.etat.tour.restant > 0);
+    check('la duree du tour aussi', enTour.etat.tour.duree > 0);
+
+    // ===== Une carte trouvee met le score a jour =====
+    $('btn-found').click();
+    await wait(400);
+    const apresPoint = await suivi();
+    const total = apresPoint.etat.equipes.reduce((t, e) => t + e.partie, 0);
+    check('le point est publie', total === 1);
+    check('le score de manche suit aussi',
+          apresPoint.etat.equipes.reduce((t, e) => t + e.manche, 0) === 1);
+
+    // ===== Mise en pause =====
+    $('btn-pause').click();
+    await wait(400);
+    const enPause = await suivi();
+    check('la pause est publiee', enPause.etat.etape === 'pause');
+    check('le tour reste decrit pendant la pause', !!enPause.etat.tour);
+    const gele = enPause.etat.tour.restant;
+    await wait(1500);
+    const toujoursEnPause = await suivi();
+    check('le temps restant ne bouge plus', toujoursEnPause.etat.tour.restant === gele);
+
+    // ===== Reprise, puis on vide le paquet =====
+    $('btn-resume-turn').click();
+    await wait(4200);   // decompte de reprise avant que le tour reparte
+    const reprise = await suivi();
+    check('la reprise est publiee', reprise.etat.etape === 'tour');
+    check('le chrono repart de la ou il s etait arrete',
+          Math.abs(reprise.etat.tour.restant - gele) <= 1);
+    let clics = 0;
+    while (ecran() === 'screen-game' && clics < 300) { $('btn-found').click(); clics++; }
+    await wait(400);
+    const finTour = await suivi();
+    check('la fin de tour est publiee', finTour.etat.etape === 'entre-tours');
+    check('aucun tour n est plus en cours', finTour.etat.tour === null);
+
+    $('btn-next-turn').click();
+    await wait(500);
+    check('on est en fin de manche', ecran() === 'screen-round-end');
+    const finManche = await suivi();
+    check('la fin de manche est publiee', finManche.etat.etape === 'fin-manche');
+    check('le detail des manches accompagne la fin de manche',
+          Array.isArray(finManche.etat.historique) && finManche.etat.historique.length === 1);
+    check('la manche jouee est nommee', !!finManche.etat.historique[0].nom);
+
+    // ===== L abandon coupe la publication =====
+    check('le suivi est en memoire pendant la partie', !!w.localStorage.getItem('timesup_suivi'));
+    d.querySelector('#screen-round-end .btn-close').click();
+    await wait(400);
+    check('on demande confirmation avant de quitter', $('dialog-overlay').style.display !== 'none');
+    // « Abandonner » est l action destructrice, donc le bouton d annulation
+    const boutons = [...d.querySelectorAll('#dialog-overlay button')].map(b => b.textContent);
+    log('       choix : ' + boutons.join(' | '));
+    $('dialog-confirm').click();
+    await wait(700);
+    check('retour a l accueil', ecran() === 'screen-home');
+
+    log('SCENARIO 27 TERMINE');
+  } catch (e) { log('EXCEPTION: ' + e.message + '\n' + e.stack); }
+});
+</script>
+</body>
+</html>

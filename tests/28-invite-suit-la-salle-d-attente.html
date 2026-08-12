@@ -100,6 +100,15 @@ async function sonder(adresse) {
     suivre.click();
     await wait(700);
     check('la salle d attente s ouvre', ecran() === 'screen-attente');
+    // Verifier la classe ne suffit pas : un ecran peut porter « active » et
+    // rester invisible. On regarde ce que le navigateur affiche vraiment.
+    const vue = $('screen-attente');
+    const style = w.getComputedStyle(vue);
+    log('       affichage : display=' + style.display + ', hauteur=' + Math.round(vue.getBoundingClientRect().height));
+    check('et elle est reellement visible',
+          style.display !== 'none' && vue.getBoundingClientRect().height > 50);
+    check('l ecran precedent a bien disparu',
+          w.getComputedStyle($('screen-envoye')).display === 'none');
     check('les trois joueurs sont listes', lignes().length === 3);
     log('       liste : ' + lignes().map(l => l.textContent.replace(/\s+/g, ' ').trim()).join('  |  '));
 
@@ -162,8 +171,14 @@ async function sonder(adresse) {
     await api('fermer', { code, jeton });
     await wait(2600);
     log('       titre : "' + $('attente-titre').textContent + '"');
-    check('le depart de la partie est annonce',
-          $('attente-titre').textContent.includes('commencé'));
+    // Fermer la session fige le paquet ; l organisateur enchaine sur les
+    // equipes et les manches. Annoncer une partie commencee serait faux.
+    check('la suite de la configuration est annoncee',
+          $('attente-titre').textContent.includes('Configuration'));
+    check('on ne pretend pas que la partie a demarre',
+          !$('attente-titre').textContent.includes('commencé'));
+    check('le texte dit ce que fait l organisateur',
+          $('attente-sous').textContent.includes('équipes'));
     check('le retour disparait : on ne modifie plus rien',
           $('btn-attente-retour').style.display === 'none');
     // 4 joueurs x 3 cartes depuis l arrivee de Dan

@@ -446,15 +446,20 @@ async function rafraichirAttente() {
 }
 
 function rendreAttente(etat) {
-  // Une session fermée veut dire que l'organisateur a lancé. Les vrais écrans
-  // de suivi viendront ensuite ; d'ici là on le dit simplement.
-  const lancee = etat.ouverte === false;
+  // Une session fermée veut dire que le paquet est figé — pas que la partie a
+  // commencé : l'organisateur enchaîne sur les équipes, les manches et les
+  // réglages. Les vrais écrans de suivi viendront ensuite.
+  //
+  // À traiter plus tard : en rejeu (« rejouer avec les mêmes joueurs »), la
+  // configuration est déjà faite et la partie démarre aussitôt. Ce libellé sera
+  // alors faux pendant quelques secondes.
+  const configEnCours = etat.ouverte === false;
   document.getElementById('attente-titre').textContent =
-    lancee ? '🚀 La partie a commencé' : 'En attente du départ';
-  document.getElementById('attente-sous').textContent = lancee
-    ? 'Bonne partie ! Repose ton téléphone et écoute bien.'
+    configEnCours ? '⚙️ Configuration de la partie en cours' : 'En attente du départ';
+  document.getElementById('attente-sous').textContent = configEnCours
+    ? "L'organisateur règle les équipes et les manches. La partie démarre juste après."
     : "On attend que tout le monde ait saisi ses cartes.";
-  document.getElementById('btn-attente-retour').style.display = lancee ? 'none' : '';
+  document.getElementById('btn-attente-retour').style.display = configEnCours ? 'none' : '';
 
   const liste = document.getElementById('attente-joueurs');
   liste.innerHTML = '';
@@ -498,7 +503,7 @@ function rendreAttente(etat) {
   });
 
   const prets = etat.joueurs.filter(j => j.fini).length;
-  document.getElementById('attente-total').textContent = lancee
+  document.getElementById('attente-total').textContent = configEnCours
     ? `${etat.total} cartes dans le paquet`
     : `${prets} joueur(s) sur ${etat.joueurs.length} ont terminé · ${etat.total} cartes`;
 }

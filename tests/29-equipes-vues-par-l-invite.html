@@ -395,6 +395,33 @@ localStorage.removeItem('timesup_rejoint');
     // la garde laisse passer un changement. C est déjà couvert plus haut, quand
     // l organisateur remanie ses equipes et que la fenetre ouverte se met a jour.
 
+    // ===== Le palmarès survit au « Rejouer » =====
+    // Rejouer remet le moteur a zero. Tant que la coupure n existait pas, les
+    // battements continuaient de publier « fin de partie » sur l ancien code,
+    // mais avec un etat vide : l ecran des invites se vidait sous leurs yeux.
+    const avantRejeu = (await api('suivre', { code })).corps.suivi;
+    check('le palmarès publie porte les trois manches',
+          avantRejeu.etat.historique.length === 3);
+    check('et le detail des joueurs', (avantRejeu.etat.joueurs || []).length === 4);
+
+    A('btn-replay').click();
+    await wait(1000);
+    log('       ecran apres Rejouer : ' + ecranApp());
+    // Deux battements passent : c est la ou l ancien defaut se manifestait
+    await wait(16000);
+    const apresRejeu = (await api('suivre', { code })).corps.suivi;
+    log('       publie apres rejeu : etape=' + apresRejeu.etat.etape
+        + ' manches=' + (apresRejeu.etat.historique?.length ?? 'absent')
+        + ' joueurs=' + (apresRejeu.etat.joueurs?.length ?? 'absent'));
+    check('l ancienne session ne recoit plus rien', apresRejeu.v === avantRejeu.v);
+    check('le palmarès reste intact', apresRejeu.etat.historique.length === 3);
+    check('le detail des joueurs aussi', (apresRejeu.etat.joueurs || []).length === 4);
+
+    await wait(2600);
+    check('et l ecran de l invite le montre toujours',
+          di.querySelectorAll('#resultats-scores .manche-passee').length === 3);
+    check('avec son tiroir de joueurs', !!I('resultats-tiroir-joueurs'));
+
     log('SCENARIO 29 TERMINE');
   } catch (e) { log('EXCEPTION: ' + e.message + '\n' + e.stack); }
 })();

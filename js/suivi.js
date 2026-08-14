@@ -29,6 +29,8 @@ const BATTEMENT_MS = 15000;
 
 let etat = lireStockage();
 let battement = null;
+// Le moment de la partie que les battements rejouent entre deux changements
+let etapeCourante = 'attente';
 
 function lireStockage() {
   try {
@@ -59,12 +61,17 @@ export function suiviActif() {
 export function activerSuivi(code, jeton) {
   if (!code || !jeton) return;
   etat = { code, jeton, version: 0 };
+  // Repartir de « attente » : sans ça, les battements d'une nouvelle session
+  // rejouaient l'étape de la partie précédente — « fin de partie » — sur un état
+  // de jeu déjà remis à zéro, et les invités voyaient un palmarès vide.
+  etapeCourante = 'attente';
   ecrireStockage();
   relancerBattement();
 }
 
 export function couperSuivi() {
   etat = null;
+  etapeCourante = 'attente';
   ecrireStockage();
   if (battement) clearInterval(battement);
   battement = null;
@@ -144,8 +151,6 @@ function resume(etape) {
   }
   return paquet;
 }
-
-let etapeCourante = 'attente';
 
 async function envoyer(battementSeul) {
   if (!etat) return;

@@ -521,6 +521,11 @@ function setupListeners() {
   // Rejouer avec les mêmes joueurs : mêmes équipes, mêmes réglages, le cumul continue
   document.getElementById('btn-replay').addEventListener('click', () => {
     replayGame();
+    // La partie précédente est close. Sans cette coupure, ses battements
+    // continuaient de publier sur l'ancien code, mais sur un état déjà remis à
+    // zéro : les invités voyaient leur écran de résultats se vider. Le dernier
+    // état publié reste en place, et c'est le bon — celui de la partie finie.
+    couperSuivi();
 
     // En cartes perso, il faut de NOUVELLES cartes : sans ça on rejouerait le
     // paquet à l'identique, que tout le monde connaît déjà par cœur.

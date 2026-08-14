@@ -381,6 +381,21 @@ localStorage.setItem('timesup_beta', '1');
     check('aucun mot du paquet n a fuite',
           !I('bloc-resultats').textContent.match(/tire-bouchon|boussole|Cleopatre/));
 
+    // ===== Le tiroir ouvert le reste =====
+    // Sans garde, l ecran etait reconstruit a chaque lecture et le tiroir se
+    // refermait tout seul toutes les deux secondes.
+    const marque = di.querySelector('#resultats-tiroir-joueurs tbody tr');
+    marque.dataset.temoin = 'intact';
+    await wait(5000);
+    check('le tiroir ouvert ne se referme pas tout seul',
+          I('resultats-tiroir-joueurs')?.open === true);
+    check('et le tableau n est pas reconstruit',
+          di.querySelector('#resultats-tiroir-joueurs tbody tr')?.dataset.temoin === 'intact');
+
+    // Rien ne bouge plus une fois la partie finie : inutile d éprouver ici que
+    // la garde laisse passer un changement. C est déjà couvert plus haut, quand
+    // l organisateur remanie ses equipes et que la fenetre ouverte se met a jour.
+
     log('SCENARIO 29 TERMINE');
   } catch (e) { log('EXCEPTION: ' + e.message + '\n' + e.stack); }
 })();

@@ -526,7 +526,19 @@ function ligneScore(libelle, valeurs, classe) {
   return tr;
 }
 
+let dernierResultat = null;
+
 function rendreResultats(etat) {
+  // Ne redessiner que sur un vrai changement. Sans cette garde, le tiroir des
+  // joueurs était reconstruit à chaque lecture et se refermait tout seul toutes
+  // les deux secondes, sous les doigts de celui qui venait de l'ouvrir.
+  const signature = JSON.stringify([
+    etat.etape, etat.historique, etat.cumul, etat.joueurs,
+    etat.equipes.map(e => [e.nom, e.partie, e.manche])
+  ]);
+  if (signature === dernierResultat) return;
+  dernierResultat = signature;
+
   const finale = etat.etape === 'fin-partie';
   const [e1, e2] = etat.equipes;
   const manches = etat.historique || [];

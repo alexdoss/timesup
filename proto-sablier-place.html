@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Rush — où placer le nombre autour du sablier</title>
+<style>
+:root {
+  --primary: #6D28D9; --primary-hover: #7C3AED;
+  --background: #0F172A; --surface: #1E293B; --surface-2: #273449;
+  --border: #334155; --text: #F8FAFC; --muted: #94A3B8; --muted-strong: #CBD5E1;
+  --muted-2: #64748B; --success: #22C55E; --secondary: #F59E0B; --error: #EF4444;
+  --t1: #d6336c; --t2: #33c26a;
+  --r-md: 12px; --r-lg: 16px;
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  background: #060B18; color: var(--text); padding: 22px 16px 60px; line-height: 1.5;
+}
+.wrap { max-width: 1080px; margin: 0 auto; }
+h1 { font-size: 1.4rem; margin-bottom: 4px; }
+.intro { color: var(--muted); font-size: .93rem; margin-bottom: 16px; }
+.intro b { color: var(--muted-strong); }
+.cmd { display: flex; gap: 8px; flex-wrap: wrap; align-items: center;
+  margin-bottom: 22px; font-size: .85rem; color: var(--muted); }
+.cmd button {
+  background: var(--surface-2); color: var(--text); border: 1px solid var(--border);
+  border-radius: 999px; padding: 7px 15px; font-size: .84rem; font-weight: 600;
+  cursor: pointer; font-family: inherit;
+}
+.cmd button:hover { border-color: var(--primary-hover); }
+.cmd .valeur { color: var(--secondary); font-weight: 800; font-variant-numeric: tabular-nums; }
+
+.grille { display: grid; grid-template-columns: repeat(auto-fit, minmax(255px, 1fr)); gap: 16px; }
+
+/* Chaque carte imite la largeur utile d'un téléphone */
+.tel {
+  width: 100%; max-width: 300px; margin: 0 auto;
+  background: var(--background); border: 1px solid var(--border);
+  border-radius: 22px; padding: 16px 14px 18px; text-align: center;
+}
+.carte { }
+.carte > h2 { font-size: .74rem; text-transform: uppercase; letter-spacing: .05em;
+  color: var(--muted); margin-bottom: 8px; text-align: center; }
+.carte .avis { font-size: .82rem; color: var(--muted); margin-top: 10px; }
+.mesure { font-size: .74rem; color: var(--muted-2); margin-top: 4px;
+  font-family: ui-monospace, Menlo, monospace; }
+
+.cap { font-size: .68rem; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); }
+.qui { font-size: .95rem; font-weight: 700; color: var(--t2); margin-bottom: 6px; }
+
+.chrono-bloc { display: flex; align-items: center; justify-content: center; gap: 14px; margin: 8px 0 2px; }
+.chrono-bloc.colonne { flex-direction: column; gap: 2px; }
+.chrono-bloc.colonne-inv { flex-direction: column-reverse; gap: 2px; }
+
+.nombre { font-weight: 800; line-height: 1; color: var(--secondary);
+  font-variant-numeric: tabular-nums; }
+.n-cote { font-size: 4.4rem; }
+.n-grand { font-size: 5.2rem; }
+.n-moyen { font-size: 3.4rem; }
+.chrono-bloc.urgent .nombre { color: var(--error); }
+
+.sablier { flex-shrink: 0; }
+.s-cote { width: 108px; height: 156px; }
+.s-moyen { width: 96px; height: 139px; }
+.s-petit { width: 76px; height: 110px; }
+.sablier .sable { fill: var(--secondary); transition: y .25s linear, height .25s linear; }
+.chrono-bloc.urgent .sablier .sable { fill: var(--error); }
+.sablier .verre { fill: none; stroke: var(--muted-2); stroke-width: 3; stroke-linejoin: round; }
+.sablier .socle { fill: var(--muted-2); }
+
+/* Variante « dans le sablier » : le nombre posé par-dessus */
+.superpose { position: relative; display: inline-block; }
+.superpose .nombre {
+  position: absolute; left: 0; right: 0; top: 50%; transform: translateY(-50%);
+  font-size: 2.5rem; text-shadow: 0 2px 10px rgba(15,23,42,.95);
+}
+
+.mention { font-size: .8rem; color: var(--muted); margin-top: 6px; }
+
+.ouvert { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-md);
+  padding: 15px; margin-top: 22px; font-size: .9rem; }
+.ouvert h3 { font-size: .74rem; text-transform: uppercase; letter-spacing: .05em;
+  color: var(--secondary); margin-bottom: 10px; }
+.ouvert p { margin-bottom: 10px; } .ouvert p:last-child { margin-bottom: 0; }
+.reco { display: inline-block; background: var(--success); color: #06210f; border-radius: 999px;
+  padding: 1px 7px; font-size: .62rem; font-weight: 800; margin-left: 5px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <h1>Où placer le nombre autour du sablier ?</h1>
+  <p class="intro">Toutes les dispositions tournent <b>sur la même horloge</b>.
+    La hauteur occupée est mesurée sous chacune — c'est elle qui décide si l'écran
+    tient sans défiler.</p>
+
+  <div class="cmd">
+    <button id="btn-rejouer">↻ Rejouer</button>
+    <button id="btn-fin">⏩ Sauter aux 4 dernières secondes</button>
+    <button id="btn-pause">⏸ Pause</button>
+    <span>reste <span class="valeur" id="valeur">40</span> s</span>
+  </div>
+
+  <div class="grille" id="grille"></div>
+
+  <div class="ouvert">
+    <h3>Ce que je regarde</h3>
+    <p><b>La hauteur.</b> L'écran porte aussi la manche, le joueur qui fait deviner
+      et la mention de fin. Chaque disposition est mesurée en pixels sous la carte :
+      au-delà d'environ 420 px pour ce bloc, l'écran commence à défiler sur un
+      téléphone court.</p>
+    <p><b>Le point de fixation.</b> L'œil se pose une demi-seconde. Il doit trouver
+      le nombre sans le chercher — donc toujours au même endroit, et pas trop loin
+      du sablier qui attire le regard par son mouvement.</p>
+  </div>
+</div>
+
+<script>
+const DUREE = 40;
+let depart = Date.now(), enPause = false, pauseA = 0;
+
+function restant() {
+  const fin = enPause ? pauseA : Date.now();
+  return Math.max(0, DUREE - (fin - depart) / 1000);
+}
+
+// La verrerie, identique partout — seuls les rectangles de sable bougent
+function svgSablier(cle, taille) {
+  return `<svg class="sablier ${taille}" viewBox="0 0 100 145" aria-hidden="true">
+    <defs>
+      <clipPath id="h-${cle}"><path d="M14,12 H86 L54,70 H46 Z"/></clipPath>
+      <clipPath id="b-${cle}"><path d="M46,70 H54 L86,128 H14 Z"/></clipPath>
+    </defs>
+    <g clip-path="url(#h-${cle})"><rect class="sable" data-r="haut-${cle}" x="0" width="100" y="12" height="58"/></g>
+    <rect class="sable" data-r="filet-${cle}" x="48.6" width="2.8" y="70" height="0"/>
+    <g clip-path="url(#b-${cle})"><rect class="sable" data-r="bas-${cle}" x="0" width="100" y="128" height="0"/></g>
+    <path class="verre" d="M14,12 H86 L54,70 L86,128 H14 L46,70 Z"/>
+    <rect class="socle" x="8" y="6" width="84" height="6" rx="3"/>
+    <rect class="socle" x="8" y="128" width="84" height="6" rx="3"/>
+  </svg>`;
+}
+
+const DISPOS = [
+  { cle: 'cote', titre: 'À côté (en place)', reco: false,
+    avis: "Ce qui est publié. Compact en hauteur, mais le regard doit choisir entre deux points d'attention posés côte à côte.",
+    bloc: c => `<div class="chrono-bloc" data-bloc="${c}">
+      ${svgSablier(c, 's-cote')}<span class="nombre n-cote" data-n="${c}">40</span></div>` },
+
+  { cle: 'dessus', titre: 'Au-dessus',
+    avis: "Le nombre d'abord, le sablier ensuite. On lit le chiffre en premier, dans le sens de lecture naturel.",
+    bloc: c => `<div class="chrono-bloc colonne" data-bloc="${c}">
+      <span class="nombre n-grand" data-n="${c}">40</span>${svgSablier(c, 's-moyen')}</div>` },
+
+  { cle: 'dessous', titre: 'En dessous',
+    avis: "Le sablier attire l'œil par son mouvement, le nombre confirme juste en dessous. Un seul axe vertical à parcourir.",
+    bloc: c => `<div class="chrono-bloc colonne-inv" data-bloc="${c}">
+      <span class="nombre n-grand" data-n="${c}">40</span>${svgSablier(c, 's-moyen')}</div>` },
+
+  { cle: 'dedans', titre: 'Dans le sablier',
+    avis: "Le nombre posé au centre du verre : un seul objet à regarder. Le plus compact, mais le chiffre doit rester petit pour tenir au col.",
+    bloc: c => `<div class="chrono-bloc" data-bloc="${c}">
+      <span class="superpose">${svgSablier(c, 's-cote')}<span class="nombre" data-n="${c}">40</span></span></div>` }
+];
+
+const grille = document.getElementById('grille');
+DISPOS.forEach(d => {
+  const carte = document.createElement('div');
+  carte.className = 'carte';
+  carte.innerHTML = `<h2>${d.titre}${d.reco ? '<span class="reco">actuel</span>' : ''}</h2>
+    <div class="tel">
+      <p class="cap">Manche 2/3 · Un mot</p>
+      <p class="qui">Équipe 2 · Camille fait deviner</p>
+      ${d.bloc(d.cle)}
+      <p class="mention" data-m="${d.cle}"></p>
+    </div>
+    <p class="mesure" data-mes="${d.cle}"></p>
+    <p class="avis">${d.avis}</p>`;
+  grille.appendChild(carte);
+});
+
+const HAUT = 12, COL = 70, BAS = 128, TAS = 42;
+
+function battre() {
+  const r = restant();
+  const s = Math.ceil(r);
+  const p = r / DUREE;
+  const urgent = r > 0 && r <= 5;
+  const coule = !enPause && r > 0;
+
+  const surface = HAUT + (1 - p) * (COL - HAUT);
+  const niveau = BAS - (1 - p) * TAS;
+
+  document.getElementById('valeur').textContent = s;
+
+  DISPOS.forEach(d => {
+    const c = d.cle;
+    document.querySelector(`[data-n="${c}"]`).textContent = s;
+    document.querySelector(`[data-bloc="${c}"]`).classList.toggle('urgent', urgent);
+
+    const poser = (nom, y, h) => {
+      const el = document.querySelector(`[data-r="${nom}-${c}"]`);
+      el.setAttribute('y', y.toFixed(2));
+      el.setAttribute('height', Math.max(0, h).toFixed(2));
+    };
+    poser('haut', surface, COL - surface);
+    poser('bas', niveau, BAS - niveau);
+    poser('filet', COL, coule ? niveau - COL : 0);
+
+    document.querySelector(`[data-m="${c}"]`).textContent =
+      enPause ? '⏸ Partie en pause' : (r <= 0 ? '⏰ Temps écoulé !' : '');
+
+    const bloc = document.querySelector(`[data-bloc="${c}"]`);
+    document.querySelector(`[data-mes="${c}"]`).textContent =
+      `bloc chrono : ${Math.round(bloc.getBoundingClientRect().height)} px de haut`;
+  });
+}
+setInterval(battre, 200);
+
+document.getElementById('btn-rejouer').addEventListener('click', () => {
+  depart = Date.now(); enPause = false;
+  document.getElementById('btn-pause').textContent = '⏸ Pause'; battre();
+});
+document.getElementById('btn-fin').addEventListener('click', () => {
+  depart = Date.now() - (DUREE - 4) * 1000; enPause = false;
+  document.getElementById('btn-pause').textContent = '⏸ Pause'; battre();
+});
+document.getElementById('btn-pause').addEventListener('click', () => {
+  if (enPause) { depart += Date.now() - pauseA; enPause = false; }
+  else { pauseA = Date.now(); enPause = true; }
+  document.getElementById('btn-pause').textContent = enPause ? '▶ Reprendre' : '⏸ Pause';
+  battre();
+});
+battre();
+</script>
+</body>
+</html>

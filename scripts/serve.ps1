@@ -119,6 +119,13 @@ function Invoke-FausseSession($corps) {
     if ($json.Length -gt 4096) {
       return @{ statut = 413; corps = @{ error = 'Etat de partie trop volumineux.' } }
     }
+    # Meme garde que api/session.js : une publication plus ancienne n ecrase
+    # jamais une plus recente, l ordre d arrivee n etant pas garanti.
+    $actuel = $suivis[$code]
+    if ($actuel -and [int]$actuel.v -gt $version) {
+      return @{ statut = 200; corps = [ordered]@{
+        v = $actuel.v; publieA = $actuel.publieA; ignore = $true } }
+    }
     $suivis[$code] = ($json | ConvertFrom-Json)
     return @{ statut = 200; corps = [ordered]@{ v = $version; publieA = $publieA } }
   }

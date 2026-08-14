@@ -680,16 +680,18 @@ body {
 /* Le chrono vu par les invités : lisible à un mètre, posé sur une table.
    tabular-nums fige la largeur des chiffres, sinon le nombre tressaute
    à chaque seconde. */
+/* Le nombre au-dessus du sablier : on lit le chiffre en premier, dans le sens
+   de lecture, et le sablier confirme juste en dessous. */
 .chrono-bloc {
   display: flex;
+  flex-direction: column;
   align-items: center;
-  justify-content: center;
-  gap: 14px;
-  margin: 10px 0 4px;
+  gap: 2px;
+  margin: 6px 0 2px;
 }
 
 .chrono-invite {
-  font-size: 4.4rem;
+  font-size: 5.2rem;
   font-weight: 800;
   line-height: 1;
   color: var(--secondary);
@@ -697,8 +699,8 @@ body {
 }
 
 .sablier {
-  width: 108px;
-  height: 156px;
+  width: 96px;
+  height: 139px;
   flex-shrink: 0;
 }
 

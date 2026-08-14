@@ -257,6 +257,18 @@ localStorage.setItem('timesup_beta', '1');
     check('le sablier est dessine', haut1 > 0);
     check('le filet coule pendant le tour', sable('sable-filet') > 0);
 
+    // Le nombre au-dessus du sablier, et l ecran qui tient sans defiler
+    const rNombre = I('tour-chrono').getBoundingClientRect();
+    const rSablier = di.querySelector('#tour-bloc-chrono .sablier').getBoundingClientRect();
+    const hBloc = I('tour-bloc-chrono').getBoundingClientRect().height;
+    log('       chrono a ' + Math.round(rNombre.top) + ', sablier a '
+        + Math.round(rSablier.top) + ', bloc de ' + Math.round(hBloc) + ' px');
+    check('le nombre est au-dessus du sablier', rNombre.bottom <= rSablier.top + 2);
+    check('les deux sont alignes sur le meme axe',
+          Math.abs((rNombre.left + rNombre.width / 2)
+                   - (rSablier.left + rSablier.width / 2)) < 6);
+    check('le bloc reste dans les limites mesurees', hBloc > 180 && hBloc < 260);
+
     // Le decompte tourne en local, sans attendre le serveur
     await wait(3000);
     const chrono2 = Number(L('tour-chrono'));

@@ -373,6 +373,18 @@ async function publier(req, res, code) {
     return res.status(413).json({ error: 'État de partie trop volumineux.' });
   }
 
+  // Une publication plus ancienne ne doit jamais écraser une plus récente.
+  // Quand les cartes s'enchaînent vite, plusieurs envois sont en vol en même
+  // temps et rien ne garantit leur ordre d'arrivée : sans ce contrôle, un
+  // « tour en cours » émis avant pouvait recouvrir le « fin de tour » émis
+  // après, et les invités restaient sur un écran périmé.
+  // Les battements réémettent la même version : ils sont acceptés, c'est ce qui
+  // rafraîchit l'horodatage et prouve que l'organisateur est toujours là.
+  const actuel = analyser(await commandeKV(['GET', cleSuivi(code)]));
+  if (actuel && Number(actuel.v) > version) {
+    return res.status(200).json({ v: actuel.v, publieA: actuel.publieA, ignore: true });
+  }
+
   await commandeKV(['SET', cleSuivi(code), charge, 'EX', DUREE_SUIVI_S]);
   return res.status(200).json({ v: version, publieA });
 }

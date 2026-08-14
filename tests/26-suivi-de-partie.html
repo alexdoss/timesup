@@ -83,6 +83,26 @@ function etatExemple(numero, scores) {
     check('l ancien etat a bien ete remplace', relu.corps.suivi.etat.equipes[0].partie === 9);
     check('la manche a change', relu.corps.suivi.etat.manche.numero === 2);
 
+    // ===== Une publication en retard n ecrase pas une plus recente =====
+    // Quand les cartes s enchainent, plusieurs envois sont en vol en meme temps
+    // et rien ne garantit leur ordre d arrivee. Sans cette garde, un « tour en
+    // cours » emis avant recouvrait le « fin de tour » emis apres.
+    const enRetard = await api({ action: 'publier', code, jeton, v: 1, etat: etatExemple(1, [0, 0]) });
+    check('une version plus ancienne est acceptee sans erreur', enRetard.statut === 200);
+    check('mais elle est explicitement ignoree', enRetard.corps.ignore === true);
+    const intact = await api({ action: 'suivre', code });
+    check('l etat recent est preserve', intact.corps.suivi.v === 2);
+    check('son contenu n a pas bouge', intact.corps.suivi.etat.equipes[0].partie === 9);
+
+    // Le battement reemet la meme version : il doit passer, c est lui qui
+    // rafraichit l horodatage et prouve que l organisateur est toujours la.
+    await wait(20);
+    const battement = await api({ action: 'publier', code, jeton, v: 2, etat: etatExemple(2, [9, 7]) });
+    check('un battement de meme version est accepte', !battement.corps.ignore);
+    const apresBattement = await api({ action: 'suivre', code });
+    check('et il rajeunit l horodatage',
+          apresBattement.corps.suivi.publieA > intact.corps.suivi.publieA);
+
     // ===== Le corps vient d un navigateur : il est borne =====
     const enorme = await api({ action: 'publier', code, jeton, v: 3, etat: { bourrage: 'x'.repeat(5000) } });
     check('un etat trop volumineux est refuse', enorme.statut === 413);

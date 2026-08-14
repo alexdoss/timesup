@@ -677,6 +677,12 @@ body {
   background: var(--surface-2);
 }
 
+/* Le bouton des équipes, sur l'écran de suivi : nettement séparé de l'annonce
+   du joueur, dont il n'est pas la suite. */
+.btn-equipes-invite {
+  margin-top: 28px;
+}
+
 /* Son propre prénom dans la liste des équipes : ce qu'on cherche en premier */
 .equipes-vue li.moi {
   color: var(--accent, var(--brand));

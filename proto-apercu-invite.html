@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Rush — aperçu de l'écran invité</title>
+<style>
+:root {
+  --primary: #6D28D9; --primary-hover: #7C3AED;
+  --surface: #1E293B; --surface-2: #273449; --border: #334155;
+  --text: #F8FAFC; --muted: #94A3B8; --muted-strong: #CBD5E1; --success: #22C55E;
+  --r-md: 12px;
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  background: #060B18; color: var(--text); padding: 22px 16px 50px; line-height: 1.5;
+}
+.wrap { max-width: 900px; margin: 0 auto; }
+h1 { font-size: 1.35rem; margin-bottom: 4px; }
+.intro { color: var(--muted); font-size: .92rem; margin-bottom: 18px; }
+.intro b { color: var(--muted-strong); }
+.tabs { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 18px; }
+.tab {
+  background: var(--surface); color: var(--muted-strong); border: 1px solid var(--border);
+  border-radius: 999px; padding: 8px 15px; font-size: .86rem; font-weight: 600;
+  cursor: pointer; font-family: inherit;
+}
+.tab.on { background: var(--primary); border-color: var(--primary-hover); color: #fff; }
+.stage { display: flex; gap: 26px; align-items: flex-start; flex-wrap: wrap; }
+.cadre { border: 1px solid var(--border); border-radius: 28px; overflow: hidden;
+  box-shadow: 0 12px 40px rgba(0,0,0,.5); flex-shrink: 0; background: #0F172A; }
+iframe { display: block; width: 390px; height: 780px; border: 0; }
+.notes { flex: 1; min-width: 240px; background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--r-md); padding: 15px; font-size: .9rem; }
+.notes h3 { font-size: .74rem; text-transform: uppercase; letter-spacing: .05em;
+  color: var(--muted); margin-bottom: 9px; }
+.notes p { margin-bottom: 9px; } .notes p:last-child { margin-bottom: 0; }
+.notes code { background: var(--surface-2); border-radius: 4px; padding: 1px 5px; font-size: .85em; }
+.mesure { color: var(--success); font-weight: 700; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Aperçu de l'écran invité</h1>
+  <p class="intro">La <b>vraie</b> page <code>rejoindre.html</code>, forcée dans un état donné
+    avec des données d'exemple. Rien n'est simulé côté affichage — c'est le code servi.</p>
+
+  <div class="tabs" id="tabs">
+    <button class="tab on" data-etat="lancement">Lancement de tour</button>
+    <button class="tab" data-etat="config">Configuration en cours</button>
+    <button class="tab" data-etat="attente">Salle d'attente</button>
+  </div>
+
+  <div class="stage">
+    <div class="cadre"><iframe id="vue" src="/rejoindre.html"></iframe></div>
+    <div class="notes" id="notes"></div>
+  </div>
+</div>
+
+<script>
+const NOTES = {
+  lancement: `<h3>Ce qu'il faut regarder</h3>
+    <p>L'écart entre « Camille fait deviner » et le bouton des équipes :
+      <span class="mesure">28 px</span>, contre zéro auparavant. Le bouton se lisait
+      comme la suite de l'annonce.</p>
+    <p>Le nom de l'équipe qui joue prend sa couleur.</p>
+    <p>Aucun bouton « Lancer le tour » : le départ reste à la main de l'organisateur.</p>`,
+  config: `<h3>Ce qu'il faut regarder</h3>
+    <p>La roue tourne lentement pour dire « ça avance » sans capter l'attention.</p>
+    <p>Ni tableau des joueurs ni décompte des cartes : ils ne bougeraient plus.</p>
+    <p>Le bouton des équipes n'apparaît qu'une fois la répartition validée.</p>`,
+  attente: `<h3>Ce qu'il faut regarder</h3>
+    <p>La liste est rangée par ordre alphabétique, pas par ordre d'arrivée : elle
+      ne doit pas se réordonner toutes les deux secondes.</p>
+    <p><code>·&nbsp;toi</code> repère l'invité parmi les autres.</p>
+    <p>Aucun bouton de retrait : il est réservé à l'organisateur.</p>`
+};
+
+const EQUIPES = [
+  { nom: 'Équipe 1', couleur: '#d6336c', partie: 17, manche: 4, joueurs: ['Malik', 'Jack'] },
+  { nom: 'Équipe 2', couleur: '#33c26a', partie: 16, manche: 3, joueurs: ['Camille', 'Inès'] }
+];
+
+function peupler(doc, etat) {
+  const $ = id => doc.getElementById(id);
+  doc.querySelectorAll('.screen').forEach(e =>
+    e.classList.toggle('active', e.id === 'screen-attente'));
+
+  const lancement = etat === 'lancement';
+  const config = etat === 'config';
+  const attente = etat === 'attente';
+
+  $('btn-attente-retour').style.display = attente ? '' : 'none';
+  $('attente-roue').style.display = config ? '' : 'none';
+  $('attente-titre').parentElement.style.display = lancement ? 'none' : '';
+  $('bloc-lancement').style.display = lancement ? '' : 'none';
+  $('attente-joueurs').style.display = attente ? '' : 'none';
+  $('attente-total').style.display = attente ? '' : 'none';
+  $('btn-voir-equipes').style.display = attente ? 'none' : '';
+
+  if (lancement) {
+    $('lancement-titre').textContent = 'Manche 2/3';
+    $('lancement-nom').textContent = '🔤 Un mot';
+    $('lancement-icone').textContent = '🔤';
+    $('lancement-regle').textContent =
+      "Le joueur ne peut utiliser qu'un seul mot pour faire deviner la carte.";
+    $('lancement-eq1').textContent = EQUIPES[0].nom;
+    $('lancement-eq2').textContent = EQUIPES[1].nom;
+    $('lancement-s1').textContent = EQUIPES[0].manche;
+    $('lancement-s2').textContent = EQUIPES[1].manche;
+    $('lancement-total').textContent =
+      `Total de la partie : ${EQUIPES[0].partie} – ${EQUIPES[1].partie}`;
+    $('lancement-tour').textContent = "🎯 C'est au tour de : Équipe 2";
+    $('lancement-tour').style.color = EQUIPES[1].couleur;
+    $('lancement-joueur').textContent = 'Camille fait deviner';
+  }
+
+  if (config) {
+    $('attente-titre').textContent = 'Configuration de la partie en cours';
+    $('attente-sous').textContent =
+      "L'organisateur règle les équipes et les manches. La partie démarre juste après.";
+  }
+
+  if (attente) {
+    $('attente-titre').textContent = 'En attente du départ';
+    $('attente-sous').textContent = "On attend que tout le monde ait saisi ses cartes.";
+    const liste = $('attente-joueurs');
+    liste.innerHTML = '';
+    [['Camille', 8, true, true], ['Inès', 5, false, false],
+     ['Jack', 8, true, false], ['Malik', 8, true, false]].forEach(([nom, n, fini, moi]) => {
+      const l = doc.createElement('div');
+      l.className = 'connecte' + (fini ? ' fini' : '');
+      const q = doc.createElement('span');
+      q.className = 'qui';
+      q.textContent = `${fini ? '●' : '○'} ${nom} `;
+      if (moi) {
+        const m = doc.createElement('span');
+        m.className = 'sans-tel';
+        m.textContent = '· toi';
+        q.appendChild(m);
+      }
+      const e = doc.createElement('span');
+      e.className = 'etat';
+      e.textContent = fini ? `${n} cartes ✓` : `${n}/8…`;
+      l.appendChild(q); l.appendChild(e);
+      liste.appendChild(l);
+    });
+    $('attente-total').textContent = '3 joueur(s) sur 4 ont terminé · 29 cartes';
+  }
+}
+
+let courant = 'lancement';
+const vue = document.getElementById('vue');
+
+function appliquer() {
+  document.getElementById('notes').innerHTML = NOTES[courant];
+  try { peupler(vue.contentDocument, courant); } catch { /* pas encore chargée */ }
+}
+
+vue.addEventListener('load', () => setTimeout(appliquer, 400));
+
+document.getElementById('tabs').addEventListener('click', e => {
+  const t = e.target.closest('.tab');
+  if (!t) return;
+  document.querySelectorAll('.tab').forEach(x => x.classList.toggle('on', x === t));
+  courant = t.dataset.etat;
+  appliquer();
+});
+</script>
+</body>
+</html>

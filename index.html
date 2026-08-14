@@ -485,6 +485,12 @@
           <span id="saisie-label-prenom" class="field-label">Son prénom</span>
           <input type="text" id="saisie-prenom" placeholder="Prénom" maxlength="20" autocomplete="off">
         </div>
+        <!-- Liste fermée : on rejoue avec les mêmes joueurs, chacun se reconnaît
+             plutôt que de retaper son prénom — comme sur la page des invités -->
+        <div id="saisie-bloc-liste" class="config-section" style="display:none">
+          <span id="saisie-label-liste" class="field-label">Qui es-tu ?</span>
+          <div id="saisie-liste-prenoms" class="choix-prenoms"></div>
+        </div>
         <div class="jauge"><div id="saisie-jauge"></div></div>
         <p id="saisie-compteur" class="wizard-hint"></p>
         <div class="player-input-row">

@@ -916,15 +916,63 @@ async function ouvrirSaisieLocale(role) {
 
   document.getElementById('saisie-label-prenom').textContent =
     organisateur ? 'Ton prénom' : 'Son prénom';
+  document.getElementById('saisie-label-liste').textContent =
+    organisateur ? 'Qui es-tu ?' : 'Qui saisit sur cet appareil ?';
 
   const champ = document.getElementById('saisie-prenom');
   champ.value = saisieLocale.prenom;
   champ.placeholder = organisateur ? 'Ton prénom' : 'Son prénom';
+  await rendreChoixPrenomLocal();
   document.getElementById('saisie-carte').type = saisieLocale.masque ? 'password' : 'text';
   document.getElementById('saisie-carte').value = '';
   showSaisieError('');
   rafraichirSaisieLocale();
   showScreen('screen-saisie-locale');
+}
+
+// En rejeu, les prénoms sont connus d'avance : l'organisateur les choisit dans
+// la liste, exactement comme les invités sur leur téléphone. Sans ça il était le
+// seul à devoir retaper le sien, au risque d'une faute qui le dédoublerait.
+// Qui, de la liste ou du champ libre, doit être visible. Appelé à chaque
+// rafraîchissement, donc sans le moindre appel réseau.
+function ajusterBlocsPrenom() {
+  const parListe = listeJoueurs.length > 0 && !saisieLocale.prenom && !saisieLocale.id;
+  document.getElementById('saisie-bloc-liste').style.display = parListe ? '' : 'none';
+  document.getElementById('saisie-bloc-prenom').style.display =
+    (saisieLocale.demanderPrenom && !parListe) ? '' : 'none';
+  return parListe;
+}
+
+async function rendreChoixPrenomLocal() {
+  if (!ajusterBlocsPrenom()) return;
+
+  // Les prénoms déjà pris par ceux qui ont scanné : on les montre, barrés
+  let pris = new Set();
+  try {
+    const etat = await lireEtatSansAttendre();
+    pris = new Set((etat?.joueurs || []).map(j => j.prenom.toLocaleLowerCase()));
+  } catch {
+    // Sans réseau, on propose toute la liste : le serveur refusera un doublon
+  }
+
+  const liste = document.getElementById('saisie-liste-prenoms');
+  liste.innerHTML = '';
+  listeJoueurs.forEach(prenom => {
+    const bouton = document.createElement('button');
+    bouton.type = 'button';
+    const dejaLa = pris.has(prenom.toLocaleLowerCase());
+    bouton.textContent = dejaLa ? `${prenom} ✓` : prenom;
+    bouton.disabled = dejaLa;
+    bouton.addEventListener('click', () => {
+      document.getElementById('saisie-prenom').value = prenom;
+      saisieLocale.prenom = prenom;
+      showSaisieError('');
+      // Le choix fait, la liste laisse la place au prénom retenu
+      rafraichirSaisieLocale();
+      document.getElementById('saisie-carte').focus();
+    });
+    liste.appendChild(bouton);
+  });
 }
 
 function rafraichirSaisieLocale() {
@@ -940,11 +988,13 @@ function rafraichirSaisieLocale() {
     demanderPrenom: saisieLocale.demanderPrenom
   }, retirerCarteLocale);
 
-  // Une fois inscrit, le prénom se fige : le changer créerait un second joueur
-  // dans la session au lieu de renommer le premier.
+  // Une fois inscrit — ou choisi dans la liste fermée d'un rejeu — le prénom se
+  // fige : le changer créerait un second joueur au lieu de renommer le premier.
+  const fige = !!saisieLocale.id || (listeJoueurs.length > 0 && !!saisieLocale.prenom);
   const champ = document.getElementById('saisie-prenom');
-  champ.readOnly = !!saisieLocale.id;
-  champ.title = saisieLocale.id ? 'Ton prénom est enregistré dans la partie' : '';
+  champ.readOnly = fige;
+  champ.title = fige ? 'Ton prénom est enregistré dans la partie' : '';
+  ajusterBlocsPrenom();
 }
 
 // Inscrit le joueur s'il ne l'est pas encore, puis pousse ses cartes.
@@ -991,6 +1041,11 @@ async function ajouterCarteLocale() {
   // Le prénom précède la première carte : c'est lui qui inscrit le joueur,
   // et donc ce qui le rend visible aux autres pendant qu'il tape.
   if (!saisieLocale.id && !document.getElementById('saisie-prenom').value.trim()) {
+    if (listeJoueurs.length > 0) {
+      return showSaisieError(saisieLocale.role === 'organisateur'
+        ? 'Touche ton prénom dans la liste avant de saisir tes cartes.'
+        : 'Touche le prénom de ce joueur dans la liste.');
+    }
     return showSaisieError(saisieLocale.role === 'organisateur'
       ? "Indique d'abord ton prénom : les autres verront que tu saisis tes cartes."
       : "Indique d'abord son prénom.");

@@ -737,8 +737,10 @@ body {
   margin-top: 28px;
 }
 
-/* Son propre prénom dans la liste des équipes : ce qu'on cherche en premier */
-.equipes-vue li.moi {
+/* Son propre prénom : ce qu'on cherche en premier, dans les équipes
+   comme dans le détail de fin de partie */
+.equipes-vue li.moi,
+.table-joueurs tbody th.moi {
   color: var(--accent, var(--brand));
   font-weight: 800;
 }

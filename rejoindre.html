@@ -166,6 +166,18 @@
           <p id="tour-mention" class="wizard-hint"></p>
         </div>
 
+        <!-- RÉSULTATS — fin de manche et fin de partie, comme chez l'organisateur -->
+        <div id="bloc-resultats" style="display:none">
+          <div id="resultats-emoji" class="grand-emoji"></div>
+          <h2 id="resultats-titre"></h2>
+          <p id="resultats-vainqueur" class="winner"></p>
+          <table class="score-table">
+            <thead><tr><th></th><th id="resultats-eq1"></th><th id="resultats-eq2"></th></tr></thead>
+            <tbody id="resultats-scores"></tbody>
+          </table>
+          <div id="resultats-joueurs" class="player-stats"></div>
+        </div>
+
         <!-- Détaché de ce qui précède : collé au « fait deviner », il se lisait
              comme une suite de l'annonce plutôt que comme une action à part -->
         <button id="btn-voir-equipes" class="btn btn-secondary btn-equipes-invite"

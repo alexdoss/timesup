@@ -297,6 +297,90 @@ localStorage.setItem('timesup_beta', '1');
     check('le score du tour precedent est reporte',
           Number(L('lancement-s1')) + Number(L('lancement-s2')) === 2);
 
+    // ===== Fin de manche : le detail, comme chez l organisateur =====
+    // On vide le paquet d une traite pour achever la manche
+    A('btn-start-turn').click();
+    await wait(400);
+    let c2 = 0;
+    while (ecranApp() === 'screen-game' && c2 < 400) { A('btn-found').click(); c2++; }
+    await wait(600);
+    A('btn-next-turn').click();
+    await wait(900);
+    check('l organisateur est en fin de manche', ecranApp() === 'screen-round-end');
+
+    await wait(2600);
+    const lignesRes = () => [...di.querySelectorAll('#resultats-scores tr')];
+    log('       invite : "' + L('resultats-titre') + '" — '
+        + lignesRes().map(t => t.querySelector('th').textContent).join(' | '));
+    check('l invite voit les resultats', I('bloc-resultats').style.display !== 'none');
+    check('le titre nomme la manche', L('resultats-titre').includes('Fin de la manche'));
+    check('aucun vainqueur annonce avant la fin',
+          I('resultats-vainqueur').style.display === 'none');
+    check('la manche jouee est detaillee',
+          lignesRes().some(t => t.classList.contains('manche-en-cours')));
+    check('le total de la partie est la',
+          lignesRes().some(t => t.classList.contains('score-total')));
+    check('aucun detail par joueur en fin de manche',
+          I('resultats-joueurs').children.length === 0);
+    check('le sablier a disparu', I('bloc-tour').style.display === 'none');
+
+    // ===== Fin de partie : on enchaine les manches restantes =====
+    let boucles = 0;
+    while (ecranApp() !== 'screen-final' && boucles < 12) {
+      boucles++;
+      if (ecranApp() === 'screen-round-end') { A('btn-next-round').click(); await wait(700); }
+      else if (ecranApp() === 'screen-round') { A('btn-start-turn').click(); await wait(400); }
+      else if (ecranApp() === 'screen-game') {
+        let k = 0;
+        while (ecranApp() === 'screen-game' && k < 400) { A('btn-found').click(); k++; }
+        await wait(500);
+      } else if (ecranApp() === 'screen-turn-end') { A('btn-next-turn').click(); await wait(700); }
+      else await wait(500);
+    }
+    check('la partie est terminee cote organisateur', ecranApp() === 'screen-final');
+
+    await wait(2600);
+    log('       invite : "' + L('resultats-titre') + '" · "' + L('resultats-vainqueur') + '"');
+    check('l invite voit la fin de partie', L('resultats-titre').includes('Fin de la partie'));
+    check('un vainqueur est annonce',
+          I('resultats-vainqueur').style.display !== 'none'
+          && L('resultats-vainqueur').length > 5);
+    check('les trois manches sont detaillees',
+          di.querySelectorAll('#resultats-scores .manche-passee').length === 3);
+    check('plus aucune manche marquee « en cours »',
+          di.querySelectorAll('#resultats-scores .manche-en-cours').length === 0);
+    check('le total de la partie est nomme',
+          lignesRes().some(t => t.querySelector('th').textContent === 'Cette partie'));
+
+    // Le zoom sur les joueurs
+    const tiroir = I('resultats-tiroir-joueurs');
+    check('un tiroir presente les joueurs', !!tiroir);
+    check('il est replie au depart', tiroir && !tiroir.open);
+    log('       resume : "' + tiroir.querySelector('summary').textContent + '"');
+    check('le resume annonce le meilleur',
+          tiroir.querySelector('summary').textContent.includes('en tête avec'));
+    tiroir.open = true;
+    const lj = [...di.querySelectorAll('#resultats-tiroir-joueurs tbody tr')];
+    check('une ligne par joueur', lj.length === 4);
+    const cols = [...tiroir.querySelectorAll('thead th')].map(t => t.textContent);
+    log('       colonnes : ' + cols.join(' | '));
+    check('une colonne par manche, plus le total', cols.length === 5);
+    check('les manches portent leur icone',
+          tiroir.querySelectorAll('thead th[title]').length === 3);
+    check('chaque joueur porte la couleur de son equipe',
+          lj.every(t => !!t.querySelector('.puce-equipe').style.background));
+    check('un trait separe les deux equipes',
+          di.querySelectorAll('#resultats-tiroir-joueurs .change-equipe').length === 1);
+    check('le total de chaque joueur vaut la somme de ses manches',
+          lj.every(t => {
+            const v = [...t.querySelectorAll('td')].map(x => Number(x.textContent));
+            return v.slice(0, 3).reduce((a, b) => a + b, 0) === v[3];
+          }));
+    check('l invite se retrouve en evidence',
+          di.querySelector('#resultats-tiroir-joueurs th.moi')?.textContent === 'Cleo');
+    check('aucun mot du paquet n a fuite',
+          !I('bloc-resultats').textContent.match(/tire-bouchon|boussole|Cleopatre/));
+
     log('SCENARIO 29 TERMINE');
   } catch (e) { log('EXCEPTION: ' + e.message + '\n' + e.stack); }
 })();

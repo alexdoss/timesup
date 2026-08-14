@@ -15,7 +15,8 @@
 // Tout échec est silencieux : le suivi est un supplément, il ne doit jamais
 // empêcher de jouer. Une partie sans réseau se déroule normalement.
 
-import { game, ROUNDS, getRoundScores, getRoundHistory, getCurrentPlayer } from './game.js';
+import { game, ROUNDS, getRoundScores, getRoundHistory, getCurrentPlayer,
+         getSessionScores, getPlayerBreakdown } from './game.js';
 
 const ROUTE = '/api/session';
 const CLE = 'timesup_suivi';
@@ -128,6 +129,19 @@ function resume(etape) {
   };
 
   if (etape === 'fin-manche' || etape === 'fin-partie') paquet.historique = historique();
+
+  // La fin de partie porte tout ce que voit l'organisateur : le cumul des
+  // parties enchaînées, et le détail de chaque joueur manche par manche.
+  if (etape === 'fin-partie') {
+    if (game.gamesPlayed > 0) {
+      paquet.cumul = { totaux: getSessionScores(), parties: game.gamesPlayed + 1 };
+    }
+    if (game.nominativeMode) {
+      paquet.joueurs = getPlayerBreakdown().map(j => ({
+        nom: j.name, equipe: j.team, parManche: j.perRound, total: j.total
+      }));
+    }
+  }
   return paquet;
 }
 

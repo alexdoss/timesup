@@ -460,6 +460,8 @@ const ETAPES_LANCEMENT = ['attente', 'entre-tours'];
 
 // Les moments où le chrono tourne chez l'organisateur
 const ETAPES_TOUR = ['tour', 'pause'];
+// … et ceux où il montre un tableau de résultats
+const ETAPES_RESULTAT = ['fin-manche', 'fin-partie'];
 
 // L'organisateur poursuit sa configuration, puis la partie s'enchaîne.
 function rendreConfiguration(suivi, heureServeur) {
@@ -467,22 +469,25 @@ function rendreConfiguration(suivi, heureServeur) {
   const etape = etat?.etape;
   const enLancement = ETAPES_LANCEMENT.includes(etape) && !!etat?.manche;
   const enTour = ETAPES_TOUR.includes(etape) && !!etat?.tour;
+  const enResultat = ETAPES_RESULTAT.includes(etape);
 
   // L'en-tête « configuration en cours » cède la place dès que la partie tourne
-  const enJeu = enLancement || enTour;
+  const enJeu = enLancement || enTour || enResultat;
   document.getElementById('attente-roue').style.display = enJeu ? 'none' : '';
   document.getElementById('attente-titre').parentElement.style.display = enJeu ? 'none' : '';
   document.getElementById('bloc-lancement').style.display = enLancement ? '' : 'none';
   document.getElementById('bloc-tour').style.display = enTour ? '' : 'none';
+  document.getElementById('bloc-resultats').style.display = enResultat ? '' : 'none';
   if (enLancement) rendreLancement(etat);
+  if (enResultat) rendreResultats(etat);
   if (enTour) ancrerTour(etat, suivi.publieA, heureServeur);
   else ancreTour = null;
 
   const equipes = suivi?.etat?.equipes || [];
   const nommees = equipes.filter(e => (e.joueurs || []).length > 0);
   const bouton = document.getElementById('btn-voir-equipes');
-  // Masqué pendant le tour : l'écran doit se lire d'un coup d'œil
-  bouton.style.display = (nommees.length && !enTour) ? '' : 'none';
+  // Masqué pendant le tour et sur les résultats : l'écran doit rester lisible
+  bouton.style.display = (nommees.length && !enTour && !enResultat) ? '' : 'none';
   equipesConnues = nommees.length ? equipes : null;
 
   // L'organisateur peut revenir sur sa répartition. Si la fenêtre est ouverte
@@ -500,6 +505,136 @@ function rendreConfiguration(suivi, heureServeur) {
 }
 
 let derniereComposition = null;
+
+// ===== LES RÉSULTATS =====
+// Le même tableau que celui de l'organisateur : une ligne par manche jouée, le
+// total, puis — en fin de partie — le cumul des parties et le détail par joueur.
+
+function ligneScore(libelle, valeurs, classe) {
+  const tr = document.createElement('tr');
+  if (classe) tr.className = classe;
+  const th = document.createElement('th');
+  th.scope = 'row';
+  th.textContent = libelle;
+  tr.appendChild(th);
+  valeurs.forEach(valeur => {
+    const td = document.createElement('td');
+    td.className = 'score';
+    td.textContent = valeur;
+    tr.appendChild(td);
+  });
+  return tr;
+}
+
+function rendreResultats(etat) {
+  const finale = etat.etape === 'fin-partie';
+  const [e1, e2] = etat.equipes;
+  const manches = etat.historique || [];
+
+  document.getElementById('resultats-emoji').textContent = finale ? '🏆' : (etat.manche?.icone || '📊');
+  document.getElementById('resultats-titre').textContent = finale
+    ? 'Fin de la partie !'
+    : `Fin de la manche ${etat.manche?.numero}/${etat.manche?.sur}`;
+
+  const vainqueur = document.getElementById('resultats-vainqueur');
+  if (finale) {
+    const ecart = e1.partie - e2.partie;
+    vainqueur.textContent = ecart === 0
+      ? '🤝 Égalité parfaite !'
+      : `🎉 ${(ecart > 0 ? e1 : e2).nom} gagne !`;
+    vainqueur.style.display = '';
+  } else {
+    vainqueur.style.display = 'none';
+  }
+
+  document.getElementById('resultats-eq1').textContent = e1.nom;
+  document.getElementById('resultats-eq2').textContent = e2.nom;
+
+  const corps = document.getElementById('resultats-scores');
+  corps.innerHTML = '';
+  manches.forEach((m, i) => {
+    // Hors fin de partie, la dernière ligne est celle qui vient de s'achever
+    const enCours = !finale && i === manches.length - 1;
+    corps.appendChild(ligneScore(`${m.icone} ${m.nom}`, m.scores,
+      enCours ? 'manche-en-cours' : 'manche-passee'));
+  });
+  corps.appendChild(ligneScore(finale ? 'Cette partie' : 'Total partie',
+    [e1.partie, e2.partie], 'score-total'));
+  if (etat.cumul) {
+    corps.appendChild(ligneScore(`Cumul des ${etat.cumul.parties} parties`,
+      etat.cumul.totaux, 'score-cumul'));
+  }
+
+  rendreJoueurs(finale ? (etat.joueurs || []) : [], manches, etat.equipes);
+}
+
+// Le détail par joueur, replié : l'écran reste court même à dix joueurs
+// et cinq manches, et le résumé donne déjà le meilleur sans qu'on ouvre.
+function rendreJoueurs(joueurs, manches, equipes) {
+  const boite = document.getElementById('resultats-joueurs');
+  boite.innerHTML = '';
+  if (!joueurs.length) return;
+
+  const meilleur = [...joueurs].sort((a, b) => b.total - a.total)[0];
+  const tiroir = document.createElement('details');
+  tiroir.className = 'drawer';
+  tiroir.id = 'resultats-tiroir-joueurs';
+
+  const resume = document.createElement('summary');
+  resume.textContent = `📊 Les joueurs — ${meilleur.nom} en tête avec ${meilleur.total}`;
+  tiroir.appendChild(resume);
+
+  const table = document.createElement('table');
+  table.className = 'table-joueurs';
+
+  const thead = document.createElement('thead');
+  const enTete = document.createElement('tr');
+  const cellule = (balise, texte, titre) => {
+    const el = document.createElement(balise);
+    el.textContent = texte;
+    if (titre) el.title = titre;
+    return el;
+  };
+  enTete.appendChild(cellule('th', 'Joueur'));
+  manches.forEach(m => enTete.appendChild(cellule('th', m.icone, m.nom)));
+  enTete.appendChild(cellule('th', 'Tot.'));
+  thead.appendChild(enTete);
+  table.appendChild(thead);
+
+  const corps = document.createElement('tbody');
+  joueurs.forEach((joueur, index) => {
+    const tr = document.createElement('tr');
+    // Un trait sépare les deux équipes : les joueurs sont groupés, pas classés
+    if (index > 0 && joueurs[index - 1].equipe !== joueur.equipe) tr.className = 'change-equipe';
+
+    const nom = document.createElement('th');
+    const puce = document.createElement('span');
+    puce.className = 'puce-equipe';
+    // La couleur vient de l'état courant, pas d'une variable renseignée ailleurs :
+    // un invité qui arrive directement sur la fin de partie doit la voir aussi.
+    puce.style.background = equipes?.[joueur.equipe]?.couleur || 'transparent';
+    nom.appendChild(puce);
+    // textContent : les prénoms viennent du téléphone des autres invités
+    nom.appendChild(document.createTextNode(joueur.nom));
+    if (joueur.nom.toLocaleLowerCase() === (session.prenom || '').toLocaleLowerCase()) {
+      nom.classList.add('moi');
+    }
+    tr.appendChild(nom);
+
+    (joueur.parManche || []).forEach(v => tr.appendChild(cellule('td', String(v))));
+    const total = cellule('td', String(joueur.total));
+    total.className = 'total-joueur';
+    tr.appendChild(total);
+    corps.appendChild(tr);
+  });
+  table.appendChild(corps);
+
+  const boiteTable = document.createElement('div');
+  boiteTable.className = 'boite-joueurs';
+  boiteTable.appendChild(table);
+  tiroir.appendChild(boiteTable);
+  boite.appendChild(tiroir);
+}
 
 // ===== LE CHRONO DU TOUR =====
 // Point d'ancrage : « il restait X secondes, et je l'ai su à l'instant Y de MA

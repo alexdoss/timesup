@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Rush — quelle icône pour « Suivre la partie »</title>
+<style>
+:root {
+  --primary: #6D28D9; --primary-hover: #7C3AED;
+  --background: #0F172A; --surface: #1E293B; --surface-2: #273449;
+  --border: #334155; --text: #F8FAFC; --muted: #94A3B8; --muted-strong: #CBD5E1;
+  --success: #22C55E; --secondary: #F59E0B; --error: #EF4444;
+  --r-md: 12px; --r-lg: 16px;
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  background: #060B18; color: var(--text); padding: 22px 16px 60px; line-height: 1.5;
+}
+.wrap { max-width: 940px; margin: 0 auto; }
+h1 { font-size: 1.4rem; margin-bottom: 4px; }
+.intro { color: var(--muted); font-size: .93rem; margin-bottom: 8px; }
+.intro b { color: var(--muted-strong); }
+.contexte {
+  background: rgba(109,40,217,.14); border-left: 3px solid var(--primary-hover);
+  border-radius: 0 var(--r-md) var(--r-md) 0; padding: 12px 14px;
+  font-size: .89rem; color: var(--muted-strong); margin: 14px 0 22px;
+}
+
+h2 { font-size: .76rem; text-transform: uppercase; letter-spacing: .05em;
+  color: var(--muted); margin: 26px 0 12px; }
+
+/* L'écran réel, en contexte */
+.tel {
+  width: 300px; margin: 0 auto 8px; background: var(--background);
+  border: 1px solid var(--border); border-radius: 24px;
+  padding: 20px 16px 20px; text-align: center;
+}
+.tel .emoji { font-size: 2.6rem; }
+.tel h3 { font-size: 1.15rem; font-weight: 800; margin: 4px 0 6px; }
+.tel .hint { font-size: .84rem; color: var(--muted); }
+.btn {
+  display: block; width: 100%; padding: 13px; border: 0; border-radius: var(--r-md);
+  background: var(--primary); color: #fff; font-size: 1rem; font-weight: 700;
+  font-family: inherit; margin-top: 18px; cursor: pointer;
+}
+.btn.sec { background: var(--surface-2); color: var(--text);
+  border: 1px solid var(--border); margin-top: 9px; }
+
+.liste { display: grid; grid-template-columns: repeat(auto-fit, minmax(290px, 1fr)); gap: 12px; }
+.option {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--r-md); padding: 12px 14px; cursor: pointer;
+  display: flex; gap: 12px; align-items: flex-start; text-align: left;
+  font-family: inherit; color: inherit; width: 100%;
+}
+.option:hover { border-color: var(--primary-hover); }
+.option.on { border-color: var(--primary-hover); background: rgba(109,40,217,.16); }
+.option .ico { font-size: 1.7rem; line-height: 1.2; flex-shrink: 0; }
+.option .txt { flex: 1; }
+.option .lbl { font-weight: 700; font-size: .95rem; }
+.option .pour { font-size: .82rem; color: var(--muted); margin-top: 2px; }
+.reco { display: inline-block; background: var(--success); color: #06210f; border-radius: 999px;
+  padding: 1px 7px; font-size: .62rem; font-weight: 800; margin-left: 6px;
+  text-transform: uppercase; letter-spacing: .04em; }
+
+.ouvert { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-md);
+  padding: 15px; margin-top: 24px; font-size: .9rem; }
+.ouvert h3 { font-size: .74rem; text-transform: uppercase; letter-spacing: .05em;
+  color: var(--secondary); margin-bottom: 10px; }
+.ouvert p { margin-bottom: 10px; } .ouvert p:last-child { margin-bottom: 0; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <h1>Quelle icône pour « Suivre la partie » ?</h1>
+  <p class="intro">Clique une proposition : le bouton se met à jour dans l'écran réel, au-dessus.</p>
+
+  <div class="contexte">
+    <b>Ce que fait vraiment ce bouton :</b> l'invité vient de valider ses cartes.
+    En appuyant, il voit qui a fini de saisir, puis les équipes, puis le chrono
+    de chaque tour et les scores. Il <b>regarde</b> — il ne joue pas depuis
+    son téléphone. L'icône actuelle, 📡, évoque une transmission technique :
+    juste sur le principe, muette sur l'intérêt.
+  </div>
+
+  <div class="tel">
+    <div class="emoji">✅</div>
+    <h3>C'est envoyé !</h3>
+    <p class="hint">Tes 5 cartes sont bien arrivées.</p>
+    <button class="btn" id="apercu">📡 Suivre la partie</button>
+    <button class="btn sec">Modifier mes cartes</button>
+  </div>
+
+  <h2>Les propositions</h2>
+  <div class="liste" id="liste"></div>
+
+  <div class="ouvert">
+    <h3>Ce que je regarderais</h3>
+    <p><b>Est-ce qu'elle dit « regarder » ?</b> C'est l'action réelle. Une icône
+      d'antenne ou d'onde décrit la plomberie, pas le service rendu.</p>
+    <p><b>Tient-elle à petite taille ?</b> Sur un téléphone, une icône chargée
+      en détails devient une tache. Les formes simples gagnent.</p>
+    <p><b>Le ton.</b> Rush est un jeu de soirée. Une icône un peu joueuse
+      passe mieux qu'un symbole d'application professionnelle — mais elle ne doit
+      pas laisser croire qu'on va jouer depuis son téléphone.</p>
+  </div>
+</div>
+
+<script>
+const OPTIONS = [
+  { ico: '👀', lbl: 'Les yeux', reco: true,
+    pour: "Dit exactement l'action : regarder. Sans ambiguïté, lisible en tout petit, et suffisamment léger pour un jeu de soirée." },
+  { ico: '⏱️', lbl: 'Le chronomètre',
+    pour: "Annonce ce qu'on voit le plus : le chrono du tour. Précis, mais réduit la fonction au minuteur alors qu'il y a aussi les scores et les équipes." },
+  { ico: '🍿', lbl: 'Le pop-corn',
+    pour: "Le mode spectateur, avec le sourire. Très juste sur l'intention, mais peut-être trop léger si tu veux garder un ton sobre." },
+  { ico: '📺', lbl: 'La télévision',
+    pour: "« Suivre la retransmission ». Immédiatement compris, mais un peu daté, et l'objet n'a rien à voir avec la scène." },
+  { ico: '🔎', lbl: 'La loupe',
+    pour: "Observer, examiner. Ennui : dans presque toutes les applications, la loupe veut dire « rechercher »." },
+  { ico: '📊', lbl: 'Le graphique',
+    pour: "Met en avant les scores. Sérieux et clair, mais froid pour un jeu, et muet sur le chrono." },
+  { ico: '🎬', lbl: 'Le clap',
+    pour: "« Ça tourne ». Évoque le direct et l'action, mais suggère plutôt qu'on enregistre ou qu'on lance quelque chose." },
+  { ico: '🙌', lbl: 'Les mains levées',
+    pour: "Le public qui encourage. Chaleureux et collectif, mais on peut le lire comme « rejoindre » plutôt que « regarder »." },
+  { ico: '', lbl: 'Aucune icône',
+    pour: "« Suivre la partie », tout simplement. Le texte se suffit peut-être, et l'écran gagne en calme — mais le bouton perd son repère visuel." }
+];
+
+const liste = document.getElementById('liste');
+const apercu = document.getElementById('apercu');
+
+OPTIONS.forEach((o, i) => {
+  const b = document.createElement('button');
+  b.className = 'option' + (o.ico === '📡' ? '' : '');
+  b.innerHTML = `<span class="ico">${o.ico || '—'}</span>
+    <span class="txt"><span class="lbl">${o.lbl}${o.reco ? '<span class="reco">ma reco</span>' : ''}</span>
+    <span class="pour">${o.pour}</span></span>`;
+  b.addEventListener('click', () => {
+    document.querySelectorAll('.option').forEach(x => x.classList.remove('on'));
+    b.classList.add('on');
+    apercu.textContent = o.ico ? `${o.ico} Suivre la partie` : 'Suivre la partie';
+  });
+  liste.appendChild(b);
+});
+</script>
+</body>
+</html>

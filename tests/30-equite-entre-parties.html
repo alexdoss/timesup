@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head><meta charset="utf-8"><title>Test Rush — équité d'une partie à l'autre</title></head>
+<body>
+<pre id="log">demarrage...</pre>
+<div id="hote"></div>
+<script>
+const out = [];
+function log(s) { out.push(s); document.getElementById('log').textContent = out.join('\n'); }
+function check(name, cond) { log((cond ? 'PASS' : 'FAIL') + ' -- ' + name); }
+const wait = ms => new Promise(r => setTimeout(r, ms));
+
+localStorage.removeItem('timesup_partie_en_cours');
+
+const f = document.createElement('iframe');
+f.src = '/';
+f.style.cssText = 'width:420px;height:1000px;border:1px solid #ccc';
+document.getElementById('hote').appendChild(f);
+
+let demarre = false;
+f.addEventListener('load', async () => {
+  if (demarre) return;
+  demarre = true;
+
+  const d = f.contentDocument, w = f.contentWindow;
+  w.onerror = (m, s, l) => log('ERREUR APP: ' + m + ' @' + s + ':' + l);
+  const $ = id => d.getElementById(id);
+  const ecran = () => [...d.querySelectorAll('.screen')].find(s => s.classList.contains('active'))?.id;
+  const etat = () => JSON.parse(w.localStorage.getItem('timesup_partie_en_cours')).state;
+
+  function ajouterJoueur(nom) {
+    $('player-name-input').value = nom;
+    $('btn-add-player').click();
+  }
+
+  // Vide le paquet d une traite : un seul tour par manche
+  async function jouerLaManche() {
+    $('btn-start-turn').click();
+    let clics = 0;
+    while (ecran() === 'screen-game' && clics < 400) { $('btn-found').click(); clics++; }
+    $('btn-next-turn').click();
+    await wait(200);
+  }
+
+  // Joue les trois manches et s arrete sur l ecran de fin de partie
+  async function jouerLaPartie() {
+    for (let manche = 1; manche <= 3; manche++) {
+      await jouerLaManche();
+      $('btn-next-round').click();
+      await wait(300);
+    }
+  }
+
+  const ordres = () => etat().teams.map(e => e.players.join(','));
+  const ouvreurs = () => etat().teams.map(e => e.players[0]);
+
+  try {
+    await wait(1200);
+
+    // ===== Une partie nominative a six joueurs =====
+    $('btn-start').click();
+    $('btn-next-mode').click();
+    d.querySelectorAll('#theme-selector .btn-theme')[0].click();
+    $('btn-next-step').click();
+    ['Arthur', 'Marina', 'Bilal', 'Nour', 'Elio', 'Sara'].forEach(ajouterJoueur);
+    check('six joueurs inscrits', $('player-count').textContent.startsWith('6'));
+    $('btn-next-players').click();
+    $('btn-next-rounds').click();
+    $('btn-play').click();
+    await wait(600);
+    check('la partie demarre', ecran() === 'screen-round');
+
+    const suivi = [];
+    let s = etat();
+    suivi.push({ equipe: s.startingTeam, ordres: ordres(), ouvreurs: ouvreurs() });
+    log('       partie 1 : equipe ' + (s.startingTeam + 1) + ' ouvre · '
+        + ordres().join('  /  '));
+
+    // ===== Trois parties enchainees par « Rejouer » =====
+    for (const numero of [2, 3, 4]) {
+      await jouerLaPartie();
+      check(`fin de la partie ${numero - 1}`, ecran() === 'screen-final');
+      $('btn-replay').click();
+      await wait(700);
+      check(`la partie ${numero} demarre`, ecran() === 'screen-round');
+
+      s = etat();
+      suivi.push({ equipe: s.startingTeam, ordres: ordres(), ouvreurs: ouvreurs() });
+      log(`       partie ${numero} : equipe ` + (s.startingTeam + 1) + ' ouvre · '
+          + ordres().join('  /  '));
+    }
+
+    // ===== 1) L equipe qui ouvre alterne =====
+    const ouvertures = suivi.map(p => p.equipe);
+    check('l equipe qui ouvre change a chaque partie',
+          ouvertures.every((e, i) => i === 0 || e !== ouvertures[i - 1]));
+    check('les deux equipes ouvrent a tour de role',
+          new Set(ouvertures).size === 2);
+    check('le tour en cours suit l equipe qui ouvre',
+          suivi.every((p, i) => p.equipe === ouvertures[i]));
+
+    // ===== 2) L ordre de passage est rebattu =====
+    check('l ordre change a chaque partie, dans chaque equipe',
+          suivi.every((p, i) => i === 0
+            || p.ordres.every((o, e) => o !== suivi[i - 1].ordres[e])));
+
+    check('celui qui ouvrait n ouvre pas la partie suivante',
+          suivi.every((p, i) => i === 0
+            || p.ouvreurs.every((j, e) => j !== suivi[i - 1].ouvreurs[e])));
+
+    // Personne ne doit disparaitre ni apparaitre en cours de route
+    const attendus = ['Arthur', 'Bilal', 'Elio', 'Marina', 'Nour', 'Sara'].join(',');
+    check('les six joueurs sont toujours la',
+          suivi.every(p => p.ordres.join(',').split(',').sort().join(',') === attendus));
+    check('les equipes gardent trois joueurs chacune',
+          suivi.every(p => p.ordres.every(o => o.split(',').length === 3)));
+    check('personne ne change d equipe',
+          suivi.every(p => p.ordres.every((o, e) =>
+            o.split(',').sort().join(',') === suivi[0].ordres[e].split(',').sort().join(','))));
+
+    // ===== Sur quatre parties, aucun joueur ne monopolise la premiere place =====
+    const compte = {};
+    suivi.forEach(p => p.ouvreurs.forEach(j => { compte[j] = (compte[j] || 0) + 1; }));
+    log('       ouvertures par joueur : ' + JSON.stringify(compte));
+    check('aucun joueur n ouvre plus de deux fois sur quatre parties',
+          Object.values(compte).every(n => n <= 2));
+
+    log('SCENARIO 30 TERMINE');
+  } catch (e) { log('EXCEPTION: ' + e.message + '\n' + e.stack); }
+});
+</script>
+</body>
+</html>

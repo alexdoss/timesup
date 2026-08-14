@@ -55,6 +55,7 @@ $SCENARIOS = @(
   @{ f = '27-publication-du-suivi.html';           b = 40000; p = 'aa' }
   @{ f = '28-invite-suit-la-salle-d-attente.html'; b = 25000; p = 'ab' }
   @{ f = '29-equipes-vues-par-l-invite.html';      b = 140000; p = 'ac' }
+  @{ f = '30-equite-entre-parties.html';           b = 40000; p = 'ad' }
 )
 
 function Resolve-Chrome {

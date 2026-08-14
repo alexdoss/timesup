@@ -371,35 +371,6 @@ async function terminer() {
   montrer('screen-envoye');
 }
 
-// ===== INTERRUPTEUR D'ESSAI =====
-// Le suivi de partie est en chantier : le code part en production, mais son
-// bouton n'apparaît que sur un appareil marqué. Ouvrir `?beta=1` une seule
-// fois suffit à poser la marque, `?beta=0` à la retirer.
-//
-// Rideau et non verrou : le code est bien téléchargé par tout le monde, il est
-// seulement masqué. Suffisant pour ne pas montrer un chantier, pas davantage.
-// À supprimer — ainsi que l'appel dans brancherEvenements() — le jour où la
-// fonction est finie.
-
-const CLE_ESSAI = 'timesup_beta';
-
-function reglerInterrupteurEssai() {
-  const demande = new URLSearchParams(location.search).get('beta');
-  try {
-    if (demande === '1') localStorage.setItem(CLE_ESSAI, '1');
-    else if (demande === '0') localStorage.removeItem(CLE_ESSAI);
-  } catch {
-    // stockage indisponible : la marque ne tiendra pas, tant pis
-  }
-
-  let actif = false;
-  try { actif = localStorage.getItem(CLE_ESSAI) === '1'; } catch { /* idem */ }
-
-  // Retiré du document, pas seulement masqué : rien ne traîne dans la page
-  if (!actif) document.getElementById('btn-suivre')?.remove();
-  return actif;
-}
-
 // ===== SALLE D'ATTENTE =====
 // La même vue que celle de l'organisateur, en lecture seule : chacun voit qui
 // a fini et qui est encore en train de saisir. Rien n'y est modifiable, et le
@@ -953,10 +924,7 @@ function brancherEvenements() {
   });
 
   document.getElementById('btn-terminer').addEventListener('click', terminer);
-  // Le bouton disparaît du document quand l'essai n'est pas activé
-  if (reglerInterrupteurEssai()) {
-    document.getElementById('btn-suivre').addEventListener('click', ouvrirAttente);
-  }
+  document.getElementById('btn-suivre').addEventListener('click', ouvrirAttente);
   document.getElementById('btn-attente-retour').addEventListener('click', quitterAttente);
   document.getElementById('btn-voir-equipes').addEventListener('click', afficherEquipes);
   document.getElementById('btn-equipes-fermer').addEventListener('click', masquerEquipes);

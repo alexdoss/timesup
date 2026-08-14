@@ -87,6 +87,21 @@ export function resetGame({ keepSession = false } = {}) {
   });
 }
 
+// Rebat l'ordre de passage à l'intérieur de chaque équipe.
+// Sans ça, celui qui ouvre ouvre toujours — il hérite d'un paquet intact, donc
+// des mots les plus faciles — et celui qui ferme récupère chaque fois les restes.
+function melangerOrdreDesJoueurs() {
+  game.teams.forEach(team => {
+    if (team.players.length < 2) return;
+    const ouvreur = team.players[0];
+    const melange = shuffle(team.players);
+    // Un tirage peut redonner le même ouvreur : à deux joueurs, une fois sur
+    // deux. On le décale, pour que le premier change à coup sûr.
+    if (melange[0] === ouvreur) melange.push(melange.shift());
+    team.players = melange;
+  });
+}
+
 // Nouvelle partie avec les mêmes équipes : le score de la partie qui s'achève
 // rejoint le cumul de la série, puis tout le reste repart de zéro.
 export function replayGame() {
@@ -95,7 +110,16 @@ export function replayGame() {
     (game.sessionScores[1] || 0) + game.teams[1].score
   ];
   game.gamesPlayed = (game.gamesPlayed || 0) + 1;
+
+  // L'équipe qui vient d'ouvrir ne rouvre pas : sur une soirée entière, un
+  // tirage au sort finirait par la faire commencer plusieurs fois d'affilée.
+  const ouvreurPrecedent = game.startingTeam;
   resetGame({ keepSession: true });
+  game.startingTeam = 1 - ouvreurPrecedent;
+  game.currentTeam = game.startingTeam;
+  game.turnTeam = game.startingTeam;
+
+  melangerOrdreDesJoueurs();
 }
 
 // Refuse les doublons sans tenir compte de la casse : « Marc » et « marc »

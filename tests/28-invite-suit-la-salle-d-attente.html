@@ -34,15 +34,10 @@ async function sonder(adresse) {
 
 (async () => {
   try {
-    // ===== L interrupteur d essai : la fonction est cachee par defaut =====
+    // ===== Le suivi est ouvert a tout le monde, sans reglage prealable =====
     localStorage.removeItem('timesup_rejoint');
     localStorage.removeItem('timesup_beta');
-
-    check('sans marque, le bouton n existe meme pas dans la page',
-          !(await sonder('/rejoindre.html')));
-    check('l adresse d essai le fait apparaitre',
-          await sonder('/rejoindre.html?beta=1'));
-    check('la marque survit sans le parametre',
+    check('le bouton est la des l ouverture de la page',
           await sonder('/rejoindre.html'));
 
     // ===== Une session avec deja deux joueurs, dont un en cours de saisie =====
@@ -229,9 +224,6 @@ async function sonder(adresse) {
     $('equipes-overlay').click();
     await wait(200);
     check('un clic a cote la referme aussi', $('equipes-overlay').style.display === 'none');
-
-    // ===== On peut aussi eteindre l interrupteur =====
-    check('beta=0 retire la marque', !(await sonder('/rejoindre.html?beta=0')));
 
     log('SCENARIO 28 TERMINE');
   } catch (e) { log('EXCEPTION: ' + e.message + '\n' + e.stack); }

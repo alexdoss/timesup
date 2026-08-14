@@ -110,6 +110,31 @@
           <h2 id="attente-titre">En attente du départ</h2>
           <p id="attente-sous" class="wizard-hint">On attend que tout le monde ait saisi ses cartes.</p>
         </div>
+        <!-- LANCEMENT DE TOUR — le même écran que l'organisateur, sans le
+             bouton « Lancer le tour » qui reste à sa main -->
+        <div id="bloc-lancement" style="display:none">
+          <h2 id="lancement-titre">Manche 1/3</h2>
+          <p id="lancement-nom" class="round-name-label"></p>
+          <div id="lancement-icone" class="round-icon"></div>
+          <p id="lancement-regle" class="round-desc"></p>
+          <div class="bloc-score">
+            <p class="score-cap">Score de la manche</p>
+            <div class="score-board">
+              <div class="score-team">
+                <span id="lancement-eq1">Équipe 1</span>
+                <span id="lancement-s1" class="score">0</span>
+              </div>
+              <div class="score-team">
+                <span id="lancement-eq2">Équipe 2</span>
+                <span id="lancement-s2" class="score">0</span>
+              </div>
+            </div>
+            <p id="lancement-total" class="score-rappel"></p>
+          </div>
+          <p id="lancement-tour" class="turn-info"></p>
+          <p id="lancement-joueur" class="player-info"></p>
+        </div>
+
         <button id="btn-voir-equipes" class="btn btn-secondary" style="display:none">👥 Voir les équipes</button>
         <div id="attente-joueurs" class="connectes"></div>
         <p id="attente-total" class="wizard-hint"></p>

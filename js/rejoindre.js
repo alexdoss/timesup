@@ -454,9 +454,23 @@ async function rafraichirAttente() {
   }
 }
 
-// L'organisateur poursuit sa configuration. Dès qu'il a réparti les joueurs,
-// les invités peuvent consulter les équipes.
+// Les moments où l'organisateur voit son écran de début de tour. L'invité voit
+// le même, sans le bouton « Lancer le tour » qui reste à la main de l'organisateur.
+const ETAPES_LANCEMENT = ['attente', 'entre-tours'];
+
+// L'organisateur poursuit sa configuration, puis la partie s'enchaîne.
 function rendreConfiguration(suivi) {
+  const etat = suivi?.etat;
+  const etape = etat?.etape;
+  const enLancement = ETAPES_LANCEMENT.includes(etape) && !!etat?.manche;
+
+  // L'en-tête « configuration en cours » cède la place dès que la partie tourne
+  document.getElementById('attente-roue').style.display = enLancement ? 'none' : '';
+  document.getElementById('attente-titre').parentElement.style.display =
+    enLancement ? 'none' : '';
+  document.getElementById('bloc-lancement').style.display = enLancement ? '' : 'none';
+  if (enLancement) rendreLancement(etat);
+
   const equipes = suivi?.etat?.equipes || [];
   const nommees = equipes.filter(e => (e.joueurs || []).length > 0);
   const bouton = document.getElementById('btn-voir-equipes');
@@ -478,6 +492,35 @@ function rendreConfiguration(suivi) {
 }
 
 let derniereComposition = null;
+
+// Le même écran que celui de l'organisateur au début d'un tour. On ne reprend
+// pas son bouton « Lancer le tour » : le départ reste à sa main.
+function rendreLancement(etat) {
+  const m = etat.manche;
+  const T = (id, texte) => { document.getElementById(id).textContent = texte; };
+
+  T('lancement-titre', `Manche ${m.numero}/${m.sur}`);
+  T('lancement-nom', `${m.icone} ${m.nom}`);
+  T('lancement-icone', m.icone);
+  T('lancement-regle', m.regle || '');
+
+  const [e1, e2] = etat.equipes;
+  T('lancement-eq1', e1.nom);
+  T('lancement-eq2', e2.nom);
+  T('lancement-s1', e1.manche);
+  T('lancement-s2', e2.manche);
+  T('lancement-total', `Total de la partie : ${e1.partie} – ${e2.partie}`);
+
+  // `aVenir` et non `tour` : entre deux tours, `tour` désignerait encore
+  // l'équipe qui vient de finir, pas celle qui s'apprête à jouer.
+  const suivant = etat.aVenir;
+  const equipe = suivant ? etat.equipes[suivant.equipe] : null;
+  T('lancement-tour', equipe ? `🎯 C'est au tour de : ${equipe.nom}` : '');
+  T('lancement-joueur', suivant?.joueur ? `${suivant.joueur} fait deviner` : '');
+  if (equipe?.couleur) {
+    document.getElementById('lancement-tour').style.color = equipe.couleur;
+  }
+}
 
 let equipesConnues = null;
 

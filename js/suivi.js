@@ -15,7 +15,7 @@
 // Tout échec est silencieux : le suivi est un supplément, il ne doit jamais
 // empêcher de jouer. Une partie sans réseau se déroule normalement.
 
-import { game, ROUNDS, getRoundScores, getRoundHistory } from './game.js';
+import { game, ROUNDS, getRoundScores, getRoundHistory, getCurrentPlayer } from './game.js';
 
 const ROUTE = '/api/session';
 const CLE = 'timesup_suivi';
@@ -96,7 +96,10 @@ function resume(etape) {
       numero: game.currentRound + 1,
       sur: game.activeRounds.length,
       nom: manche.name,
-      icone: manche.icon
+      icone: manche.icon,
+      // La consigne de la manche : les invités doivent la lire eux aussi,
+      // c'est elle qui dit ce qui est permis pendant le tour.
+      regle: manche.desc
     } : null,
     equipes: game.teams.map((equipe, index) => ({
       nom: equipe.name,
@@ -114,7 +117,14 @@ function resume(etape) {
       // Le temps restant AU MOMENT de la publication. L'invité le rejoue à
       // partir de l'heure du serveur, sans jamais consulter sa propre horloge.
       restant: game.timeLeft
-    } : null
+    } : null,
+    // Qui s'apprête à jouer, sur l'écran de début de tour. À ne pas confondre
+    // avec `tour` : celui-ci décrit le tour en cours, et entre deux tours il
+    // désignerait encore celui qui vient de finir.
+    aVenir: enTour ? null : {
+      equipe: game.currentTeam,
+      joueur: game.nominativeMode ? getCurrentPlayer() : null
+    }
   };
 
   if (etape === 'fin-manche' || etape === 'fin-partie') paquet.historique = historique();

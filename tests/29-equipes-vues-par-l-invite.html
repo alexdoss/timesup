@@ -192,6 +192,63 @@ localStorage.setItem('timesup_beta', '1');
     check('rouvrir la fenetre donne le meme resultat',
           JSON.stringify(rouvert) === JSON.stringify(apres));
 
+    // ===== L organisateur lance la partie : l invite voit le debut de tour =====
+    I('btn-equipes-fermer').click();
+    A('btn-next-rounds').click();
+    await wait(300);
+    A('btn-play').click();
+    await wait(800);
+    check('l organisateur est sur le debut de tour', ecranApp() === 'screen-round');
+
+    await wait(2600);
+    const L = id => I(id).textContent.trim();
+    log('       invite voit : "' + L('lancement-titre') + '" · "' + L('lancement-nom')
+        + '" · "' + L('lancement-tour') + '" · "' + L('lancement-joueur') + '"');
+
+    check('le bloc de lancement s affiche',
+          I('bloc-lancement').style.display !== 'none');
+    check('l en-tete de configuration a cede la place',
+          I('attente-roue').style.display === 'none');
+    check('la manche est annoncee', L('lancement-titre') === 'Manche 1/3');
+    check('elle est nommee', L('lancement-nom').length > 3);
+    check('sa consigne est rappelee', L('lancement-regle').length > 20);
+    check('l equipe qui joue est annoncee', L('lancement-tour').includes('Équipe'));
+    check('le joueur qui fait deviner aussi', L('lancement-joueur').includes('fait deviner'));
+    check('les scores de manche sont a zero',
+          L('lancement-s1') === '0' && L('lancement-s2') === '0');
+    check('le total de la partie est rappele',
+          L('lancement-total').includes('Total de la partie'));
+    check('les equipes restent consultables',
+          I('btn-voir-equipes').style.display !== 'none');
+
+    // Le bouton de lancement reste a la main de l organisateur
+    check('aucun bouton pour lancer le tour cote invite',
+          !di.getElementById('btn-start-turn')
+          && !I('bloc-lancement').textContent.includes('Lancer le tour'));
+
+    // ===== Apres un tour, c est bien la PROCHAINE equipe qui est annoncee =====
+    const premiereEquipe = L('lancement-tour');
+    const premierJoueur = L('lancement-joueur');
+    A('btn-start-turn').click();
+    await wait(500);
+    // Deux cartes seulement : on laisse le chrono s ecouler plutot que de vider
+    // le paquet, sinon la manche s acheve et il n y a pas de tour suivant.
+    A('btn-found').click();
+    A('btn-found').click();
+    let n = 0;
+    while (ecranApp() === 'screen-game' && n < 60) { await wait(1000); n++; }
+    check('le tour s est acheve au chrono', ecranApp() === 'screen-turn-end');
+    A('btn-next-turn').click();
+    await wait(800);
+    check('l organisateur revient au debut de tour', ecranApp() === 'screen-round');
+
+    await wait(2600);
+    log('       tour suivant : "' + L('lancement-tour') + '" · "' + L('lancement-joueur') + '"');
+    check('la main passe a l autre equipe', L('lancement-tour') !== premiereEquipe);
+    check('et a un autre joueur', L('lancement-joueur') !== premierJoueur);
+    check('le score du tour precedent est reporte',
+          Number(L('lancement-s1')) + Number(L('lancement-s2')) === 2);
+
     log('SCENARIO 29 TERMINE');
   } catch (e) { log('EXCEPTION: ' + e.message + '\n' + e.stack); }
 })();

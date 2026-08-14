@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Rush — quelle forme pour le chrono ?</title>
+<style>
+:root {
+  --primary: #6D28D9; --primary-hover: #7C3AED; --primary-soft: rgba(109,40,217,.16);
+  --background: #0F172A; --surface: #1E293B; --surface-2: #273449;
+  --border: #334155; --text: #F8FAFC; --muted: #94A3B8; --muted-strong: #CBD5E1;
+  --success: #22C55E; --secondary: #F59E0B; --error: #EF4444;
+  --r-sm: 8px; --r-md: 12px; --r-lg: 16px;
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  background: #060B18; color: var(--text); padding: 22px 16px 60px; line-height: 1.5;
+}
+.wrap { max-width: 1080px; margin: 0 auto; }
+h1 { font-size: 1.4rem; margin-bottom: 4px; }
+.intro { color: var(--muted); font-size: .93rem; margin-bottom: 16px; }
+.intro b { color: var(--muted-strong); }
+
+.cmd { display: flex; gap: 8px; flex-wrap: wrap; align-items: center;
+  margin-bottom: 22px; font-size: .85rem; color: var(--muted); }
+.cmd button {
+  background: var(--surface-2); color: var(--text); border: 1px solid var(--border);
+  border-radius: 999px; padding: 7px 15px; font-size: .84rem; font-weight: 600;
+  cursor: pointer; font-family: inherit;
+}
+.cmd button:hover { border-color: var(--primary-hover); }
+.cmd .valeur { color: var(--secondary); font-weight: 800; font-variant-numeric: tabular-nums; }
+
+.grille { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 16px; }
+.carte {
+  background: var(--background); border: 1px solid var(--border);
+  border-radius: var(--r-lg); padding: 16px 14px 14px; text-align: center;
+  position: relative; overflow: hidden;
+}
+.carte h2 { font-size: .74rem; text-transform: uppercase; letter-spacing: .05em;
+  color: var(--muted); margin-bottom: 4px; position: relative; z-index: 2; }
+.carte .avis { font-size: .8rem; color: var(--muted); margin-top: 10px;
+  position: relative; z-index: 2; text-align: left; }
+.carte .scene { height: 190px; display: flex; align-items: center; justify-content: center;
+  position: relative; z-index: 2; }
+.reco { display: inline-block; background: var(--success); color: #06210f; border-radius: 999px;
+  padding: 1px 7px; font-size: .62rem; font-weight: 800; margin-left: 5px; }
+
+.nombre { font-size: 4.6rem; font-weight: 800; line-height: 1;
+  color: var(--secondary); font-variant-numeric: tabular-nums; }
+.nombre.urgent { color: var(--error); }
+.nombre.mini { font-size: 2.6rem; }
+
+/* 1 · barre */
+.barre { width: 200px; height: 10px; background: var(--surface-2);
+  border-radius: 99px; overflow: hidden; margin-top: 14px; }
+.barre > div { height: 100%; background: var(--secondary); border-radius: 99px; }
+.barre > div.urgent { background: var(--error); }
+
+/* 4 · segments */
+.segments { display: flex; gap: 4px; justify-content: center; margin-top: 14px; }
+.segments span { width: 13px; height: 22px; border-radius: 3px; background: var(--surface-2); }
+.segments span.on { background: var(--secondary); }
+.segments span.on.urgent { background: var(--error); }
+
+/* 5 · l'écran se remplit */
+.montee { position: absolute; left: 0; right: 0; bottom: 0;
+  background: rgba(245,158,11,.20); z-index: 1; transition: height .25s linear; }
+.montee.urgent { background: rgba(239,68,68,.28); }
+
+svg { display: block; }
+.pulse { animation: bat .6s ease-in-out infinite; }
+@keyframes bat { 0%,100% { transform: scale(1); } 50% { transform: scale(1.09); } }
+@media (prefers-reduced-motion: reduce) { .pulse { animation: none; } }
+
+.ouvert { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-md);
+  padding: 15px; margin-top: 22px; font-size: .9rem; }
+.ouvert h3 { font-size: .74rem; text-transform: uppercase; letter-spacing: .05em;
+  color: var(--secondary); margin-bottom: 10px; }
+.ouvert p { margin-bottom: 10px; } .ouvert p:last-child { margin-bottom: 0; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <h1>Quelle forme pour le chrono ?</h1>
+  <p class="intro">Tous tournent <b>en même temps, sur la même horloge</b>.
+    Regarde-les de loin, en plissant les yeux : c'est ainsi qu'ils seront lus,
+    sur un téléphone posé au milieu de la table.</p>
+
+  <div class="cmd">
+    <button id="btn-rejouer">↻ Rejouer</button>
+    <button id="btn-fin">⏩ Sauter aux 6 dernières secondes</button>
+    <button id="btn-pause">⏸ Pause</button>
+    <span>reste <span class="valeur" id="valeur">40</span> s</span>
+  </div>
+
+  <div class="grille" id="grille"></div>
+
+  <div class="ouvert">
+    <h3>Ce que je regarde pour choisir</h3>
+    <p><b>Lisible à un mètre ?</b> Le téléphone sera posé sur la table, pas tenu
+      en main. Un détail fin est perdu.</p>
+    <p><b>Lisible d'un coup d'œil ?</b> Les joueurs regardent leur ami mimer.
+      Ils jettent un regard d'une demi-seconde, pas plus.</p>
+    <p><b>Dit-il l'urgence sans qu'on lise un chiffre ?</b> C'est là que les formes
+      valent mieux qu'un nombre.</p>
+  </div>
+</div>
+
+<script>
+const DUREE = 40;
+let depart = Date.now();
+let enPause = false, pauseA = 0;
+
+function restant() {
+  const fin = enPause ? pauseA : Date.now();
+  return Math.max(0, DUREE - (fin - depart) / 1000);
+}
+
+// ===== Les formes =====
+// Chacune reçoit (secondes restantes, fraction restante 0→1, urgence)
+const FORMES = [
+  {
+    id: 'barre', titre: 'La barre', reco: true,
+    avis: "Ce qui est en place. Sobre, sans surprise, et le nombre porte l'essentiel.",
+    rendre: (s, p, u) => `
+      <div>
+        <div class="nombre ${u ? 'urgent' : ''}">${s}</div>
+        <div class="barre"><div class="${u ? 'urgent' : ''}" style="width:${p * 100}%"></div></div>
+      </div>`
+  },
+  {
+    id: 'sablier', titre: 'Le sablier',
+    avis: "Le sable descend d'un bulbe à l'autre, avec un filet qui coule. Le plus parlant de loin : on comprend sans lire.",
+    rendre: (s, p, u) => sablier(s, p, u)
+  },
+  {
+    id: 'anneau', titre: "L'anneau",
+    avis: "Le nombre au centre d'un cercle qui se referme. Compact, lisible, et l'arc restant se juge d'un coup d'œil.",
+    rendre: (s, p, u) => anneau(s, p, u)
+  },
+  {
+    id: 'segments', titre: 'Les segments',
+    avis: "Huit blocs de 5 secondes qui s'éteignent. On compte les blocs restants sans lire de chiffre.",
+    rendre: (s, p, u) => {
+      const total = 8, allumes = Math.ceil(p * total);
+      return `<div>
+        <div class="nombre ${u ? 'urgent' : ''}">${s}</div>
+        <div class="segments">${Array.from({ length: total }, (_, i) =>
+          `<span class="${i < allumes ? 'on' + (u ? ' urgent' : '') : ''}"></span>`).join('')}</div>
+      </div>`;
+    }
+  },
+  {
+    id: 'montee', titre: "L'écran se remplit",
+    avis: "Pas de widget : la carte entière se teinte par le bas à mesure que le temps passe. Visible du bout de la table, même sans regarder.",
+    rendre: (s, p, u) => `
+      <div class="montee ${u ? 'urgent' : ''}" style="height:${(1 - p) * 100}%"></div>
+      <div><div class="nombre ${u ? 'urgent' : ''}">${s}</div></div>`
+  },
+  {
+    id: 'pulse', titre: 'Le nombre qui bat',
+    avis: "Rien qu'un nombre, mais il se met à battre sous 10 secondes, de plus en plus vite. L'urgence se voit du coin de l'œil.",
+    rendre: (s, p, u) => {
+      const bat = s <= 10 && s > 0;
+      const vitesse = Math.max(0.28, s / 22);
+      return `<div class="nombre ${u ? 'urgent' : ''} ${bat ? 'pulse' : ''}"
+        style="animation-duration:${vitesse}s">${s}</div>`;
+    }
+  }
+];
+
+// ===== Le sablier, en SVG =====
+// Deux bulbes en entonnoir. Le sable du haut baisse, celui du bas s'accumule,
+// et un filet coule entre les deux tant que le temps s'écoule.
+function sablier(s, p, u) {
+  const teinte = u ? '#EF4444' : '#F59E0B';
+  const HAUT_Y0 = 12, COL = 70, BAS_Y1 = 128;
+
+  // Surface du sable dans le bulbe du haut : descend vers le col
+  const surface = HAUT_Y0 + (1 - p) * (COL - HAUT_Y0);
+  // Niveau du sable accumulé en bas : monte depuis le fond
+  const niveau = BAS_Y1 - (1 - p) * 42;
+  const coule = p > 0 && p < 1 && !enPause;
+
+  return `
+  <svg width="120" height="150" viewBox="0 0 100 145" aria-hidden="true">
+    <defs>
+      <clipPath id="cp-haut"><path d="M14,12 H86 L54,70 H46 Z"/></clipPath>
+      <clipPath id="cp-bas"><path d="M46,70 H54 L86,128 H14 Z"/></clipPath>
+    </defs>
+
+    <!-- sable restant, en haut -->
+    <g clip-path="url(#cp-haut)">
+      <rect x="0" y="${surface}" width="100" height="${Math.max(0, COL - surface)}" fill="${teinte}"/>
+    </g>
+    <!-- filet qui coule -->
+    ${coule ? `<rect x="48.6" y="70" width="2.8" height="${Math.max(0, niveau - 70)}"
+        fill="${teinte}" opacity=".85"/>` : ''}
+    <!-- sable accumulé, en bas -->
+    <g clip-path="url(#cp-bas)">
+      <rect x="0" y="${niveau}" width="100" height="${Math.max(0, BAS_Y1 - niveau)}" fill="${teinte}"/>
+    </g>
+
+    <!-- verrerie -->
+    <path d="M14,12 H86 L54,70 L86,128 H14 L46,70 Z"
+          fill="none" stroke="#475569" stroke-width="3" stroke-linejoin="round"/>
+    <rect x="8" y="6" width="84" height="6" rx="3" fill="#475569"/>
+    <rect x="8" y="128" width="84" height="6" rx="3" fill="#475569"/>
+  </svg>
+  <div class="nombre mini ${u ? 'urgent' : ''}" style="margin-left:10px">${s}</div>`;
+}
+
+// ===== L'anneau, en SVG =====
+function anneau(s, p, u) {
+  const R = 62, C = 2 * Math.PI * R;
+  const teinte = u ? '#EF4444' : '#F59E0B';
+  return `
+  <svg width="165" height="165" viewBox="0 0 150 150">
+    <circle cx="75" cy="75" r="${R}" fill="none" stroke="#273449" stroke-width="11"/>
+    <circle cx="75" cy="75" r="${R}" fill="none" stroke="${teinte}" stroke-width="11"
+            stroke-linecap="round" stroke-dasharray="${C}"
+            stroke-dashoffset="${C * (1 - p)}"
+            transform="rotate(-90 75 75)"/>
+    <text x="75" y="75" text-anchor="middle" dominant-baseline="central"
+          fill="${teinte}" font-size="46" font-weight="800"
+          font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif"
+          style="font-variant-numeric:tabular-nums">${s}</text>
+  </svg>`;
+}
+
+// ===== Montage =====
+const grille = document.getElementById('grille');
+FORMES.forEach(f => {
+  const c = document.createElement('div');
+  c.className = 'carte';
+  c.innerHTML = `<h2>${f.titre}${f.reco ? '<span class="reco">en place</span>' : ''}</h2>
+    <div class="scene" id="scene-${f.id}"></div>
+    <p class="avis">${f.avis}</p>`;
+  grille.appendChild(c);
+});
+
+function battre() {
+  const r = restant();
+  const s = Math.ceil(r);
+  const p = r / DUREE;
+  const u = r > 0 && r <= 6;
+  document.getElementById('valeur').textContent = s;
+  FORMES.forEach(f => {
+    document.getElementById('scene-' + f.id).innerHTML = f.rendre(s, p, u);
+  });
+}
+setInterval(battre, 200);
+
+document.getElementById('btn-rejouer').addEventListener('click', () => {
+  depart = Date.now(); enPause = false;
+  document.getElementById('btn-pause').textContent = '⏸ Pause';
+  battre();
+});
+document.getElementById('btn-fin').addEventListener('click', () => {
+  depart = Date.now() - (DUREE - 6) * 1000; enPause = false;
+  document.getElementById('btn-pause').textContent = '⏸ Pause';
+  battre();
+});
+document.getElementById('btn-pause').addEventListener('click', () => {
+  if (enPause) { depart += Date.now() - pauseA; enPause = false; }
+  else { pauseA = Date.now(); enPause = true; }
+  document.getElementById('btn-pause').textContent = enPause ? '▶ Reprendre' : '⏸ Pause';
+  battre();
+});
+battre();
+</script>
+</body>
+</html>

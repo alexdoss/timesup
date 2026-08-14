@@ -448,7 +448,7 @@ async function rafraichirAttente() {
       saisieClose = true;
     }
     const reponse = await appeler('suivre', { code: session.code });
-    rendreConfiguration(reponse.suivi);
+    rendreConfiguration(reponse.suivi, reponse.serveur);
   } catch {
     // Coupure passagère : on garde le dernier affichage plutôt que de le vider
   }
@@ -458,23 +458,31 @@ async function rafraichirAttente() {
 // le même, sans le bouton « Lancer le tour » qui reste à la main de l'organisateur.
 const ETAPES_LANCEMENT = ['attente', 'entre-tours'];
 
+// Les moments où le chrono tourne chez l'organisateur
+const ETAPES_TOUR = ['tour', 'pause'];
+
 // L'organisateur poursuit sa configuration, puis la partie s'enchaîne.
-function rendreConfiguration(suivi) {
+function rendreConfiguration(suivi, heureServeur) {
   const etat = suivi?.etat;
   const etape = etat?.etape;
   const enLancement = ETAPES_LANCEMENT.includes(etape) && !!etat?.manche;
+  const enTour = ETAPES_TOUR.includes(etape) && !!etat?.tour;
 
   // L'en-tête « configuration en cours » cède la place dès que la partie tourne
-  document.getElementById('attente-roue').style.display = enLancement ? 'none' : '';
-  document.getElementById('attente-titre').parentElement.style.display =
-    enLancement ? 'none' : '';
+  const enJeu = enLancement || enTour;
+  document.getElementById('attente-roue').style.display = enJeu ? 'none' : '';
+  document.getElementById('attente-titre').parentElement.style.display = enJeu ? 'none' : '';
   document.getElementById('bloc-lancement').style.display = enLancement ? '' : 'none';
+  document.getElementById('bloc-tour').style.display = enTour ? '' : 'none';
   if (enLancement) rendreLancement(etat);
+  if (enTour) ancrerTour(etat, suivi.publieA, heureServeur);
+  else ancreTour = null;
 
   const equipes = suivi?.etat?.equipes || [];
   const nommees = equipes.filter(e => (e.joueurs || []).length > 0);
   const bouton = document.getElementById('btn-voir-equipes');
-  bouton.style.display = nommees.length ? '' : 'none';
+  // Masqué pendant le tour : l'écran doit se lire d'un coup d'œil
+  bouton.style.display = (nommees.length && !enTour) ? '' : 'none';
   equipesConnues = nommees.length ? equipes : null;
 
   // L'organisateur peut revenir sur sa répartition. Si la fenêtre est ouverte
@@ -492,6 +500,97 @@ function rendreConfiguration(suivi) {
 }
 
 let derniereComposition = null;
+
+// ===== LE CHRONO DU TOUR =====
+// Point d'ancrage : « il restait X secondes, et je l'ai su à l'instant Y de MA
+// propre montre ». Ensuite on ne compte que des écarts locaux, jamais des heures
+// absolues — c'est ce qui rend le décompte juste alors que deux téléphones ne
+// sont jamais réglés à la même heure.
+let ancreTour = null;
+const SECONDES_URGENCE = 5;   // le moment où l'app fait tic-tac chez l'organisateur
+
+function ancrerTour(etat, publieA, heureServeur) {
+  const tour = etat.tour;
+  const gele = etat.etape === 'pause';
+
+  // Ne réancrer que sur une publication nouvelle. L'organisateur ne publie qu'à
+  // chaque carte trouvée et toutes les quinze secondes ; sans cette garde, les
+  // lectures intermédiaires relisaient le même « il reste 40 s » et remettaient
+  // le décompte à son point de départ toutes les deux secondes.
+  if (ancreTour && ancreTour.publieA === publieA) {
+    ancreTour.gele = gele;
+    return;
+  }
+  // Les deux horodatages viennent du serveur : l'écart entre publication et
+  // réponse est mesuré sans qu'aucune montre de téléphone n'intervienne.
+  const enRoute = (heureServeur - publieA) / 1000;
+
+  ancreTour = {
+    restant: gele ? tour.restant : Math.max(0, tour.restant - enRoute),
+    gele,
+    publieA,
+    recuA: performance.now(),
+    duree: tour.duree || 40,
+    manche: etat.manche,
+    equipe: etat.equipes[tour.equipe],
+    joueur: tour.joueur
+  };
+  peindreChrono();
+}
+
+// Le sablier. Repères de la verrerie, en unités du dessin : le bulbe du haut va
+// de 12 au col (70), celui du bas du col à 128.
+const SABLE_HAUT = 12, SABLE_COL = 70, SABLE_BAS = 128;
+const SABLE_TAS = 42;   // hauteur du tas accumulé en bas quand tout est écoulé
+
+function peindreSablier(part, coule) {
+  const p = Math.min(1, Math.max(0, part));
+  // Surface du sable restant, en haut : elle descend vers le col
+  const surface = SABLE_HAUT + (1 - p) * (SABLE_COL - SABLE_HAUT);
+  // Niveau du tas, en bas : il monte depuis le fond
+  const niveau = SABLE_BAS - (1 - p) * SABLE_TAS;
+
+  const poser = (id, y, hauteur) => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.setAttribute('y', y.toFixed(2));
+    el.setAttribute('height', Math.max(0, hauteur).toFixed(2));
+  };
+
+  poser('sable-haut', surface, SABLE_COL - surface);
+  poser('sable-bas', niveau, SABLE_BAS - niveau);
+  // Le filet ne coule que tant que le temps s'écoule vraiment
+  poser('sable-filet', SABLE_COL, coule ? niveau - SABLE_COL : 0);
+}
+
+function peindreChrono() {
+  if (!ancreTour) return;
+  const a = ancreTour;
+  const restant = a.gele
+    ? a.restant
+    : Math.max(0, a.restant - (performance.now() - a.recuA) / 1000);
+
+  const urgent = restant > 0 && restant <= SECONDES_URGENCE;
+  document.getElementById('tour-chrono').textContent = Math.ceil(restant);
+  document.getElementById('tour-bloc-chrono').classList.toggle('urgent', urgent && !a.gele);
+  peindreSablier(restant / a.duree, !a.gele && restant > 0);
+
+  const T = (id, texte) => { document.getElementById(id).textContent = texte; };
+  T('tour-manche', a.manche ? `Manche ${a.manche.numero}/${a.manche.sur} · ${a.manche.nom}` : '');
+  T('tour-qui', a.joueur
+    ? `${a.equipe?.nom} · ${a.joueur} fait deviner`
+    : `Au tour de ${a.equipe?.nom}`);
+  if (a.equipe?.couleur) document.getElementById('tour-qui').style.color = a.equipe.couleur;
+
+  // Entre la fin du temps et le moment où l'organisateur passe à la suite,
+  // il s'écoule quelques secondes : mieux vaut le dire qu'afficher un zéro nu.
+  T('tour-mention', a.gele ? '⏸ Partie en pause' : (restant <= 0 ? '⏰ Temps écoulé !' : ''));
+}
+
+// Le décompte tourne en local, sans rien demander au serveur
+setInterval(() => {
+  if (ancreTour && !ancreTour.gele) peindreChrono();
+}, 200);
 
 // Le même écran que celui de l'organisateur au début d'un tour. On ne reprend
 // pas son bouton « Lancer le tour » : le départ reste à sa main.

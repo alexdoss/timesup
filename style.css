@@ -677,6 +677,58 @@ body {
   background: var(--surface-2);
 }
 
+/* Le chrono vu par les invités : lisible à un mètre, posé sur une table.
+   tabular-nums fige la largeur des chiffres, sinon le nombre tressaute
+   à chaque seconde. */
+.chrono-bloc {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  margin: 10px 0 4px;
+}
+
+.chrono-invite {
+  font-size: 4.4rem;
+  font-weight: 800;
+  line-height: 1;
+  color: var(--secondary);
+  font-variant-numeric: tabular-nums;  /* sinon le nombre tressaute chaque seconde */
+}
+
+.sablier {
+  width: 108px;
+  height: 156px;
+  flex-shrink: 0;
+}
+
+.sablier .sable {
+  fill: var(--secondary);
+  transition: y 0.25s linear, height 0.25s linear;
+}
+
+.sablier .verre {
+  fill: none;
+  stroke: var(--muted-2);
+  stroke-width: 3;
+  stroke-linejoin: round;
+}
+
+.sablier .socle {
+  fill: var(--muted-2);
+}
+
+/* Les 5 dernières secondes : le même moment où l'app fait tic-tac chez l'organisateur */
+.chrono-bloc.urgent .chrono-invite,
+.chrono-bloc.urgent .sablier .sable {
+  color: var(--error);
+  fill: var(--error);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sablier .sable { transition: none; }
+}
+
 /* Le bouton des équipes, sur l'écran de suivi : nettement séparé de l'annonce
    du joueur, dont il n'est pas la suite. */
 .btn-equipes-invite {

@@ -135,6 +135,37 @@
           <p id="lancement-joueur" class="player-info"></p>
         </div>
 
+        <!-- TOUR EN COURS — le téléphone devient l'horloge de la table :
+             celui qui fait deviner tient l'appareil tourné vers lui, personne
+             d'autre ne voit le temps qu'il reste. -->
+        <div id="bloc-tour" style="display:none">
+          <p id="tour-manche" class="score-cap"></p>
+          <p id="tour-qui" class="turn-info"></p>
+          <div id="tour-bloc-chrono" class="chrono-bloc">
+            <!-- Le sable du haut baisse, celui du bas s'accumule, un filet coule
+                 entre les deux. Seuls les rectangles bougent : la verrerie et
+                 les découpes sont posées une fois pour toutes. -->
+            <svg class="sablier" viewBox="0 0 100 145" aria-hidden="true">
+              <defs>
+                <clipPath id="sablier-haut"><path d="M14,12 H86 L54,70 H46 Z"/></clipPath>
+                <clipPath id="sablier-bas"><path d="M46,70 H54 L86,128 H14 Z"/></clipPath>
+              </defs>
+              <g clip-path="url(#sablier-haut)">
+                <rect id="sable-haut" class="sable" x="0" width="100" y="12" height="58"/>
+              </g>
+              <rect id="sable-filet" class="sable" x="48.6" width="2.8" y="70" height="0"/>
+              <g clip-path="url(#sablier-bas)">
+                <rect id="sable-bas" class="sable" x="0" width="100" y="128" height="0"/>
+              </g>
+              <path class="verre" d="M14,12 H86 L54,70 L86,128 H14 L46,70 Z"/>
+              <rect class="socle" x="8" y="6" width="84" height="6" rx="3"/>
+              <rect class="socle" x="8" y="128" width="84" height="6" rx="3"/>
+            </svg>
+            <p id="tour-chrono" class="chrono-invite">--</p>
+          </div>
+          <p id="tour-mention" class="wizard-hint"></p>
+        </div>
+
         <!-- Détaché de ce qui précède : collé au « fait deviner », il se lisait
              comme une suite de l'annonce plutôt que comme une action à part -->
         <button id="btn-voir-equipes" class="btn btn-secondary btn-equipes-invite"

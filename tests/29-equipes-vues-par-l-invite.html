@@ -231,6 +231,42 @@ localStorage.setItem('timesup_beta', '1');
     const premierJoueur = L('lancement-joueur');
     A('btn-start-turn').click();
     await wait(500);
+
+    // ===== Le tour en cours : le telephone devient l horloge de la table =====
+    await wait(2600);
+    check('l invite bascule sur le tour en cours',
+          I('bloc-tour').style.display !== 'none');
+    check('l ecran de lancement a cede la place',
+          I('bloc-lancement').style.display === 'none');
+    const chrono1 = Number(L('tour-chrono'));
+    log('       chrono invite : ' + chrono1 + ' s · "' + L('tour-qui') + '"');
+    check('un chrono est affiche', chrono1 > 0 && chrono1 <= 40);
+    check('il est deja entame', chrono1 < 40);
+    check('la manche reste rappelee', L('tour-manche').includes('Manche'));
+    check('on sait qui fait deviner', L('tour-qui').includes('fait deviner'));
+    check('les equipes ne sont plus consultables pendant le tour',
+          I('btn-voir-equipes').style.display === 'none');
+    check('aucune carte du paquet n est visible',
+          !I('bloc-tour').textContent.match(/tire-bouchon|boussole|Cleopatre/));
+
+    // Le sablier : le sable du haut baisse, celui du bas s accumule
+    const sable = id => Number(I(id).getAttribute('height'));
+    const haut1 = sable('sable-haut'), bas1 = sable('sable-bas');
+    log('       sablier : haut=' + haut1 + ' bas=' + bas1
+        + ' filet=' + sable('sable-filet'));
+    check('le sablier est dessine', haut1 > 0);
+    check('le filet coule pendant le tour', sable('sable-filet') > 0);
+
+    // Le decompte tourne en local, sans attendre le serveur
+    await wait(3000);
+    const chrono2 = Number(L('tour-chrono'));
+    log('       trois secondes plus tard : ' + chrono2 + ' s');
+    check('le chrono descend', chrono2 < chrono1);
+    check('et il descend a la bonne vitesse',
+          Math.abs((chrono1 - chrono2) - 3) <= 1);
+    check('le sable du haut a baisse', sable('sable-haut') < haut1);
+    check('et le tas du bas a grossi', sable('sable-bas') > bas1);
+
     // Deux cartes seulement : on laisse le chrono s ecouler plutot que de vider
     // le paquet, sinon la manche s acheve et il n y a pas de tour suivant.
     A('btn-found').click();

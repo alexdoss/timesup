@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Rush — l'invité pendant un tour</title>
+<style>
+:root {
+  --primary: #6D28D9; --primary-hover: #7C3AED; --primary-soft: rgba(109,40,217,.16);
+  --background: #0F172A; --surface: #1E293B; --surface-2: #273449;
+  --border: #334155; --text: #F8FAFC; --muted: #94A3B8; --muted-strong: #CBD5E1;
+  --success: #22C55E; --secondary: #F59E0B; --error: #EF4444;
+  --t1: #d6336c; --t2: #33c26a;
+  --r-sm: 8px; --r-md: 12px; --r-lg: 16px;
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  background: #060B18; color: var(--text); padding: 22px 16px 60px; line-height: 1.5;
+}
+.wrap { max-width: 1000px; margin: 0 auto; }
+h1 { font-size: 1.4rem; margin-bottom: 4px; }
+.intro { color: var(--muted); font-size: .93rem; margin-bottom: 8px; }
+.intro b { color: var(--muted-strong); }
+.constat {
+  background: var(--primary-soft); border-left: 3px solid var(--primary-hover);
+  border-radius: 0 var(--r-md) var(--r-md) 0; padding: 12px 14px;
+  font-size: .9rem; color: var(--muted-strong); margin: 14px 0 20px;
+}
+.tabs { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 10px; }
+.tab {
+  background: var(--surface); color: var(--muted-strong); border: 1px solid var(--border);
+  border-radius: var(--r-md); padding: 9px 16px; font-size: .87rem; font-weight: 600;
+  cursor: pointer; font-family: inherit;
+}
+.tab.on { background: var(--primary); border-color: var(--primary-hover); color: #fff; }
+.cmd { display: flex; gap: 8px; flex-wrap: wrap; align-items: center;
+  margin-bottom: 18px; font-size: .85rem; color: var(--muted); }
+.cmd button {
+  background: var(--surface-2); color: var(--text); border: 1px solid var(--border);
+  border-radius: 999px; padding: 6px 13px; font-size: .82rem; font-weight: 600;
+  cursor: pointer; font-family: inherit;
+}
+.stage { display: flex; gap: 28px; align-items: flex-start; flex-wrap: wrap; }
+.phone {
+  width: 340px; flex-shrink: 0; background: var(--background);
+  border: 1px solid var(--border); border-radius: 30px; overflow: hidden;
+  box-shadow: 0 14px 44px rgba(0,0,0,.55);
+}
+.barre { display: flex; align-items: center; gap: 8px; padding: 13px 18px 11px;
+  border-bottom: 1px solid var(--border); font-size: .74rem; color: var(--muted); }
+.barre .marque { font-weight: 800; color: var(--text); }
+.barre .code { margin-left: auto; font-family: ui-monospace, Menlo, monospace; letter-spacing: .1em; }
+.corps { padding: 20px 18px 26px; text-align: center; min-height: 420px;
+  display: flex; flex-direction: column; justify-content: center; }
+
+.cap { font-size: .72rem; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); }
+.qui { font-size: 1.05rem; font-weight: 700; }
+.qui .e1 { color: var(--t1); } .qui .e2 { color: var(--t2); }
+.icone { font-size: 2.4rem; }
+
+.chrono { font-weight: 800; color: var(--secondary); line-height: 1; font-variant-numeric: tabular-nums; }
+.chrono.geant { font-size: 7rem; }
+.chrono.grand { font-size: 4.2rem; }
+.chrono.petit { font-size: 2rem; }
+.chrono.urgent { color: var(--error); }
+.jauge { height: 8px; background: var(--surface-2); border-radius: 99px; overflow: hidden; margin: 12px 20px; }
+.jauge.fine { height: 5px; }
+.jauge.epaisse { height: 18px; border-radius: var(--r-sm); margin: 16px 12px; }
+.jauge > div { height: 100%; background: var(--secondary); border-radius: 99px;
+  transition: width .25s linear; }
+.jauge > div.urgent { background: var(--error); }
+/* Variante A′ : ce qui reste est calé à droite, donc le vide progresse
+   de la gauche vers la droite. */
+.jauge.inversee > div { margin-left: auto; }
+
+.scores { display: flex; justify-content: center; gap: 30px; margin-top: 14px; }
+.eq { text-align: center; position: relative; }
+.eq .nom { font-size: .67rem; font-weight: 700; text-transform: uppercase;
+  letter-spacing: .03em; display: block; }
+.eq.e1 .nom { color: var(--t1); } .eq.e2 .nom { color: var(--t2); }
+.eq .gros { font-size: 2rem; font-weight: 800; font-variant-numeric: tabular-nums; }
+.eq .petit { font-size: .72rem; color: var(--muted); }
+.eq.active .gros { color: var(--secondary); }
+
+.plusun {
+  position: absolute; left: 50%; top: 6px; transform: translateX(-50%);
+  color: var(--success); font-weight: 800; font-size: 1.1rem;
+  animation: monte 1s ease-out forwards; pointer-events: none;
+}
+@keyframes monte {
+  from { opacity: 1; transform: translate(-50%, 0); }
+  to   { opacity: 0; transform: translate(-50%, -26px); }
+}
+
+.trouvees { font-size: 3.4rem; font-weight: 800; font-variant-numeric: tabular-nums; }
+.trouvees-cap { font-size: .78rem; color: var(--muted); }
+.pastilles { display: flex; flex-wrap: wrap; gap: 5px; justify-content: center; margin-top: 10px; }
+.pastilles span { width: 11px; height: 11px; border-radius: 50%; background: var(--success); }
+.repos { font-size: .88rem; color: var(--muted); margin-top: 14px; }
+.bandeau { border-radius: var(--r-md); padding: 9px 12px; font-size: .85rem;
+  font-weight: 700; margin-top: 12px; }
+.bandeau.pause { background: rgba(245,158,11,.15); color: var(--secondary); }
+
+.notes { flex: 1; min-width: 260px; background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--r-md); padding: 16px; font-size: .9rem; }
+.notes h3 { font-size: .75rem; text-transform: uppercase; letter-spacing: .05em;
+  color: var(--muted); margin-bottom: 10px; }
+.notes p { margin-bottom: 10px; } .notes p:last-child { margin-bottom: 0; }
+.plus::before { content: '＋ '; color: var(--success); font-weight: 700; }
+.minus::before { content: '− '; color: var(--secondary); font-weight: 700; }
+.reco { display: inline-block; background: var(--success); color: #06210f; border-radius: 999px;
+  padding: 1px 8px; font-size: .68rem; font-weight: 800; text-transform: uppercase; margin-left: 6px; }
+.ouvert { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-md);
+  padding: 15px; margin-top: 18px; font-size: .9rem; }
+.ouvert h3 { font-size: .75rem; text-transform: uppercase; letter-spacing: .05em;
+  color: var(--secondary); margin-bottom: 10px; }
+.ouvert p { margin-bottom: 10px; } .ouvert p:last-child { margin-bottom: 0; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <h1>L'invité pendant un tour</h1>
+  <p class="intro">Le chrono tourne pour de vrai. Les cartes trouvées arrivent
+    <b>toutes les 2 secondes</b>, comme dans la réalité — jamais à l'instant du geste.</p>
+
+  <div class="constat">
+    <b>Le constat qui oriente tout :</b> celui qui fait deviner tient le téléphone
+    tourné vers lui pour lire les cartes. <b>Personne d'autre ne voit le chrono.</b>
+    C'est peut-être le vrai service à rendre ici — plus que le score.
+  </div>
+
+  <div class="tabs" id="tabs">
+    <button class="tab on" data-v="a">A — Le chrono, en grand</button>
+    <button class="tab" data-v="a2">A′ — barre inversée</button>
+    <button class="tab" data-v="b">B — Chrono + score vivant</button>
+    <button class="tab" data-v="c">C — Discret</button>
+    <button class="tab" data-v="d">D — Barre seule</button>
+  </div>
+
+  <div class="cmd">
+    <button id="btn-rejouer">↻ Rejouer le tour</button>
+    <button id="btn-pause">⏸ Pause</button>
+    <span id="etat-sim"></span>
+  </div>
+
+  <div class="stage">
+    <div class="phone">
+      <div class="barre"><span class="marque">Rush</span><span>tu suis la partie</span>
+        <span class="code">7KP2</span></div>
+      <div class="corps" id="corps"></div>
+    </div>
+    <div class="notes" id="notes"></div>
+  </div>
+
+  <div class="ouvert">
+    <h3>Trois questions que ce proto ne tranche pas</h3>
+    <p><b>Le retard du score.</b> Une carte trouvée met jusqu'à 2 secondes à s'afficher
+      chez l'invité. Sur un tour rapide, son compteur est en permanence en retard d'une
+      ou deux cartes sur les cris de la table. Acceptable, ou faut-il ne rien montrer
+      du tout plutôt qu'un chiffre faux ?</p>
+    <p><b>Le buzzer.</b> Faut-il que les téléphones des invités sonnent et vibrent
+      à la fin du tour ? Huit téléphones en cacophonie, avec chacun jusqu'à 2 secondes
+      de décalage… Je ne le ferais pas.</p>
+    <p><b>Le score de l'équipe adverse.</b> Montrer les deux équipes, ou seulement
+      celle qui joue ? Pendant un tour, l'autre ne bouge pas.</p>
+  </div>
+</div>
+
+<script>
+const DUREE = 40;
+const EQ = [
+  { nom: 'Équipe 1', couleur: '#d6336c', partie: 17, manche: 4 },
+  { nom: 'Équipe 2', couleur: '#33c26a', partie: 16, manche: 3 }
+];
+const QUI_JOUE = 1;              // l'équipe 2 joue ce tour
+const CARTES = [3, 8, 13, 17, 24, 29, 35];   // secondes où une carte est trouvée
+
+let variante = 'a';
+let depart = Date.now();
+let enPause = false;
+let pauseA = 0;
+let trouveesVues = 0;
+let dernierAffiche = -1;
+
+const NOTES = {
+  a: `<p class="plus"><b>A</b><span class="reco">ma reco</span> — le téléphone devient
+      l'horloge que tout le monde peut voir. C'est le seul chiffre que la table
+      n'a pas sous les yeux, et il crée la tension du jeu.</p>
+    <p class="plus">Lisible à un mètre, posé sur la table au milieu des joueurs.</p>
+    <p class="minus">Le score n'apparaît qu'à la fin du tour. Assumé : il serait
+      de toute façon en retard.</p>`,
+  a2: `<p class="plus"><b>A′</b> — même écran que A, mais ce qui reste est calé
+      à droite : le vide progresse de la gauche vers la droite, dans le sens
+      de la lecture.</p>
+    <p class="plus">Le bord qui bouge avance vers la droite, comme une aiguille
+      ou une barre de chargement. Certains y lisent plus naturellement
+      « le temps passe » que « le temps se retire ».</p>
+    <p class="minus">Dans A, le bloc coloré reste ancré à gauche, là où l'œil
+      revient toujours. Dans A′, il s'éloigne : à 3 secondes de la fin, il ne
+      reste qu'un fragment collé au bord droit de l'écran, plus difficile
+      à repérer d'un coup d'œil.</p>
+    <p class="minus">Bascule entre A et A′ pendant que le chrono tourne :
+      c'est le seul moyen de trancher.</p>`,
+  b: `<p class="plus"><b>B</b> — le chrono reste dominant, et chaque carte trouvée
+      fait monter un « +1 » sur l'équipe qui joue. On suit la performance en direct.</p>
+    <p class="minus">Le « +1 » arrive jusqu'à 2 secondes après le cri. Sur un bon tour,
+      l'animation se déclenche pendant que la table est déjà passée à autre chose.</p>
+    <p class="minus">Plus de choses qui bougent, donc plus de raisons de regarder
+      son téléphone plutôt que ses amis.</p>`,
+  c: `<p class="plus"><b>C</b> — parti pris inverse : l'écran dit explicitement de
+      <i>ne pas</i> le regarder. Le chrono reste, petit, pour qui veut jeter un œil.</p>
+    <p class="plus">Le moins de distraction possible. Le jeu se joue entre les gens.</p>
+    <p class="minus">Si personne ne regarde son téléphone pendant un tour, à quoi bon
+      afficher quelque chose ? C'est l'argument, et c'est aussi la limite.</p>`,
+  d: `<p class="plus"><b>D</b> — pas de chiffres : une barre qui se vide, et une pastille
+      par carte trouvée. On lit l'écran d'un coup d'œil, sans le déchiffrer.</p>
+    <p class="plus">Les pastilles encaissent bien le retard : personne ne compte
+      les points en temps réel, on voit juste « ça avance ».</p>
+    <p class="minus">Sans chiffre, on ne sait pas s'il reste 12 ou 18 secondes.
+      Justement l'information qui manque à la table.</p>`
+};
+
+function ecoule() {
+  const fin = enPause ? pauseA : Date.now();
+  return (fin - depart) / 1000;
+}
+
+function rendre() {
+  const t = ecoule();
+  const restant = Math.max(0, DUREE - t);
+  const secondes = Math.ceil(restant);
+  const pct = Math.max(0, restant / DUREE * 100);
+  const urgent = restant <= 5 && restant > 0;
+  const fini = restant <= 0;
+
+  // Les cartes n'arrivent que par paquets de 2 s : c'est le rythme des lectures
+  const vuesA = Math.floor(t / 2) * 2;
+  const trouvees = CARTES.filter(s => s <= vuesA).length;
+  if (trouvees > trouveesVues) { trouveesVues = trouvees; animerPlusUn(); }
+
+  const scoreManche = EQ[QUI_JOUE].manche + trouvees;
+  const scorePartie = EQ[QUI_JOUE].partie + trouvees;
+
+  const enTete = `<p class="cap">Manche 2/3 · Un mot</p>
+    <p class="qui"><span class="e${QUI_JOUE + 1}">${EQ[QUI_JOUE].nom}</span> · Camille fait deviner</p>`;
+
+  const chrono = (taille) => fini
+    ? `<p class="chrono ${taille}">0</p>`
+    : `<p class="chrono ${taille}${urgent ? ' urgent' : ''}">${secondes}</p>`;
+
+  const barre = (classe) =>
+    `<div class="jauge ${classe}"><div class="${urgent ? 'urgent' : ''}" style="width:${pct}%"></div></div>`;
+
+  const blocScores = (montrerLes2) => `<div class="scores">
+    ${[0, 1].map(i => {
+      const actif = i === QUI_JOUE;
+      if (!montrerLes2 && !actif) return '';
+      return `<div class="eq e${i + 1}${actif ? ' active' : ''}" id="eq-${i}">
+        <span class="nom">${EQ[i].nom}</span>
+        <div class="gros">${actif ? scoreManche : EQ[i].manche}</div>
+        <div class="petit">partie ${actif ? scorePartie : EQ[i].partie}</div>
+      </div>`;
+    }).join('')}
+  </div><p class="cap" style="margin-top:8px">Score de la manche</p>`;
+
+  const pause = enPause ? '<div class="bandeau pause">⏸ Partie en pause</div>' : '';
+
+  const vues = {
+    a: `${enTete}${chrono('geant')}${barre('')}${pause}`,
+    a2: `${enTete}${chrono('geant')}${barre('inversee')}${pause}`,
+    b: `${enTete}${chrono('grand')}${barre('fine')}${blocScores(true)}${pause}`,
+    c: `${enTete}<div class="icone">🔤</div>${chrono('petit')}
+        <p class="repos">Repose ton téléphone — regarde-les jouer.</p>${pause}`,
+    d: `${enTete}${barre('epaisse')}
+        <p class="trouvees">${trouvees}</p>
+        <p class="trouvees-cap">carte${trouvees > 1 ? 's' : ''} trouvée${trouvees > 1 ? 's' : ''}</p>
+        <div class="pastilles">${'<span></span>'.repeat(trouvees)}</div>${pause}`
+  };
+
+  document.getElementById('corps').innerHTML = vues[variante];
+  document.getElementById('etat-sim').textContent = fini
+    ? 'tour terminé' : (enPause ? 'en pause' : `${secondes} s · ${trouvees} carte(s)`);
+}
+
+function animerPlusUn() {
+  if (variante !== 'b') return;
+  requestAnimationFrame(() => {
+    const cible = document.getElementById('eq-' + QUI_JOUE);
+    if (!cible) return;
+    const p = document.createElement('div');
+    p.className = 'plusun';
+    p.textContent = '+1';
+    cible.appendChild(p);
+    setTimeout(() => p.remove(), 1000);
+  });
+}
+
+setInterval(rendre, 200);
+
+document.getElementById('tabs').addEventListener('click', e => {
+  const t = e.target.closest('.tab');
+  if (!t) return;
+  document.querySelectorAll('.tab').forEach(x => x.classList.toggle('on', x === t));
+  variante = t.dataset.v;
+  document.getElementById('notes').innerHTML = '<h3>Ce qui le distingue</h3>' + NOTES[variante];
+  rendre();
+});
+
+document.getElementById('btn-rejouer').addEventListener('click', () => {
+  depart = Date.now(); enPause = false; trouveesVues = 0; rendre();
+});
+
+document.getElementById('btn-pause').addEventListener('click', () => {
+  if (enPause) { depart += Date.now() - pauseA; enPause = false; }
+  else { pauseA = Date.now(); enPause = true; }
+  document.getElementById('btn-pause').textContent = enPause ? '▶ Reprendre' : '⏸ Pause';
+  rendre();
+});
+
+document.getElementById('notes').innerHTML = '<h3>Ce qui le distingue</h3>' + NOTES.a;
+rendre();
+</script>
+</body>
+</html>

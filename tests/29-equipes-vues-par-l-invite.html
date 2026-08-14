@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head><meta charset="utf-8"><title>Test Rush — l'app publie, l'invité voit les équipes</title></head>
+<body>
+<pre id="log">demarrage...</pre>
+<div id="hote" style="display:flex;gap:8px"></div>
+<script>
+const out = [];
+function log(s) { out.push(s); document.getElementById('log').textContent = out.join('\n'); }
+function check(name, cond) { log((cond ? 'PASS' : 'FAIL') + ' -- ' + name); }
+const wait = ms => new Promise(r => setTimeout(r, ms));
+
+async function api(action, donnees = {}) {
+  const r = await fetch('/api/session', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ action, ...donnees })
+  });
+  return { statut: r.status, corps: await r.json().catch(() => ({})) };
+}
+
+function cadre(src, largeur) {
+  const f = document.createElement('iframe');
+  f.src = src;
+  f.style.cssText = `width:${largeur}px;height:1000px;border:1px solid #ccc`;
+  document.getElementById('hote').appendChild(f);
+  return new Promise(r => f.addEventListener('load', () => r(f), { once: true }));
+}
+
+localStorage.removeItem('timesup_partie_en_cours');
+localStorage.removeItem('timesup_suivi');
+localStorage.removeItem('timesup_rejoint');
+localStorage.setItem('timesup_beta', '1');
+
+(async () => {
+  try {
+    // ===== L organisateur ouvre une session de cartes perso =====
+    const app = await cadre('/', 400);
+    const da = app.contentDocument, wa = app.contentWindow;
+    wa.onerror = (m, s, l) => log('ERREUR APP: ' + m + ' @' + s + ':' + l);
+    const A = id => da.getElementById(id);
+    const ecranApp = () => [...da.querySelectorAll('.screen')].find(s => s.classList.contains('active'))?.id;
+    await wait(1200);
+
+    A('btn-start').click();
+    da.querySelector('[data-source="custom"]').click();
+    A('btn-next-mode').click();
+    for (let i = 0; i < 4; i++) A('btn-joueurs-plus').click();
+    A('btn-cartes-moins').click();
+    A('btn-cartes-moins').click();
+    A('btn-ouvrir-session').click();
+    await wait(900);
+    const code = A('session-code').textContent.trim();
+    log('       session : ' + code);
+
+    // Trois invites deposent leurs cartes par le reseau
+    for (const [prenom, cartes] of [['Ana', ['A1','A2','A3']], ['Bob', ['B1','B2','B3']], ['Dan', ['D1','D2','D3']]]) {
+      const r = await api('rejoindre', { code, prenom });
+      await api('deposer', { code, idJoueur: r.corps.idJoueur, cartes, fini: true });
+    }
+
+    // ===== Le quatrieme invite ouvre la VRAIE page invite =====
+    const inv = await cadre('/rejoindre.html?c=' + code, 400);
+    const di = inv.contentDocument, wi = inv.contentWindow;
+    wi.onerror = (m, s, l) => log('ERREUR INVITE: ' + m + ' @' + s + ':' + l);
+    const I = id => di.getElementById(id);
+    await wait(700);
+
+    I('champ-prenom').value = 'Cleo';
+    I('btn-prenom').click();
+    await wait(700);
+    for (const mot of ['C1', 'C2', 'C3']) {
+      I('champ-carte').value = mot;
+      I('btn-ajouter').click();
+    }
+    await wait(1200);
+    I('btn-terminer').click();
+    await wait(900);
+    I('btn-suivre').click();
+    await wait(800);
+    check('l invite suit la salle d attente',
+          [...di.querySelectorAll('.screen')].find(s => s.classList.contains('active'))?.id === 'screen-attente');
+    check('les quatre joueurs y figurent',
+          di.querySelectorAll('#attente-joueurs .connecte').length === 4);
+
+    // ===== L organisateur ferme la saisie et configure =====
+    await wait(2600);
+    A('btn-session-lancer').click();
+    await wait(600);
+    A('dialog-confirm').click();     // paquet court, on lance quand meme
+    await wait(900);
+    check('l organisateur passe aux equipes', ecranApp() === 'screen-players');
+    check('le mode nominatif est bien celui par defaut',
+          da.querySelector('[data-mode="nominatif"]').classList.contains('active'));
+
+    // La saisie est close : l invite doit basculer sur l ecran de configuration
+    await wait(2600);
+    log('       titre invite : "' + I('attente-titre').textContent + '"');
+    check('l invite voit la configuration en cours',
+          I('attente-titre').textContent.includes('Configuration'));
+    check('aucun acces aux equipes : elles ne sont pas encore reparties',
+          I('btn-voir-equipes').style.display === 'none');
+
+    A('btn-next-players').click();
+    await wait(400);
+    check('l organisateur arrive sur la repartition', ecranApp() === 'screen-repartition');
+
+    // ===== LE MOMENT QUI COMPTE : la validation des equipes =====
+    A('btn-repartition-jouer').click();
+    await wait(500);
+    check('l organisateur passe aux manches', ecranApp() === 'screen-rounds');
+
+    // Ce que l app a reellement publie
+    const publie = (await api('suivre', { code })).corps.suivi;
+    check('un etat a bien ete publie', !!publie);
+    if (publie) {
+      log('       publie : etape=' + publie.etat.etape + ' equipes='
+          + JSON.stringify(publie.etat.equipes.map(e => e.joueurs)));
+      check('l etape annonce la configuration', publie.etat.etape === 'configuration');
+      check('les prenoms accompagnent les equipes',
+            publie.etat.equipes.every(e => Array.isArray(e.joueurs) && e.joueurs.length > 0));
+      check('les quatre joueurs sont repartis',
+            publie.etat.equipes.reduce((n, e) => n + e.joueurs.length, 0) === 4);
+    }
+
+    // ===== Et ce que l invite en fait =====
+    await wait(2600);
+    log('       bouton invite : display="' + I('btn-voir-equipes').style.display + '"');
+    check('le bouton des equipes apparait chez l invite',
+          I('btn-voir-equipes').style.display !== 'none');
+
+    I('btn-voir-equipes').click();
+    await wait(300);
+    check('la fenetre s ouvre', I('equipes-overlay').style.display !== 'none');
+    const blocs = [...di.querySelectorAll('#equipes-contenu .equipe-bloc')];
+    check('les deux equipes sont affichees', blocs.length === 2);
+    const noms = blocs.flatMap(b => [...b.querySelectorAll('li')].map(li => li.textContent));
+    log('       equipes vues : ' + blocs.map(b =>
+      b.querySelector('h4').textContent + ' = ' +
+      [...b.querySelectorAll('li')].map(li => li.textContent).join(', ')).join('  |  '));
+    check('les quatre joueurs y sont', noms.length === 4);
+    check('ce sont ceux de la session',
+          ['Ana', 'Bob', 'Cleo', 'Dan'].every(p => noms.includes(p)));
+    check('l invite se retrouve en evidence',
+          di.querySelector('#equipes-contenu li.moi')?.textContent === 'Cleo');
+
+    // ===== L organisateur revient sur les equipes et les modifie =====
+    // La fenetre de l invite est restee OUVERTE : elle doit suivre le changement,
+    // sinon il lit une composition perimee sans rien qui le lui signale.
+    const avant = blocs.map(b => [...b.querySelectorAll('li')].map(li => li.textContent).join(','));
+
+    da.querySelector('#screen-rounds .btn-back').click();
+    await wait(400);
+    check('l organisateur retrouve la repartition', ecranApp() === 'screen-repartition');
+    da.querySelector('#repartition-liste .equipier button').click();   // un joueur change d equipe
+    A('btn-repartition-jouer').click();
+    await wait(500);
+
+    const republie = (await api('suivre', { code })).corps.suivi;
+    log('       republie : v' + republie.v + ' '
+        + JSON.stringify(republie.etat.equipes.map(e => e.joueurs)));
+    check('la modification est republiee', republie.v > publie.v);
+    check('la nouvelle composition est differente',
+          JSON.stringify(republie.etat.equipes.map(e => e.joueurs)) !==
+          JSON.stringify(publie.etat.equipes.map(e => e.joueurs)));
+
+    await wait(2600);
+    const apres = [...di.querySelectorAll('#equipes-contenu .equipe-bloc')]
+      .map(b => [...b.querySelectorAll('li')].map(li => li.textContent).join(','));
+    log('       avant : ' + avant.join(' | ') + '   apres : ' + apres.join(' | '));
+    check('la fenetre ouverte chez l invite se met a jour',
+          JSON.stringify(apres) !== JSON.stringify(avant));
+    check('les quatre joueurs y sont toujours',
+          di.querySelectorAll('#equipes-contenu li').length === 4);
+
+    // ===== Sans changement, la fenetre ouverte n est pas redessinee =====
+    // Une liste de vingt joueurs reconstruite toutes les deux secondes
+    // ramenerait au debut celui qui la fait defiler.
+    const premierNom = di.querySelector('#equipes-contenu li');
+    premierNom.dataset.temoin = 'intact';
+    await wait(5000);   // plusieurs cycles de lecture
+    check('sans changement, la liste n est pas reconstruite',
+          di.querySelector('#equipes-contenu li').dataset.temoin === 'intact');
+
+    // Refermer puis rouvrir doit evidemment montrer la meme chose
+    I('btn-equipes-fermer').click();
+    await wait(200);
+    I('btn-voir-equipes').click();
+    await wait(200);
+    const rouvert = [...di.querySelectorAll('#equipes-contenu .equipe-bloc')]
+      .map(b => [...b.querySelectorAll('li')].map(li => li.textContent).join(','));
+    check('rouvrir la fenetre donne le meme resultat',
+          JSON.stringify(rouvert) === JSON.stringify(apres));
+
+    log('SCENARIO 29 TERMINE');
+  } catch (e) { log('EXCEPTION: ' + e.message + '\n' + e.stack); }
+})();
+</script>
+</body>
+</html>

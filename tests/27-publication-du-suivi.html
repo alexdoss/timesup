@@ -40,6 +40,20 @@ f.addEventListener('load', async () => {
   let code = null;
   const suivi = async () => (await api('suivre', { code })).corps.suivi;
 
+  // La publication part sans qu on l attende : le jeu ne doit pas dependre du
+  // reseau. Un delai fixe rendrait donc ce test dependant de la charge machine.
+  async function attendreEtape(etape, limite = 4000) {
+    const fin = Date.now() + limite;
+    let dernier = null;
+    while (Date.now() < fin) {
+      dernier = await suivi();
+      if (dernier?.etat?.etape === etape) return dernier;
+      await wait(150);
+    }
+    log(`       (attendu « ${etape} », recu « ${dernier?.etat?.etape} »)`);
+    return dernier;
+  }
+
   async function invite(prenom, cartes) {
     const r = await api('rejoindre', { code, prenom });
     await api('deposer', { code, idJoueur: r.corps.idJoueur, cartes, fini: true });
@@ -123,8 +137,7 @@ f.addEventListener('load', async () => {
 
     // ===== Debut de tour =====
     $('btn-start-turn').click();
-    await wait(400);
-    const enTour = await suivi();
+    const enTour = await attendreEtape('tour');
     log('       etape : ' + enTour.etat.etape + ', v' + enTour.v
         + ', restant ' + enTour.etat.tour?.restant);
     check('le debut de tour est publie', enTour.etat.etape === 'tour');
@@ -136,8 +149,12 @@ f.addEventListener('load', async () => {
 
     // ===== Une carte trouvee met le score a jour =====
     $('btn-found').click();
-    await wait(400);
-    const apresPoint = await suivi();
+    // Le score change sans que l etape bouge : on attend la version suivante
+    let apresPoint = enTour;
+    for (let i = 0; i < 25 && apresPoint.v === enTour.v; i++) {
+      await wait(150);
+      apresPoint = await suivi();
+    }
     const total = apresPoint.etat.equipes.reduce((t, e) => t + e.partie, 0);
     check('le point est publie', total === 1);
     check('le score de manche suit aussi',
@@ -145,8 +162,7 @@ f.addEventListener('load', async () => {
 
     // ===== Mise en pause =====
     $('btn-pause').click();
-    await wait(400);
-    const enPause = await suivi();
+    const enPause = await attendreEtape('pause');
     check('la pause est publiee', enPause.etat.etape === 'pause');
     check('le tour reste decrit pendant la pause', !!enPause.etat.tour);
     const gele = enPause.etat.tour.restant;
@@ -163,8 +179,7 @@ f.addEventListener('load', async () => {
           Math.abs(reprise.etat.tour.restant - gele) <= 1);
     let clics = 0;
     while (ecran() === 'screen-game' && clics < 300) { $('btn-found').click(); clics++; }
-    await wait(400);
-    const finTour = await suivi();
+    const finTour = await attendreEtape('entre-tours');
     check('la fin de tour est publiee', finTour.etat.etape === 'entre-tours');
     check('aucun tour n est plus en cours', finTour.etat.tour === null);
 

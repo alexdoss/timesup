@@ -462,7 +462,22 @@ function rendreConfiguration(suivi) {
   const bouton = document.getElementById('btn-voir-equipes');
   bouton.style.display = nommees.length ? '' : 'none';
   equipesConnues = nommees.length ? equipes : null;
+
+  // L'organisateur peut revenir sur sa répartition. Si la fenêtre est ouverte
+  // à cet instant, la laisser telle quelle afficherait une composition périmée
+  // sans que rien ne le signale : on la redessine — mais seulement si elle a
+  // vraiment changé. Redessiner à chaque réponse ramènerait une liste de vingt
+  // joueurs en haut toutes les deux secondes, sous les doigts de qui la fait défiler.
+  const signature = JSON.stringify(nommees.map(e => [e.nom, e.joueurs]));
+  const aChange = signature !== derniereComposition;
+  derniereComposition = signature;
+
+  if (aChange && document.getElementById('equipes-overlay').style.display !== 'none') {
+    afficherEquipes();
+  }
 }
+
+let derniereComposition = null;
 
 let equipesConnues = null;
 

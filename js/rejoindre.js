@@ -110,6 +110,88 @@ function repartirDuCode() {
   montrer('screen-code');
 }
 
+// ===== REJOUER DANS LA MÊME SOIRÉE =====
+// L'organisateur recycle sa session au lieu d'en ouvrir une neuve : le code ne
+// change pas, personne ne rescanne. Le numéro de partie est ce qui distingue
+// « celle que j'ai déjà jouée » de « une nouvelle vient de commencer ».
+
+const numeroDePartie = etat => Number(etat?.partie) || 1;
+let partieCourante = 1;
+
+function nouvellePartieDisponible(etat) {
+  return etat.ouverte === true
+    && numeroDePartie(etat) > (Number(session.partie) || 1)
+    && etat.joueurs.some(j => j.id === session.idJoueur);
+}
+
+function proposerRejeu(etat) {
+  arreterAttente();
+  partieCourante = numeroDePartie(etat);
+  session.cartesParJoueur = etat.cartesParJoueur;
+  document.getElementById('rejouer-question').textContent =
+    `Tu rejoues, ${session.prenom} ?`;
+  montrer('screen-rejouer');
+}
+
+function accepterRejeu() {
+  session.cartes = [];
+  session.fini = false;
+  session.partie = partieCourante;
+  sauvegarder();
+  reinitialiserSuivi();
+  ouvrirSaisie();
+}
+
+// Tout ce que l'écran de suivi retient d'une partie : les repères de progression
+// et les blocs affichés. Sans cette remise à zéro, un invité qui ressaisit ses
+// cartes retrouvait le tableau de scores de la partie précédente au lieu de la
+// salle d'attente — la page continuait de guetter une relance déjà arrivée.
+function reinitialiserSuivi() {
+  saisieClose = false;
+  guetterRelance = false;
+  ancreTour = null;
+  derniereComposition = null;
+  dernierResultat = null;
+  equipesConnues = null;
+  ['bloc-resultats', 'bloc-lancement', 'bloc-tour', 'btn-voir-equipes']
+    .forEach(id => { const el = document.getElementById(id); if (el) el.style.display = 'none'; });
+  ['attente-joueurs', 'attente-total'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.style.display = '';
+  });
+  const entete = document.getElementById('attente-titre');
+  if (entete) entete.parentElement.style.display = '';
+}
+
+// « Ce n'est pas moi » : le téléphone a changé de mains. On oublie l'identité
+// retenue et on repart de la liste des prénoms.
+async function refuserIdentite() {
+  const code = session.code;
+  oublier();
+  session = { code, idJoueur: null, prenom: '', cartes: [],
+              cartesParJoueur: session.cartesParJoueur, mode: session.mode, fini: false };
+  await validerCode(code);
+}
+
+async function quitterLaPartie() {
+  const bouton = document.getElementById('btn-rejouer-quitter');
+  if (bouton.dataset.confirme !== '1') {
+    bouton.dataset.confirme = '1';
+    bouton.textContent = 'Confirmer : je quitte la partie';
+    return;
+  }
+  try {
+    await appeler('retirer', { code: session.code, idJoueur: session.idJoueur, soiMeme: true });
+  } catch {
+    // Le serveur n'a pas pu retirer le joueur : l'organisateur le fera à la main
+  }
+  const code = session.code;
+  oublier();
+  bloquer('👋', 'À bientôt',
+    'Tu as quitté la partie. Tu peux revenir en saisissant le code.',
+    'Revenir', () => { repartirDuCode(); document.getElementById('champ-code').value = code; });
+}
+
 // ===== Étape 1 : le code =====
 
 function codeDepuisAdresse() {
@@ -126,6 +208,7 @@ async function validerCode(code) {
     const etat = await appeler('etat', { code });
     session.cartesParJoueur = etat.cartesParJoueur;
     session.mode = etat.mode;
+    partieCourante = numeroDePartie(etat);
 
     if (!etat.ouverte) {
       return bloquer('🚪', 'La partie a démarré',
@@ -205,7 +288,11 @@ async function rejoindreAvec(prenom) {
     session.mode = reponse.mode;
     session.cartes = [];
     session.fini = false;
+    // Le numéro de la partie pour laquelle ces cartes sont saisies : c'est lui
+    // qui permettra de reconnaître qu'une nouvelle partie a commencé.
+    session.partie = partieCourante;
     sauvegarder();
+    reinitialiserSuivi();
     ouvrirSaisie();
   } catch (err) {
     // Quelqu'un a pris cette place entre l'affichage et le tap : on rafraîchit
@@ -387,8 +474,7 @@ function ouvrirAttente() {
 }
 
 function quitterAttente() {
-  clearInterval(minuterieAttente);
-  minuterieAttente = null;
+  arreterAttente();
   montrer('screen-envoye');
 }
 
@@ -409,9 +495,17 @@ document.addEventListener('visibilitychange', () => {
 // elle ne bougera plus et c'est l'état publié par l'organisateur qui devient
 // intéressant — les équipes, puis la partie.
 let saisieClose = false;
+// La partie est finie : la seule chose intéressante devient « une nouvelle
+// commence-t-elle ? ». On interroge donc la session, plus l'état publié.
+let guetterRelance = false;
 
 async function rafraichirAttente() {
   try {
+    if (guetterRelance) {
+      const etat = await appeler('etat', { code: session.code });
+      if (nouvellePartieDisponible(etat)) proposerRejeu(etat);
+      return;
+    }
     if (!saisieClose) {
       const etat = await appeler('etat', { code: session.code });
       rendreAttente(etat);
@@ -423,6 +517,11 @@ async function rafraichirAttente() {
   } catch {
     // Coupure passagère : on garde le dernier affichage plutôt que de le vider
   }
+}
+
+function arreterAttente() {
+  clearInterval(minuterieAttente);
+  minuterieAttente = null;
 }
 
 // Les moments où l'organisateur voit son écran de début de tour. L'invité voit
@@ -441,6 +540,8 @@ function rendreConfiguration(suivi, heureServeur) {
   const enLancement = ETAPES_LANCEMENT.includes(etape) && !!etat?.manche;
   const enTour = ETAPES_TOUR.includes(etape) && !!etat?.tour;
   const enResultat = ETAPES_RESULTAT.includes(etape);
+  // Dès la partie finie, on guette la suivante plutôt que l'état publié
+  if (etape === 'fin-partie') guetterRelance = true;
 
   // L'en-tête « configuration en cours » cède la place dès que la partie tourne
   const enJeu = enLancement || enTour || enResultat;
@@ -867,15 +968,20 @@ async function reprendre(sauvegarde) {
   try {
     const etat = await appeler('etat', { code: session.code });
     session.cartesParJoueur = etat.cartesParJoueur;
+    partieCourante = numeroDePartie(etat);
 
-    if (!etat.ouverte) {
-      return bloquer('🚪', 'La partie a démarré',
-        'Cette partie est déjà lancée. Tes cartes sont bien parties.', null, null);
-    }
     // Le joueur existe-t-il toujours ? L'organisateur a pu le retirer.
     if (!etat.joueurs.some(j => j.id === session.idJoueur)) {
       oublier();
       return validerCode(session.code);
+    }
+    // Celui qui avait rangé son téléphone le rallume : une nouvelle partie a pu
+    // commencer entre-temps, et il doit pouvoir la rejoindre d'ici.
+    if (nouvellePartieDisponible(etat)) return proposerRejeu(etat);
+
+    if (!etat.ouverte) {
+      return bloquer('🚪', 'La partie a démarré',
+        'Cette partie est déjà lancée. Tes cartes sont bien parties.', null, null);
     }
 
     if (session.fini) {
@@ -925,6 +1031,9 @@ function brancherEvenements() {
 
   document.getElementById('btn-terminer').addEventListener('click', terminer);
   document.getElementById('btn-suivre').addEventListener('click', ouvrirAttente);
+  document.getElementById('btn-rejouer-oui').addEventListener('click', accepterRejeu);
+  document.getElementById('btn-rejouer-autre').addEventListener('click', refuserIdentite);
+  document.getElementById('btn-rejouer-quitter').addEventListener('click', quitterLaPartie);
   document.getElementById('btn-attente-retour').addEventListener('click', quitterAttente);
   document.getElementById('btn-voir-equipes').addEventListener('click', afficherEquipes);
   document.getElementById('btn-equipes-fermer').addEventListener('click', masquerEquipes);

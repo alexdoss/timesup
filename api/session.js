@@ -192,7 +192,7 @@ async function creer(req, res) {
   }
 
   const jeton = tirerIdentifiant();
-  const config = { creee: Date.now(), cartesParJoueur, mode, jeton, ouverte: true, attendus };
+  const config = { creee: Date.now(), cartesParJoueur, mode, jeton, ouverte: true, attendus, partie: 1 };
 
   await commandeKV(['HSET', cleSession(code), 'config', JSON.stringify(config)]);
   await commandeKV(['EXPIRE', cleSession(code), DUREE_SESSION_S]);
@@ -279,14 +279,26 @@ function etat(req, res, session) {
     mode: session.config.mode,
     attendus: session.config.attendus || [],
     ouverte: session.config.ouverte !== false,
+    // Numéro de partie : c'est lui qui dit à un invité qu'une nouvelle a commencé
+    partie: Number(session.config.partie) || 1,
     joueurs,
     total: joueurs.reduce((n, j) => n + j.nbCartes, 0),
     tousPrets: joueurs.length > 0 && joueurs.every(j => j.fini)
   });
 }
 
+// Retrait d'un joueur : par l'organisateur, ou par le joueur lui-même quand il
+// quitte la partie. Sans cette seconde voie, il resterait inscrit sans cartes et
+// bloquerait le lancement pour tout le monde.
+//
+// Se retirer soi-même ne demande que de connaître son propre identifiant. Ce
+// n'est pas une preuve solide — `etat` publie les identifiants à qui a le code —
+// mais le modèle de confiance est déjà celui-là : quiconque a le code peut
+// rejoindre sous un faux nom ou saisir n'importe quoi. Le code se partage dans
+// une pièce, entre gens qui jouent ensemble.
 async function retirer(req, res, session, code) {
-  if (req.body.jeton !== session.config.jeton) {
+  const soiMeme = req.body.soiMeme === true;
+  if (!soiMeme && req.body.jeton !== session.config.jeton) {
     return res.status(403).json({ error: 'Action réservée à l\'organisateur.' });
   }
   const idJoueur = String(req.body.idJoueur || '');
@@ -328,6 +340,52 @@ async function fermer(req, res, session, code) {
   return res.status(200).json({
     cartes,
     joueurs: joueurs.map(j => ({ prenom: j.prenom, role: j.role, nbCartes: j.cartes.length }))
+  });
+}
+
+// Rejouer avec les mêmes joueurs : la session est recyclée plutôt que refaite.
+// Le code reste celui de la soirée, ce qui évite à chacun de rescanner un QR
+// entre deux parties — et le téléphone des invités, qui connaît déjà ce code,
+// découvre tout seul qu'une nouvelle partie commence.
+async function relancer(req, res, session, code) {
+  if (req.body.jeton !== session.config.jeton) {
+    return res.status(403).json({ error: "Action réservée à l'organisateur." });
+  }
+
+  const entrees = Object.entries(session.joueurs);
+  if (entrees.length === 0) {
+    return res.status(409).json({ error: 'Cette partie n\'a aucun joueur à rappeler.' });
+  }
+
+  const cartesParJoueur = Math.max(2, Math.min(MAX_CARTES,
+    Number(req.body.cartesParJoueur) || session.config.cartesParJoueur));
+
+  // Le numéro de partie est ce qui permet à un invité de distinguer « la partie
+  // que j'ai déjà jouée » de « une nouvelle vient de commencer ».
+  const config = {
+    ...session.config,
+    ouverte: true,
+    cartesParJoueur,
+    partie: (Number(session.config.partie) || 1) + 1,
+    // La liste se referme sur ceux qui étaient là : chacun se reconnaîtra
+    attendus: entrees.map(([, j]) => j.prenom)
+  };
+
+  // Les cartes repartent à zéro, les joueurs restent inscrits
+  for (const [id, joueur] of entrees) {
+    await commandeKV(['HSET', cleSession(code), `j:${id}`,
+      JSON.stringify({ ...joueur, cartes: [], fini: false, maj: Date.now() })]);
+  }
+  await commandeKV(['HSET', cleSession(code), 'config', JSON.stringify(config)]);
+  // Une soirée dure plus longtemps qu'une partie : on repousse l'expiration
+  await commandeKV(['EXPIRE', cleSession(code), DUREE_SESSION_S]);
+  // Le suivi de la partie précédente n'a plus lieu d'être, et le repartir de
+  // zéro évite que son compteur de version, resté haut, ne fasse rejeter les
+  // publications de la nouvelle partie.
+  await commandeKV(['DEL', cleSuivi(code)]);
+
+  return res.status(200).json({
+    code, partie: config.partie, cartesParJoueur, attendus: config.attendus
   });
 }
 
@@ -443,6 +501,7 @@ export default async function handler(req, res) {
       case 'deposer':   return await deposer(req, res, session, code);
       case 'retirer':   return await retirer(req, res, session, code);
       case 'fermer':    return await fermer(req, res, session, code);
+      case 'relancer':  return await relancer(req, res, session, code);
       default:          return res.status(400).json({ error: 'Action inconnue.' });
     }
   } catch (err) {

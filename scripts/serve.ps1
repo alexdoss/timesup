@@ -59,6 +59,7 @@ function Get-VuePublique($s) {
     mode            = $s.mode
     attendus        = @($s.attendus)
     ouverte         = $s.ouverte
+    partie          = [int]($s.partie ?? 1)
     joueurs         = $liste
     total           = $total
     tousPrets       = ($liste.Count -gt 0 -and -not ($liste | Where-Object { -not $_.fini }))
@@ -86,6 +87,7 @@ function Invoke-FausseSession($corps) {
       jeton           = New-Id
       ouverte         = $true
       attendus        = $attendus
+      partie          = 1
       joueurs         = @{}
     }
     return @{ statut = 200; corps = [ordered]@{
@@ -193,7 +195,10 @@ function Invoke-FausseSession($corps) {
     }
 
     'retirer' {
-      if ($corps.jeton -ne $s.jeton) { return @{ statut = 403; corps = @{ error = "Action reservee a l'organisateur." } } }
+      # L organisateur retire qui il veut ; un joueur peut se retirer lui-meme
+      if (-not ($corps.soiMeme -eq $true) -and $corps.jeton -ne $s.jeton) {
+        return @{ statut = 403; corps = @{ error = "Action reservee a l'organisateur." } }
+      }
       $id = [string]$corps.idJoueur
       if (-not $s.joueurs.ContainsKey($id)) { return @{ statut = 404; corps = @{ error = 'Ce joueur ne fait pas partie de la session.' } } }
       $s.joueurs.Remove($id)
@@ -211,6 +216,29 @@ function Invoke-FausseSession($corps) {
       $s.ouverte = $false
       $detail = @($s.joueurs.Values | ForEach-Object { [ordered]@{ prenom = $_.prenom; role = $_.role; nbCartes = @($_.cartes).Count } })
       return @{ statut = 200; corps = [ordered]@{ cartes = $cartes; joueurs = $detail } }
+    }
+
+    'relancer' {
+      if ($corps.jeton -ne $s.jeton) { return @{ statut = 403; corps = @{ error = "Action reservee a l'organisateur." } } }
+      if ($s.joueurs.Count -eq 0) {
+        return @{ statut = 409; corps = @{ error = "Cette partie n'a aucun joueur a rappeler." } }
+      }
+      $n = [int]($corps.cartesParJoueur ?? $s.cartesParJoueur)
+      $s.cartesParJoueur = [Math]::Max(2, [Math]::Min(20, $n))
+      # Le numero de partie distingue « celle que j ai jouee » de « la nouvelle »
+      $s.partie = [int]($s.partie ?? 1) + 1
+      $s.ouverte = $true
+      $s.attendus = @($s.joueurs.Values | ForEach-Object { $_.prenom })
+      foreach ($id in @($s.joueurs.Keys)) {
+        $s.joueurs[$id].cartes = @()
+        $s.joueurs[$id].fini = $false
+      }
+      # Le suivi repart de zero, sinon son compteur de version ferait rejeter
+      # les publications de la nouvelle partie
+      $suivis.Remove($code)
+      return @{ statut = 200; corps = [ordered]@{
+        code = $code; partie = $s.partie
+        cartesParJoueur = $s.cartesParJoueur; attendus = @($s.attendus) } }
     }
 
     default { return @{ statut = 400; corps = @{ error = 'Action inconnue.' } } }

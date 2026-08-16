@@ -395,32 +395,79 @@ localStorage.removeItem('timesup_rejoint');
     // la garde laisse passer un changement. C est déjà couvert plus haut, quand
     // l organisateur remanie ses equipes et que la fenetre ouverte se met a jour.
 
-    // ===== Le palmarès survit au « Rejouer » =====
-    // Rejouer remet le moteur a zero. Tant que la coupure n existait pas, les
-    // battements continuaient de publier « fin de partie » sur l ancien code,
-    // mais avec un etat vide : l ecran des invites se vidait sous leurs yeux.
-    const avantRejeu = (await api('suivre', { code })).corps.suivi;
-    check('le palmarès publie porte les trois manches',
-          avantRejeu.etat.historique.length === 3);
-    check('et le detail des joueurs', (avantRejeu.etat.joueurs || []).length === 4);
+    // ===== Une nouvelle partie, sans rescanner =====
+    // L organisateur recycle la session : le code de la soiree ne change pas,
+    // et l invite reconnait sa propre identite au lieu de tout ressaisir.
+    const ecranInv = () =>
+      [...di.querySelectorAll('.screen')].find(s => s.classList.contains('active'))?.id;
 
     A('btn-replay').click();
-    await wait(1000);
-    log('       ecran apres Rejouer : ' + ecranApp());
-    // Deux battements passent : c est la ou l ancien defaut se manifestait
-    await wait(16000);
-    const apresRejeu = (await api('suivre', { code })).corps.suivi;
-    log('       publie apres rejeu : etape=' + apresRejeu.etat.etape
-        + ' manches=' + (apresRejeu.etat.historique?.length ?? 'absent')
-        + ' joueurs=' + (apresRejeu.etat.joueurs?.length ?? 'absent'));
-    check('l ancienne session ne recoit plus rien', apresRejeu.v === avantRejeu.v);
-    check('le palmarès reste intact', apresRejeu.etat.historique.length === 3);
-    check('le detail des joueurs aussi', (apresRejeu.etat.joueurs || []).length === 4);
+    await wait(900);
+    check('l organisateur regle la nouvelle partie', ecranApp() === 'screen-session-ouvrir');
+    A('btn-ouvrir-session').click();
+    await wait(1200);
+    check('la session est rouverte', ecranApp() === 'screen-session');
+    check('le code de la soiree n a pas change', A('session-code').textContent.trim() === code);
 
+    const relance = (await api('etat', { code })).corps;
+    check('le numero de partie a avance', relance.partie === 2);
+    check('les cartes de tout le monde sont effacees',
+          relance.joueurs.every(j => j.nbCartes === 0));
+    check('les joueurs restent inscrits', relance.joueurs.length === 4);
+
+    // L invite, reste sur son ecran de resultats, se voit proposer de rejouer
     await wait(2600);
-    check('et l ecran de l invite le montre toujours',
-          di.querySelectorAll('#resultats-scores .manche-passee').length === 3);
-    check('avec son tiroir de joueurs', !!I('resultats-tiroir-joueurs'));
+    log('       ecran invite : ' + ecranInv() + ' — "' + L('rejouer-question') + '"');
+    check('l invite est invite a rejouer', ecranInv() === 'screen-rejouer');
+    check('on lui demande de confirmer son identite',
+          L('rejouer-question') === 'Tu rejoues, Cleo ?');
+    check('il peut dire que ce n est pas lui', !!I('btn-rejouer-autre'));
+    check('et quitter la partie', !!I('btn-rejouer-quitter'));
+
+    I('btn-rejouer-oui').click();
+    await wait(500);
+    check('il arrive directement sur ses cartes', ecranInv() === 'screen-cartes');
+    check('sans avoir rescanne ni retape son prenom',
+          I('titre-cartes').textContent.includes('Cleo'));
+    check('et son paquet precedent est efface',
+          di.querySelectorAll('#liste-cartes li').length === 0);
+
+    // A quatre joueurs, la nouvelle partie exige 8 cartes chacun pour atteindre
+    // le paquet minimum : le compte a change depuis la premiere partie.
+    const exige = (await api('etat', { code })).corps.cartesParJoueur;
+    log('       cartes exigees pour la partie 2 : ' + exige);
+    for (let i = 1; i <= exige; i++) {
+      I('champ-carte').value = 'N' + i;
+      I('btn-ajouter').click();
+      await wait(200);
+    }
+    await wait(1200);
+    const apresSaisie = (await api('etat', { code })).corps;
+    check('ses nouvelles cartes arrivent bien sous le meme joueur',
+          apresSaisie.joueurs.find(j => j.prenom === 'Cleo')?.nbCartes === exige);
+
+    // ===== Une fois ses cartes finies, il retrouve la salle d attente =====
+    // Et non le tableau de scores de la partie precedente : l ecran de suivi
+    // doit oublier tout ce qu il retenait de la partie d avant.
+    // « J ai termine » attend la fin de l envoi : la frappe est temporisee de
+    // 700 ms avant de partir, il faut laisser passer l aller-retour.
+    I('btn-terminer').click();
+    await wait(1800);
+    check('ses cartes sont envoyees', ecranInv() === 'screen-envoye');
+    I('btn-suivre').click();
+    await wait(2600);
+    check('il revient sur la salle d attente', ecranInv() === 'screen-attente');
+    check('le tableau des joueurs est de retour',
+          I('attente-joueurs').style.display !== 'none'
+          && di.querySelectorAll('#attente-joueurs .connecte').length === 4);
+    log('       invite voit : "' + L('attente-titre') + '" — ' + L('attente-total'));
+    check('on attend a nouveau les autres',
+          L('attente-titre').includes('En attente'));
+    check('et non les resultats de la partie precedente',
+          I('bloc-resultats').style.display === 'none');
+    check('ni le sablier', I('bloc-tour').style.display === 'none');
+    check('le decompte des cartes repart de la nouvelle partie',
+          L('attente-total').includes(`${exige} cartes`));
 
     log('SCENARIO 29 TERMINE');
   } catch (e) { log('EXCEPTION: ' + e.message + '\n' + e.stack); }

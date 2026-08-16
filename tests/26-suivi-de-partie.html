@@ -121,6 +121,54 @@ function etatExemple(numero, scores) {
     const codeCourt = await api({ action: 'suivre', code: 'AB' });
     check('un code mal forme est refuse', codeCourt.statut === 400);
 
+    // ===== Rejouer recycle la session au lieu d en ouvrir une neuve =====
+    // Le code reste celui de la soiree : personne ne rescanne entre deux parties,
+    // et le telephone des invites, qui connait deja ce code, decouvre tout seul
+    // qu une nouvelle partie commence.
+    const ana = await api({ action: 'rejoindre', code, prenom: 'Ana' });
+    const bob = await api({ action: 'rejoindre', code, prenom: 'Bob' });
+    // 5 cartes chacun : c est ce que la session exige pour marquer « termine »
+    const lot = p => [1, 2, 3, 4, 5].map(i => p + i);
+    await api({ action: 'deposer', code, idJoueur: ana.corps.idJoueur, cartes: lot('A'), fini: true });
+    await api({ action: 'deposer', code, idJoueur: bob.corps.idJoueur, cartes: lot('B'), fini: true });
+    const fermeture = await api({ action: 'fermer', code, jeton });
+    check('la partie se lance', fermeture.statut === 200);
+
+    const avant = await api({ action: 'etat', code });
+    check('la premiere partie porte le numero 1', avant.corps.partie === 1);
+    check('la saisie est close apres le lancement', avant.corps.ouverte === false);
+
+    const usurpateur = await api({ action: 'relancer', code, jeton: 'pas-le-bon' });
+    check('relancer sans le bon jeton est refuse', usurpateur.statut === 403);
+
+    const relance = await api({ action: 'relancer', code, jeton });
+    check('l organisateur relance la session', relance.statut === 200);
+    check('le code ne change pas', relance.corps.code === code);
+    check('le numero de partie avance', relance.corps.partie === 2);
+
+    const apres = await api({ action: 'etat', code });
+    check('la saisie est rouverte', apres.corps.ouverte === true);
+    check('le numero de partie est visible des invites', apres.corps.partie === 2);
+    check('les joueurs sont toujours inscrits', apres.corps.joueurs.length === 2);
+    check('leurs cartes sont effacees',
+          apres.corps.joueurs.every(j => j.nbCartes === 0));
+    check('et personne n est marque termine',
+          apres.corps.joueurs.every(j => j.fini === false));
+    check('le paquet repart de zero', apres.corps.total === 0);
+    log('       liste fermee : ' + JSON.stringify(apres.corps.attendus));
+    check('la liste se referme sur ceux qui etaient la',
+          ['Ana', 'Bob'].every(p => apres.corps.attendus.includes(p))
+          && apres.corps.attendus.length === 2);
+
+    // L identifiant de chacun survit : son telephone le reconnait sans rien redemander
+    check('les identifiants des joueurs sont conserves',
+          apres.corps.joueurs.some(j => j.id === ana.corps.idJoueur));
+
+    // Le nombre de cartes peut changer d une partie a l autre
+    const ajustee = await api({ action: 'relancer', code, jeton, cartesParJoueur: 6 });
+    check('le nombre de cartes se regle a la relance', ajustee.corps.cartesParJoueur === 6);
+    check('et la partie avance encore', ajustee.corps.partie === 3);
+
     log('SCENARIO 26 TERMINE');
   } catch (e) { log('EXCEPTION: ' + e.message + '\n' + e.stack); }
 })();

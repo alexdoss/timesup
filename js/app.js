@@ -9,7 +9,7 @@ import { showScreen, updateTimer, showCard, updateRoundScreen, updateTurnInfo, u
          afficherEquipes, masquerEquipes, afficherBoutonEquipes } from './ui.js';
 import { activerSuivi, couperSuivi, publierEtat } from './suivi.js';
 import { ouvrirSession, sessionCourante, oublierSession, adresseInvitation, adresseLisible,
-         inscrire, deposerCartes, retirerJoueur, fermerSession, lireEtat,
+         inscrire, deposerCartes, retirerJoueur, fermerSession, relancerSession, lireEtat,
          suivre, arreterSuivi } from './session.js';
 import { creerQrSvg } from './qr.js';
 import { getCustomThemes, saveCustomTheme, deleteCustomTheme, generateWithAI, getQuota } from './library.js';
@@ -783,13 +783,21 @@ function reglerJoueursSession(delta) {
 // téléphone. Le nombre de cartes par joueur vient de l'étape « Déroulement ».
 
 async function demarrerSessionPartagee() {
-  moiJoueur = null;
+  // En rejeu, l'organisateur reste inscrit sous le même identifiant : il n'a ni
+  // à se renommer, ni à se réinscrire, juste à ressaisir ses cartes.
+  if (!modeRejeu) moiJoueur = null;
   repartition = [];
 
   try {
+    // En rejeu, on recycle la session de la soirée plutôt que d'en ouvrir une
+    // neuve : le code ne change pas, personne ne rescanne, et le téléphone des
+    // invités découvre tout seul qu'une nouvelle partie commence.
     // Partie neuve : le mode de jeu n'est pas encore choisi, la page des invités
-    // demande simplement le prénom. En rejeu : liste fermée, chacun se reconnaît.
-    const session = await ouvrirSession(game.numCards, modeRejeu ? listeJoueurs : []);
+    // demande simplement le prénom.
+    const recyclable = modeRejeu && !!sessionCourante();
+    const session = recyclable
+      ? { ...sessionCourante(), ...(await relancerSession(game.numCards)) }
+      : await ouvrirSession(game.numCards, modeRejeu ? listeJoueurs : []);
 
     afficherInvitation(
       creerQrSvg(adresseInvitation(), { taille: 190 }),
@@ -951,26 +959,33 @@ function ajusterBlocsPrenom() {
 async function rendreChoixPrenomLocal() {
   if (!ajusterBlocsPrenom()) return;
 
-  // Les prénoms déjà pris par ceux qui ont scanné : on les montre, barrés
-  let pris = new Set();
+  // Qui est déjà inscrit, et où en est-il ? En rejeu, tout le monde reste
+  // inscrit d'une partie à l'autre : un joueur déjà là mais sans cartes n'est
+  // pas « pris », il attend simplement qu'on ressaisisse pour lui.
+  let connus = new Map();
   try {
     const etat = await lireEtatSansAttendre();
-    pris = new Set((etat?.joueurs || []).map(j => j.prenom.toLocaleLowerCase()));
+    (etat?.joueurs || []).forEach(j => connus.set(j.prenom.toLocaleLowerCase(), j));
   } catch {
-    // Sans réseau, on propose toute la liste : le serveur refusera un doublon
+    // Sans réseau, on propose toute la liste : le serveur tranchera
   }
 
   const liste = document.getElementById('saisie-liste-prenoms');
   liste.innerHTML = '';
   listeJoueurs.forEach(prenom => {
+    const existant = connus.get(prenom.toLocaleLowerCase());
+    const termine = !!existant?.fini;
+
     const bouton = document.createElement('button');
     bouton.type = 'button';
-    const dejaLa = pris.has(prenom.toLocaleLowerCase());
-    bouton.textContent = dejaLa ? `${prenom} ✓` : prenom;
-    bouton.disabled = dejaLa;
+    bouton.textContent = termine ? `${prenom} ✓` : prenom;
+    bouton.disabled = termine;
     bouton.addEventListener('click', () => {
       document.getElementById('saisie-prenom').value = prenom;
       saisieLocale.prenom = prenom;
+      // Ce joueur existe déjà : on reprend son identifiant au lieu de créer un
+      // doublon. Ses cartes seront simplement redéposées sous le même nom.
+      if (existant) saisieLocale.id = existant.id;
       showSaisieError('');
       // Le choix fait, la liste laisse la place au prénom retenu
       rafraichirSaisieLocale();
@@ -1123,7 +1138,9 @@ async function terminerSaisieEtConfigurer() {
     // En rejeu, équipes et réglages n'ont pas bougé : on relance directement
     if (modeRejeu) {
       modeRejeu = false;
-      oublierSession();
+      // La session n'est pas oubliée : c'est celle de la soirée, et le rejeu
+      // suivant la recyclera encore. Une partie vraiment neuve l'efface,
+      // depuis preparerNouvellePartie().
       buildDeck(THEMES);
       beginRound();
       return;
@@ -1204,8 +1221,10 @@ let customEntry = { playerIndex: 0, playerList: [], currentCards: [], batchSize:
 function onPlayClicked() {
   if (game.cardSource === 'custom') {
     if (saisieMode === 'partagee') {
-      // Cartes saisies, équipes formées : il n'y a plus qu'à jouer
-      oublierSession();
+      // Cartes saisies, équipes formées : il n'y a plus qu'à jouer.
+      // La session n'est pas oubliée : c'est celle de la soirée, et « Rejouer »
+      // la recyclera pour que personne n'ait à rescanner. Une partie vraiment
+      // neuve l'efface, depuis preparerNouvellePartie().
       startGame();
     } else {
       startCustomCardsEntry();

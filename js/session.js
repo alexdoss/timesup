@@ -88,6 +88,17 @@ export function retirerJoueur(idJoueur) {
   return appeler('retirer', { code: courante.code, jeton: courante.jeton, idJoueur });
 }
 
+// Rejouer avec les mêmes joueurs : la session est recyclée, pas refaite.
+// Le code de la soirée ne change pas, donc personne ne rescanne — et le
+// téléphone des invités, qui connaît déjà ce code, découvre la nouvelle partie.
+export async function relancerSession(cartesParJoueur) {
+  const reponse = await appeler('relancer', {
+    code: courante.code, jeton: courante.jeton, cartesParJoueur
+  });
+  courante = { ...courante, cartesParJoueur: reponse.cartesParJoueur };
+  return reponse;
+}
+
 // Ferme la session et récupère enfin les cartes : c'est le seul appel qui les rapatrie.
 export function fermerSession() {
   return appeler('fermer', { code: courante.code, jeton: courante.jeton });

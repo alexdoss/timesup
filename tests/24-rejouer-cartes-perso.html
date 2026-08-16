@@ -115,9 +115,15 @@ f.addEventListener('load', async () => {
 
     $('btn-ouvrir-session').click();
     await wait(800);
-    check('une nouvelle session s ouvre', ecran() === 'screen-session');
+    check('la session est rouverte', ecran() === 'screen-session');
     const code2 = code();
-    check('avec un code different', code2 !== code1);
+    // Le code est celui de la soiree : personne ne rescanne entre deux parties
+    check('le code ne change pas d une partie a l autre', code2 === code1);
+    r = await api('etat', { code: code2 });
+    check('le numero de partie a avance', r.corps.partie === 2);
+    check('les joueurs restent inscrits', r.corps.joueurs.length === 4);
+    check('mais leurs cartes sont effacees',
+          r.corps.joueurs.every(j => j.nbCartes === 0 && j.fini === false));
 
     // ===== La liste des joueurs est fermee =====
     r = await api('etat', { code: code2 });
@@ -126,33 +132,22 @@ f.addEventListener('load', async () => {
           ['Marc', 'Inès', 'Sam', 'Jo'].every(p => r.corps.attendus.includes(p)));
     check('et personne d autre', r.corps.attendus.length === 4);
 
-    // ===== L organisateur choisit son prenom, comme les invites =====
-    // Il etait le seul a devoir le retaper, au risque d une faute qui l aurait
-    // dedouble dans une partie ou tous les prenoms sont pourtant connus.
+    // ===== L organisateur se reconnait dans la liste =====
+    // Il n etait pas joueur a la partie precedente : la liste lui est donc
+    // proposee. Choisir un prenom deja inscrit reprend son identifiant plutot
+    // que d en creer un second.
     $('btn-mes-cartes').click();
     await wait(600);
     check('l ecran de saisie s ouvre', ecran() === 'screen-saisie-locale');
     check('une liste de prenoms lui est proposee',
           $('saisie-bloc-liste').style.display !== 'none');
-    check('et non un champ a remplir',
-          $('saisie-bloc-prenom').style.display === 'none');
     const choix = [...d.querySelectorAll('#saisie-liste-prenoms button')];
     log('       liste offerte : ' + choix.map(b => b.textContent).join(', '));
     check('elle reprend les joueurs de la partie precedente', choix.length === 4);
-    check('ce sont les bons',
-          ['Marc', 'Inès', 'Sam', 'Jo'].every(p => choix.some(b => b.textContent.startsWith(p))));
-    check('aucun n est encore pris', choix.every(b => !b.disabled));
+    // Inscrits mais sans cartes : ils attendent qu on saisisse, ils ne sont pas pris
+    check('aucun n est encore barre', choix.every(b => !b.disabled));
 
-    // Saisir une carte sans s etre nomme renvoie vers la liste
-    $('saisie-carte').value = 'Alpha';
-    $('btn-saisie-ajouter').click();
-    await wait(300);
-    log('       message : "' + $('saisie-erreur').textContent + '"');
-    check('sans prenom choisi, la carte est refusee',
-          d.querySelectorAll('#saisie-liste .player-name').length === 0);
-    check('le message renvoie bien a la liste',
-          $('saisie-erreur').textContent.includes('liste'));
-
+    const avantMarc = (await api('etat', { code: code2 })).corps.joueurs.length;
     choix.find(b => b.textContent.startsWith('Marc')).click();
     await wait(300);
     check('le prenom choisi remplace la liste',
@@ -160,7 +155,7 @@ f.addEventListener('load', async () => {
     check('il est repris dans le champ', $('saisie-prenom').value === 'Marc');
     check('et ne peut plus etre modifie', $('saisie-prenom').readOnly);
 
-    // L organisateur est un joueur comme les autres : il saisit ses 8 cartes
+    // L organisateur saisit ses 8 cartes sous l identite reprise
     for (let i = 0; i < 8; i++) {
       $('saisie-carte').value = 'Nm' + i;
       $('btn-saisie-ajouter').click();
@@ -169,8 +164,10 @@ f.addEventListener('load', async () => {
     check('ses huit cartes sont saisies',
           d.querySelectorAll('#saisie-liste .player-name').length === 8);
     const inscrit = await api('etat', { code: code2 });
-    check('il est inscrit sous le prenom choisi',
-          inscrit.corps.joueurs.some(j => j.prenom === 'Marc'));
+    check('il saisit bien sous le prenom choisi',
+          inscrit.corps.joueurs.find(j => j.prenom === 'Marc')?.nbCartes === 8);
+    check('sans creer de second joueur du meme nom',
+          inscrit.corps.joueurs.length === avantMarc);
 
     $('btn-saisie-fini').click();
     await wait(800);
@@ -189,11 +186,26 @@ f.addEventListener('load', async () => {
           $('saisie-label-liste').textContent !== 'Qui es-tu ?');
     const restants = [...d.querySelectorAll('#saisie-liste-prenoms button')];
     log('       liste : ' + restants.map(b => b.textContent).join(', '));
-    check('Marc est marque comme deja pris',
+    // Marc a fini sa saisie : lui seul est barre. Les autres sont inscrits mais
+    // sans cartes — ils attendent qu on saisisse pour eux, ils ne sont pas pris.
+    check('celui qui a deja fini est barre',
           restants.find(b => b.textContent.startsWith('Marc'))?.disabled === true);
     check('les trois autres restent choisissables',
           restants.filter(b => !b.disabled).length === 3);
     check('ses cartes restent masquees', $('saisie-carte').type === 'password');
+
+    // Choisir un joueur deja inscrit reprend son identifiant, sans le dedoubler
+    const avantChoix = (await api('etat', { code: code2 })).corps.joueurs.length;
+    restants.find(b => b.textContent.startsWith('Jo')).click();
+    await wait(300);
+    $('saisie-carte').value = 'Zeta';
+    $('btn-saisie-ajouter').click();
+    await wait(500);
+    const apresChoix = (await api('etat', { code: code2 })).corps;
+    check('aucun joueur n est cree en double', apresChoix.joueurs.length === avantChoix);
+    check('la carte est deposee sous le joueur existant',
+          apresChoix.joueurs.find(j => j.prenom === 'Jo')?.nbCartes === 1);
+
     $('btn-saisie-retour').click();
     await wait(300);
 
@@ -206,16 +218,24 @@ f.addEventListener('load', async () => {
     // A 4 joueurs, le minimum impose 8 cartes chacun pour atteindre 30
     const lot = prefixe => Array.from({ length: 8 }, (_, i) => prefixe + i);
 
-    // ===== On ne peut pas relancer tant que tout le monde n a pas rejoint =====
+    // En rejeu, les invites ne rejoignent pas : ils sont deja inscrits, leur
+    // telephone connait leur identifiant et redepose simplement des cartes.
+    async function redeposer(prenom, cartes) {
+      const e = await api('etat', { code: code2 });
+      const moi = e.corps.joueurs.find(j => j.prenom === prenom);
+      return api('deposer', { code: code2, idJoueur: moi.id, cartes, fini: true });
+    }
+
+    // ===== On ne peut pas relancer tant que chacun n a pas ressaisi =====
     // Marc, c est l organisateur : il a deja saisi ses cartes plus haut
     await wait(2600);
-    check('le lancement attend les absents', $('btn-session-lancer').disabled);
+    check('le lancement attend ceux qui saisissent encore', $('btn-session-lancer').disabled);
     log('       bouton : ' + $('btn-session-lancer').textContent);
     check('le bouton nomme combien manquent', $('btn-session-lancer').textContent.includes('3 joueurs'));
 
-    await invite(code2, 'Inès', lot('Ni'));
-    await invite(code2, 'Sam', lot('Ns'));
-    await invite(code2, 'Jo', lot('Nj'));
+    await redeposer('Inès', lot('Ni'));
+    await redeposer('Sam', lot('Ns'));
+    await redeposer('Jo', lot('Nj'));
     await wait(2600);
     check('une fois tous presents, on peut relancer', !$('btn-session-lancer').disabled);
     log('       bouton : ' + $('btn-session-lancer').textContent);

@@ -677,6 +677,13 @@ body {
   background: var(--surface-2);
 }
 
+/* « Tu rejoues, Marc ? » — la question porte le prénom, c'est elle qu'on lit */
+.grosse-question {
+  font-size: 1.25rem;
+  font-weight: 800;
+  margin: 4px 0 18px;
+}
+
 /* Le chrono vu par les invités : lisible à un mètre, posé sur une table.
    tabular-nums fige la largeur des chiffres, sinon le nombre tressaute
    à chaque seconde. */

@@ -25,7 +25,7 @@ js/qr.js        Seul fichier qui connaît la bibliothèque QR ; rend un SVG
 js/vendor/      Bibliothèques tierces vendues telles quelles (qrcode.js)
 rejoindre.html  Page autonome des invités (ce qu'ouvre le QR) — ne charge pas le jeu
 js/rejoindre.js Sa logique : code, prénom, cartes, reprise après coupure
-api/generate.js Serverless Vercel → Groq (llama-3.3-70b-versatile), génère des cartes
+api/generate.js Serverless Vercel → Groq (modèle réglable par `GROQ_MODELE`), génère des cartes
 api/session.js  Serverless Vercel → Upstash : sessions de saisie partagée
 themes/*.json   Thèmes officiels : { id, name, icon, words[] }
 sw.js           Service worker, cache-first sur une liste d'assets figée
@@ -67,6 +67,7 @@ mode (thèmes prédéfinis / cartes perso) → thèmes → équipes & joueurs �
 - **Bumper `CACHE_NAME` dans `sw.js`** (`rush-vNN`) à chaque modification d'un asset listé, sinon les utilisateurs installés gardent l'ancienne version : le fetch est cache-first sans revalidation.
 - Les couleurs d'équipe sont codées en dur dans `game.js` (`#d6336c`, `#33c26a`, héritées du proto `rush-app.html`) et **ne correspondent pas** aux tokens `--brand`/`--good` du CSS actuel. Toute retouche de palette doit traiter les deux endroits.
 - `api/generate.js` a besoin de `GROQ_API_KEY` (variable d'environnement Vercel). En local sans cette variable, la génération IA renvoie 500 — le reste de l'app fonctionne.
+- **Groq déprécie ses modèles régulièrement** (llama-3.3-70b l'a été en août 2026). Le modèle se règle par `GROQ_MODELE` depuis Vercel, sans redéployer ; défaut `openai/gpt-oss-120b`. Les modèles de raisonnement consomment leur budget de jetons à réfléchir : `corpsGroq()` leur impose `reasoning_effort: 'low'` et un budget large, et n'envoie ce paramètre qu'aux modèles qui l'acceptent. La consigne de langue est **explicite** dans le prompt — sans elle, le modèle répondait parfois en anglais. Elle n'est pas codée en dur : `js/library.js` envoie `langue` d'après l'attribut `lang` du document, donc les cartes suivront une future traduction de l'app. La consigne libre du joueur est placée en dernier et annoncée prioritaire : c'est ce qui lui permet de demander une autre langue.
 - `api/generate.js` et `api/session.js` ont besoin de `KV_REST_API_URL` / `KV_REST_API_TOKEN` (Upstash, via le Marketplace Vercel). Sans elles : le plafond IA est simplement inactif, mais la **saisie partagée renvoie 503** et l'app bascule sur la saisie séquentielle.
 - Ces deux fonctions **dupliquent volontairement** leur dialogue avec le stockage plutôt que de partager un module : chacune doit rester chargeable isolément, ce dont dépendent les scénarios 12 et 18 (le fichier est chargé en Blob avec un `fetch` simulé — un import relatif s'y résoudrait mal).
 - L'adresse montrée aux invités sous le QR code est `/rejoindre`, **sans extension** : c'est celle qu'ils recopient à la main. Vercel ne la sert que grâce à la règle `rewrites` de `vercel.json` ; `scripts/serve.ps1` fait la même correspondance en local. Sans l'une des deux, l'adresse affichée renvoie 404 — un défaut invisible en développement. `vercel.json` n'accepte aucune propriété inconnue (pas de clé `comment`), sous peine d'échec du déploiement.

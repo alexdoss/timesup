@@ -66,7 +66,12 @@ export async function generateWithAI(themeName, comment, count) {
   const response = await fetch('/api/generate', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ themeName, comment, count })
+    // La langue vient de l'attribut `lang` du document : c'est déjà la langue
+    // d'affichage de l'app, et elle suivra d'elle-même une future traduction.
+    body: JSON.stringify({
+      themeName, comment, count,
+      langue: document.documentElement.lang || undefined
+    })
   });
 
   const data = await response.json();

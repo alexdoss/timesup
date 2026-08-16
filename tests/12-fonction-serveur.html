@@ -13,6 +13,7 @@ let appelsKV = [];
 let compteurKV = 0;
 let appelsGroq = 0;
 let reponseGroq = { ok: true, texte: '["Un", " Deux ", "", "Trois"]' };
+let dernierCorpsGroq = null;
 
 // Faux fetch : intercepte les appels du module serveur
 window.__fauxFetch = async (url, options) => {
@@ -23,6 +24,7 @@ window.__fauxFetch = async (url, options) => {
     return { ok: true, json: async () => ({ result: 'OK' }) };
   }
   appelsGroq++;
+  dernierCorpsGroq = JSON.parse(options.body);
   if (!reponseGroq.ok) {
     return { ok: false, status: 500, text: async () => 'boom' };
   }
@@ -85,6 +87,79 @@ function fauxReq(corps, ip = '10.0.0.1', methode = 'POST') {
     check('aucun appel au compteur quand il n est pas configure', appelsKV.length === 0);
     log('       mots renvoyes : ' + JSON.stringify(res.body.words));
     check('les mots sont nettoyes et les vides ecartes', JSON.stringify(res.body.words) === JSON.stringify(['Un', 'Deux', 'Trois']));
+
+    // --- Le modele, et les precautions propres aux modeles de raisonnement ---
+    log('       corps envoye : ' + JSON.stringify({
+      model: dernierCorpsGroq.model, reasoning_effort: dernierCorpsGroq.reasoning_effort,
+      max_tokens: dernierCorpsGroq.max_tokens }));
+    check('le modele par defaut n est plus le llama deprecie',
+          !dernierCorpsGroq.model.includes('llama-3.3'));
+    check('la reflexion est reduite au minimum',
+          dernierCorpsGroq.reasoning_effort === 'low');
+    check('le budget de jetons couvre reflexion et reponse',
+          dernierCorpsGroq.max_tokens >= 4096);
+
+    // --- La langue suit celle de l app, elle n est pas codee en dur ---
+    const envoye = dernierCorpsGroq.messages[0].content;
+    check('sans precision, la langue de l app est demandee', envoye.includes('en français'));
+
+    for (const [code, attendu] of [['en', 'anglais'], ['es', 'espagnol'], ['pt-BR', 'portugais']]) {
+      res = fauxRes();
+      await handler(fauxReq({ themeName: 'Sport', count: 3, langue: code }), res);
+      const p = dernierCorpsGroq.messages[0].content;
+      check(`la langue « ${code} » est transmise au modele`, p.includes(`en ${attendu}`));
+      check(`et le francais n est plus impose pour « ${code} »`, !p.includes('en français'));
+    }
+
+    // Une langue inconnue de la table passe par son code : les modeles savent lire
+    res = fauxRes();
+    await handler(fauxReq({ themeName: 'Sport', count: 3, langue: 'sv' }), res);
+    check('une langue non repertoriee passe quand meme',
+          dernierCorpsGroq.messages[0].content.includes('en sv'));
+
+    // --- La consigne du joueur vient en dernier, donc elle prime ---
+    res = fauxRes();
+    await handler(fauxReq({ themeName: 'Sport', count: 3, comment: 'en anglais stp' }), res);
+    const avecConsigne = dernierCorpsGroq.messages[0].content;
+    check('la consigne du joueur est placee apres les regles',
+          avecConsigne.indexOf('en anglais stp') > avecConsigne.indexOf('Règles à respecter'));
+    check('et elle est annoncee comme prioritaire',
+          avecConsigne.includes('prioritaire'));
+
+    // --- Le modele se change depuis Vercel, sans redeployer ---
+    const autreModele = await charger({ GROQ_API_KEY: 'cle-test', GROQ_MODELE: 'qwen/qwen3.6-27b' });
+    res = fauxRes();
+    await autreModele(fauxReq({ themeName: 'Sport', count: 3 }), res);
+    check('la variable d environnement impose le modele',
+          dernierCorpsGroq.model === 'qwen/qwen3.6-27b');
+    check('et le parametre de raisonnement n est pas envoye a un modele qui l ignore',
+          dernierCorpsGroq.reasoning_effort === undefined);
+    check('la generation fonctionne quand meme', res.code === 200);
+
+    // --- Ce que renvoie un modele n est pas un contrat : trois pieges ---
+    const piegeux = [
+      ['une reflexion qui fuit dans la reponse',
+       '<think>Je vais lister des sports [en francais]</think>\n["Tennis", "Judo"]', ['Tennis', 'Judo']],
+      ['une cloture markdown autour du JSON',
+       '```json\n["Tennis", "Judo"]\n```', ['Tennis', 'Judo']],
+      ['des valeurs qui ne sont pas des chaines',
+       '["Tennis", 42, null, "Judo"]', ['Tennis', 'Judo']]
+    ];
+    for (const [nom, texte, attendu] of piegeux) {
+      reponseGroq = { ok: true, texte };
+      res = fauxRes();
+      await handler(fauxReq({ themeName: 'Sport', count: 2 }), res);
+      check(nom + ' est surmontee',
+            res.code === 200 && JSON.stringify(res.body.words) === JSON.stringify(attendu));
+    }
+
+    reponseGroq = { ok: true, texte: "Desole, je ne peux pas repondre." };
+    res = fauxRes();
+    await handler(fauxReq({ themeName: 'Sport', count: 2 }), res);
+    check('une reponse sans liste renvoie une erreur claire',
+          res.code === 502 && res.body.error.includes('format'));
+
+    reponseGroq = { ok: true, texte: '["Un", " Deux ", "", "Trois"]' };
 
     // --- Avec stockage KV : le plafond par IP s applique ---
     const avecKV = await charger({ GROQ_API_KEY: 'cle-test', KV_REST_API_URL: URL_KV, KV_REST_API_TOKEN: 'jeton' });

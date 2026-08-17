@@ -354,6 +354,12 @@ function rendreCartes() {
     n >= cible ? `${n} cartes — c'est bon !` : `${n} / ${cible} cartes`;
   document.getElementById('jauge-remplie').style.width = Math.min(100, (n / cible) * 100) + '%';
   document.getElementById('btn-terminer').disabled = n < cible;
+
+  // Le compte atteint, on ferme l'ajout plutôt que de refuser après coup.
+  // Retirer une carte reste possible, et rouvre l'ajout.
+  const complet = n >= cible;
+  document.getElementById('btn-ajouter').disabled = complet;
+  document.getElementById('champ-carte').disabled = complet;
 }
 
 function ajouterCarte() {

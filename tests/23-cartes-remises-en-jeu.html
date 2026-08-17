@@ -5,7 +5,8 @@
 <pre id="log">demarrage...</pre>
 <script type="module">
 import { game, resetGame, startNewRound, beginTurn, closeTurn, cardFound, cardPassed,
-         countCard, getCurrentCard, getCardsRemaining, isRoundOver, switchTeam } from '/js/game.js';
+         countCard, uncountCard, getCurrentCard, getCardsRemaining, isRoundOver,
+         switchTeam } from '/js/game.js';
 
 const out = [];
 function log(s) { out.push(s); document.getElementById('log').textContent = out.join('\n'); }
@@ -110,6 +111,42 @@ try {
   closeTurn();
   check('sur un paquet epuise, la cloture ne replace rien', game.deck.length === tailleAvant);
   check('la manche reste terminee', isRoundOver());
+
+  // ===== 7. Une carte decomptee revient comme une carte passee =====
+  // Meme situation de jeu : elle n a finalement pas ete trouvee. Elle doit donc
+  // suivre le reglage de l organisateur, et non filer systematiquement au fond.
+
+  // En bas du paquet
+  preparer('bottom');
+  beginTurn();
+  cardFound();                       // « A » est comptee
+  uncountCard('A');
+  check('en mode bas de paquet, la carte decomptee passe en dernier',
+        game.deck[game.deck.length - 1] === 'A');
+  // L exemplaire deja consomme reste ou il est : on ne revisite jamais cette
+  // partie du paquet. C est deja ainsi pour les cartes passees.
+  check('une seule copie reste a jouer',
+        game.deck.slice(game.currentCardIndex).filter(c => c === 'A').length === 1);
+  check('et elle rejoint les cartes non comptees', game.turnMissed.includes('A'));
+
+  // Au hasard : on mesure, plutot que de supposer
+  let auFond = 0, tropTot = 0;
+  const tirages = 400;
+  for (let i = 0; i < tirages; i++) {
+    preparer('random');
+    beginTurn();
+    cardFound();                     // « A » comptee, on est maintenant sur « B »
+    uncountCard('A');
+    // On cherche dans ce qu il reste a jouer : l exemplaire consomme est devant
+    const position = game.deck.indexOf('A', game.currentCardIndex);
+    if (position === game.deck.length - 1) auFond++;
+    if (position <= game.currentCardIndex + 1) tropTot++;
+  }
+  log(`       ${tirages} decomptes au hasard : ${auFond} en dernier, ${tropTot} trop tot`);
+  check('en mode hasard, la carte ne file plus systematiquement au fond',
+        auFond < tirages);
+  check('elle y atterrit parfois, comme n importe ou ailleurs', auFond > 0);
+  check('et jamais juste sous le nez du joueur', tropTot === 0);
 
   log('SCENARIO 23 TERMINE');
 } catch (e) {

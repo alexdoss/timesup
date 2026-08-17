@@ -66,17 +66,20 @@ f.addEventListener('load', async () => {
     // ===== Nouvelle partie : l affichage doit refleter l etat reel =====
     $('btn-start').click();
     check('etape du type de partie', ecran() === 'screen-mode');
-    check('la tuile affichee correspond au type de partie retenu',
-          tuile('custom').classList.contains('active'));
-    check('une seule tuile est active',
-          d.querySelectorAll('[data-source].active').length === 1);
+    // Choisir vaut avancer : aucune tuile n est allumee d avance, sans quoi
+    // elle laisserait croire qu il reste un « Suivant » a presser.
+    check('aucune tuile n est pre-selectionnee',
+          d.querySelectorAll('[data-source].active').length === 0);
+    check('les deux types de partie restent proposes',
+          !!tuile('custom') && !!tuile('themes'));
 
     // ===== On choisit des themes predefinis =====
     tuile('themes').click();
-    check('le type de partie bascule sur les themes', tuile('themes').classList.contains('active'));
+    // Le clic vaut choix ET validation : on le lit a l ecran atteint
+    check('le clic mene directement au choix des themes', ecran() === 'screen-themes');
     check('l autre tuile se desactive', !tuile('custom').classList.contains('active'));
 
-    $('btn-next-mode').click();
+    d.querySelector('[data-source="themes"]').click();
     check('on arrive bien sur le choix des themes', ecran() === 'screen-themes');
 
     // C'est ici que le defaut se manifestait : le clic etait perdu

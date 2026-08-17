@@ -57,9 +57,9 @@ async function init() {
 // pendant que les écrans affichent encore autre chose : on croit choisir des
 // thèmes prédéfinis et on se retrouve sur la saisie partagée.
 function preparerNouvellePartie() {
-  document.querySelectorAll('[data-source]').forEach(tuile => {
-    tuile.classList.toggle('active', tuile.dataset.source === game.cardSource);
-  });
+  // Aucune tuile n'est pré-sélectionnée : choisir, c'est avancer. Une tuile
+  // déjà allumée laisserait croire qu'il reste quelque chose à valider.
+  document.querySelectorAll('[data-source]').forEach(tuile => tuile.classList.remove('active'));
   document.querySelectorAll('[data-mode]').forEach(pastille => {
     pastille.classList.toggle('active',
       (pastille.dataset.mode === 'nominatif') === game.nominativeMode);
@@ -213,33 +213,23 @@ function setupListeners() {
   // Mode tiles selection
   // On cible [data-source] et non .mode-tile : le choix de saisie partagée
   // réutilise la même apparence, mais ne doit pas changer le type de partie.
+  // Le choix du type de partie vaut validation : il n'y a plus rien à régler
+  // sur cet écran depuis que la saisie passe toujours par le QR code, donc plus
+  // de raison de demander un « Suivant » après avoir choisi.
   document.querySelectorAll('[data-source]').forEach(tile => {
     tile.addEventListener('click', () => {
+      // Aucune tuile ne reste allumée : le clic est une action, pas un état.
+      // Une tuile qui garde sa surbrillance au retour laisserait croire qu'il
+      // reste quelque chose à valider.
       document.querySelectorAll('[data-source]').forEach(t => t.classList.remove('active'));
-      tile.classList.add('active');
       game.cardSource = tile.dataset.source;
       // Les cartes perso passent toujours par le QR code : le repli « on se
       // passe le téléphone » reste offert depuis l'écran de session, y compris
       // si le réseau manque. Un choix de moins à faire en début de partie.
       saisieMode = 'partagee';
       updateSimpleCustomBlock();
+      etapeApresTypeDePartie();
     });
-  });
-
-  // Mode → next step
-  document.getElementById('btn-next-mode').addEventListener('click', () => {
-    updateWizardLabels();
-    updateCardsCountLabel();
-    updateSimpleCustomBlock();
-    if (game.cardSource === 'themes') {
-      showScreen('screen-themes');
-    } else if (saisieMode === 'partagee') {
-      // La saisie des cartes passe avant tout le reste : les joueurs commencent
-      // pendant que l'organisateur n'a encore rien réglé.
-      ouvrirReglageSession();
-    } else {
-      showScreen('screen-players');
-    }
   });
 
   // Themes → Players (step)
@@ -509,6 +499,11 @@ function setupListeners() {
   document.getElementById('btn-settings-back').addEventListener('click', closeSettings);
 
   // Composition des équipes, consultable avant de lancer un tour
+  document.getElementById('btn-retour-correction')
+    .addEventListener('click', revenirALaCorrection);
+  document.getElementById('btn-retour-correction-manche')
+    .addEventListener('click', revenirALaCorrection);
+
   document.getElementById('btn-voir-equipes').addEventListener('click', () => afficherEquipes(game.teams));
   document.getElementById('btn-equipes-fermer').addEventListener('click', masquerEquipes);
   document.getElementById('equipes-overlay').addEventListener('click', event => {
@@ -732,6 +727,21 @@ const CARTES_MAX = 15;
 // le minimum par joueur découle du nombre de joueurs annoncé.
 function minimumCartesParJoueur() {
   return Math.max(CARTES_MIN, Math.ceil(PAQUET_MINIMUM / joueursAttendus));
+}
+
+function etapeApresTypeDePartie() {
+  updateWizardLabels();
+  updateCardsCountLabel();
+  updateSimpleCustomBlock();
+  if (game.cardSource === 'themes') {
+    showScreen('screen-themes');
+  } else if (saisieMode === 'partagee') {
+    // La saisie des cartes passe avant tout le reste : les joueurs commencent
+    // pendant que l'organisateur n'a encore rien réglé.
+    ouvrirReglageSession();
+  } else {
+    showScreen('screen-players');
+  }
 }
 
 function ouvrirReglageSession() {
@@ -1408,6 +1418,7 @@ function showRoundScreen() {
   updateTurnInfo(game.teams[game.currentTeam].name);
   updateCurrentPlayer(game.nominativeMode ? getCurrentPlayer() : null);
   afficherBoutonEquipes(game.nominativeMode && game.teams.some(e => e.players.length > 0));
+  afficherRetourCorrection();
   showScreen('screen-round');
   // Le tout premier écran de la partie n'est pas « entre deux tours »
   publierEtat(game.currentRound === 0 && getRoundScores().every(s => s === 0)
@@ -1659,6 +1670,22 @@ function onCountCard(word) {
   renderTurnEnd();
 }
 
+// Revenir sur le comptage du tour qui vient de s'achever. Le « Suivant » de cet
+// écran se clique vite, souvent avant d'avoir vu qu'une carte manquait.
+function revenirALaCorrection() {
+  if (!game.turnCorrigeable) return;
+  renderTurnEnd();
+  showScreen('screen-turn-end');
+}
+
+function afficherRetourCorrection() {
+  const visible = !!game.turnCorrigeable;
+  ['btn-retour-correction', 'btn-retour-correction-manche'].forEach(id => {
+    const bouton = document.getElementById(id);
+    if (bouton) bouton.style.display = visible ? '' : 'none';
+  });
+}
+
 function onNextTurn() {
   if (isRoundOver()) {
     endRound();
@@ -1676,6 +1703,7 @@ function endRound() {
   saveGame(game);
   publierEtat('fin-manche');
   showRoundEnd(`${game.currentRound + 1}/${game.activeRounds.length}`, game.teams, getRoundHistory());
+  afficherRetourCorrection();
 
   const btnNext = document.getElementById('btn-next-round');
   if (isGameOver()) {

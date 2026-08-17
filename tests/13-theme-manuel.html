@@ -75,7 +75,7 @@ f.addEventListener('load', async () => {
 
     d.querySelector('#screen-library .btn-close').click();
     $('btn-start').click();
-    $('btn-next-mode').click();
+    d.querySelector('[data-source="themes"]').click();
     const bt = boutonTheme('Vacances 2026');
     check('le theme manuel est proposable en partie', !!bt && !bt.disabled);
     check('avec son nombre de cartes', bt.textContent.includes('(3)'));

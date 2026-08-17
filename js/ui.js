@@ -545,6 +545,13 @@ export function renderSaisieLocale({ titre, note, cartes, cible, masque, demande
   document.getElementById('saisie-jauge').style.width =
     Math.min(100, (cartes.length / cible) * 100) + '%';
   document.getElementById('btn-saisie-fini').disabled = cartes.length < cible;
+
+  // Le compte atteint, on ferme l'ajout plutôt que de refuser après coup : le
+  // joueur voyait sinon un message d'erreur pour un geste que rien n'empêchait.
+  // Retirer une carte reste possible, et rouvre l'ajout.
+  const complet = cartes.length >= cible;
+  document.getElementById('btn-saisie-ajouter').disabled = complet;
+  document.getElementById('saisie-carte').disabled = complet;
 }
 
 export function showSaisieError(message) {

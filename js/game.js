@@ -47,7 +47,11 @@ export const game = {
   gamesPlayed: 0,          // nombre de parties déjà terminées dans la série en cours
   timerInterval: null,
   timeLeft: 0,
-  turnActive: false        // un tour est en cours (sert à reprendre une partie interrompue en plein tour)
+  turnActive: false,       // un tour est en cours (sert à reprendre une partie interrompue en plein tour)
+  // Le tour qui vient de s'achever est encore corrigeable : ses cartes trouvées
+  // et passées sont toujours en mémoire. Elles s'effacent au tour suivant, et
+  // corriger après un changement de manche imputerait les points à la mauvaise.
+  turnCorrigeable: false
 };
 
 export function shuffle(arr) {
@@ -229,6 +233,8 @@ export function buildDeck(themes) {
 }
 
 export function startNewRound() {
+  // Changer de manche ferme la correction : les points iraient à la nouvelle
+  game.turnCorrigeable = false;
   game.deck = shuffle([...game.masterDeck]);
   game.currentCardIndex = 0;
   // Repère pour isoler ce qui sera marqué pendant cette manche
@@ -292,6 +298,7 @@ export function getCurrentCard() {
 // l'équipe active a déjà changé, et c'est bien celle qui a joué qu'on corrige.
 
 export function beginTurn() {
+  game.turnCorrigeable = false;   // le tour précédent n'est plus rattrapable
   game.turnScore = 0;
   game.passCount = 0;
   game.turnFound = [];
@@ -308,6 +315,7 @@ export function beginTurn() {
 // descriptions. Elle démarrait donc chaque tour sur la carte la plus dure.
 export function closeTurn() {
   game.turnActive = false;
+  game.turnCorrigeable = true;
   const carte = getCurrentCard();
   if (!carte) return;
   rememberMissed(carte);
@@ -326,14 +334,29 @@ function remettreCarteEnJeu() {
 
   if (game.passReplace === 'random') {
     game.deck.splice(game.currentCardIndex, 1);
-    const plusTot = Math.min(game.currentCardIndex + ECART_MINIMUM, game.deck.length);
-    const choix = game.deck.length - plusTot + 1;
-    game.deck.splice(plusTot + Math.floor(Math.random() * choix), 0, carte);
+    placerAuHasard(carte);
   } else {
     // En bas du paquet : l'original reste dans la partie déjà consommée
     game.deck.push(carte);
     game.currentCardIndex++;
   }
+}
+
+// Insère une carte quelque part dans ce qu'il reste à jouer, jamais tout de
+// suite : l'écart minimum évite qu'elle revienne sous le nez du joueur.
+function placerAuHasard(carte) {
+  const plusTot = Math.min(game.currentCardIndex + ECART_MINIMUM, game.deck.length);
+  const choix = game.deck.length - plusTot + 1;
+  game.deck.splice(plusTot + Math.floor(Math.random() * choix), 0, carte);
+}
+
+// Une carte qui revient en jeu revient de la même façon, quelle qu'en soit la
+// raison — passée pendant le tour, ou décomptée à la correction. Sans ça,
+// l'organisateur qui avait choisi « au hasard » voyait ses cartes corrigées
+// atterrir en bas du paquet, sans que rien ne l'explique.
+function remettreEnJeu(carte) {
+  if (game.passReplace === 'random') placerAuHasard(carte);
+  else game.deck.push(carte);
 }
 
 // Crée la fiche à la volée : en saisie partagée les joueurs arrivent après
@@ -395,7 +418,7 @@ export function uncountCard(word) {
   game.turnFound.splice(position, 1);
   debitTurn();
   game.turnMissed.push(word);
-  game.deck.push(word);
+  remettreEnJeu(word);
   return true;
 }
 

@@ -47,19 +47,22 @@ f.addEventListener('load', async () => {
     check('etape du type de partie', ecran() === 'screen-mode');
     check('aucun choix de mode de saisie n est propose', d.querySelectorAll('[data-saisie]').length === 0);
 
+    // Choisir le type de partie vaut validation : plus de bouton « Suivant »
+    check('aucun bouton de validation sur cet ecran', !d.getElementById('btn-next-mode'));
     d.querySelector('[data-source="custom"]').click();
     check('la description annonce le QR code',
           d.querySelector('[data-source="custom"]').textContent.includes('QR'));
 
-    $('btn-next-mode').click();
-
     // ===== La composition du paquet, avant l ouverture =====
-    check('un reglage precede l ouverture', ecran() === 'screen-session-ouvrir');
+    check('un clic sur la tuile mene directement au reglage',
+          ecran() === 'screen-session-ouvrir');
 
     // La fleche doit ramener a l ecran reellement precedent
     d.querySelector('#screen-session-ouvrir .btn-back').click();
     check('retour depuis le paquet : on retrouve le type de partie', ecran() === 'screen-mode');
-    $('btn-next-mode').click();
+    check('aucune tuile n est pre-selectionnee au retour',
+          d.querySelectorAll('[data-source].active').length === 0);
+    d.querySelector('[data-source="custom"]').click();
     check('et on revient au paquet', ecran() === 'screen-session-ouvrir');
     check('le nombre de joueurs est demande', $('session-joueurs-valeur').textContent === '6');
     check('le nombre de cartes par joueur aussi', $('session-cartes-valeur').textContent === '5');

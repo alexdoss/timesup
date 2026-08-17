@@ -198,19 +198,17 @@
       </div>
       <div class="config-form">
         <div class="mode-choice">
-          <button type="button" class="mode-tile active" data-source="themes">
-            <span class="mode-tile-icon">🎴</span>
-            <span class="mode-tile-title">Thèmes prédéfinis</span>
-            <span class="mode-tile-desc">Thèmes officiels et thèmes créés avec l'IA depuis la bibliothèque.</span>
-          </button>
           <button type="button" class="mode-tile" data-source="custom">
             <span class="mode-tile-icon">✍️</span>
             <span class="mode-tile-title">Cartes personnalisées</span>
             <span class="mode-tile-desc">Chaque joueur saisit ses propres cartes sur son téléphone, en scannant un QR code.</span>
           </button>
+          <button type="button" class="mode-tile" data-source="themes">
+            <span class="mode-tile-icon">🎴</span>
+            <span class="mode-tile-title">Thèmes prédéfinis</span>
+            <span class="mode-tile-desc">Thèmes officiels et thèmes créés avec l'IA depuis la bibliothèque.</span>
+          </button>
         </div>
-
-        <button id="btn-next-mode" class="btn btn-primary">Suivant ▶️</button>
       </div>
     </div>
 
@@ -522,6 +520,10 @@
 
     <!-- ÉCRAN DÉBUT DE MANCHE -->
     <div id="screen-round" class="screen">
+      <!-- Retour vers la correction du tour précédent : le « Suivant » de
+           l'écran de comptage se clique vite, et rien ne permettait d'y revenir -->
+      <button id="btn-retour-correction" class="btn-back" type="button"
+              title="Corriger le tour précédent" style="display:none">←</button>
       <button class="btn-close" onclick="confirmQuit()">✕</button>
       <div class="round-content">
         <h2 id="round-title">Manche 1/3</h2>
@@ -616,6 +618,8 @@
 
     <!-- ÉCRAN FIN DE MANCHE -->
     <div id="screen-round-end" class="screen">
+      <button id="btn-retour-correction-manche" class="btn-back" type="button"
+              title="Corriger le dernier tour" style="display:none">←</button>
       <button class="btn-close" onclick="confirmQuit()">✕</button>
       <div class="round-end-content">
         <h2 id="round-end-title">Fin de la manche 1</h2>

@@ -43,7 +43,7 @@ document.getElementById('f').addEventListener('load', async () => {
 
     // ===== Partie nominative a 6 joueurs =====
     $('btn-start').click();
-    $('btn-next-mode').click();
+    d.querySelector('[data-source="themes"]').click();
     d.querySelectorAll('#theme-selector .btn-theme')[0].click();
     $('btn-next-step').click();
     // Le dernier prenom porte du HTML : il vient d un invite en saisie partagee,

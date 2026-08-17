@@ -32,7 +32,7 @@ f.addEventListener('load', async () => {
     check('bloc Reprendre masque quand aucune sauvegarde', $('resume-block').style.display === 'none');
 
     click('btn-start');              check('etape 1 : mode', screen() === 'screen-mode');
-    click('btn-next-mode');          check('etape 2 : themes', screen() === 'screen-themes');
+    d.querySelector('[data-source="themes"]').click();          check('etape 2 : themes', screen() === 'screen-themes');
     themeBtns[0].click();
     click('btn-next-step');          check('etape 3 : joueurs', screen() === 'screen-players');
     d.querySelector('[data-mode="simple"]').click();

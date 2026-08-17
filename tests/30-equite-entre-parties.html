@@ -59,7 +59,7 @@ f.addEventListener('load', async () => {
 
     // ===== Une partie nominative a six joueurs =====
     $('btn-start').click();
-    $('btn-next-mode').click();
+    d.querySelector('[data-source="themes"]').click();
     d.querySelectorAll('#theme-selector .btn-theme')[0].click();
     $('btn-next-step').click();
     ['Arthur', 'Marina', 'Bilal', 'Nour', 'Elio', 'Sara'].forEach(ajouterJoueur);

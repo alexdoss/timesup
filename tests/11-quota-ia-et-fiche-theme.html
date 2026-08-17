@@ -117,7 +117,7 @@ f.addEventListener('load', async () => {
 
     d.querySelector('.btn-close').click();
     $('btn-start').click();
-    $('btn-next-mode').click();
+    d.querySelector('[data-source="themes"]').click();
     const bouton = [...d.querySelectorAll('#theme-selector .btn-theme')].find(b => b.textContent.includes('Thème de test'));
     check('le theme apparait dans la selection', !!bouton);
     check('avec le nombre de cartes a jour', bouton.textContent.includes('(3)'));

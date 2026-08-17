@@ -112,10 +112,20 @@ const recharger = () => new Promise(r => { resoudre = r; f.contentWindow.locatio
     check('le compteur le signale', $('compteur-cartes').textContent.includes("c'est bon"));
     check('terminer devient possible', !$('btn-terminer').disabled);
 
+    // Le compte atteint, l ajout se ferme au lieu de refuser apres coup : le
+    // joueur voyait sinon un message d erreur pour un geste que rien n empechait
+    check('le bouton d ajout est desormais grise', $('btn-ajouter').disabled);
+    check('et le champ ne se laisse plus remplir', $('champ-carte').disabled);
+
+    // Retirer une carte rouvre l ajout : on peut se raviser
+    d().querySelector('#liste-cartes .btn-remove').click();
+    await wait(200);
+    check('retirer une carte est toujours possible', cartes().length === 2);
+    check('l ajout se rouvre aussitot', !$('btn-ajouter').disabled);
+    check('le champ aussi', !$('champ-carte').disabled);
     saisir('champ-carte', 'Sable');
     $('btn-ajouter').click();
-    check('au-dela du quota, l ajout est refuse', cartes().length === 3);
-    check('le message dit combien on en demande', $('erreur-carte').textContent.includes('3'));
+    check('et une nouvelle carte peut remplacer l ancienne', cartes().length === 3);
 
     // ===== Validation =====
     $('btn-terminer').click();

@@ -27,7 +27,7 @@ document.getElementById('f').addEventListener('load', async () => {
     await wait(1200);
 
     $('btn-start').click();
-    $('btn-next-mode').click();
+    d.querySelector('[data-source="themes"]').click();
     d.querySelectorAll('#theme-selector .btn-theme')[0].click();
     $('btn-next-step').click();
     d.querySelector('[data-mode="simple"]').click();
@@ -109,6 +109,80 @@ document.getElementById('f').addEventListener('load', async () => {
     check('la carte retiree revient dans le paquet', restantes() === 1);
     $('btn-next-turn').click();
     check('la manche continue au lieu de se cloturer', ecran() === 'screen-round');
+
+    // ===== Revenir corriger apres avoir clique « Suivant » trop vite =====
+    // C est le defaut d usage : le bouton se presse avant d avoir vu qu une
+    // carte manquait, et rien ne permettait de revenir en arriere.
+    const retour = () => $('btn-retour-correction');
+    check('une fleche de retour est proposee sur le lancement de tour',
+          retour().style.display !== 'none');
+
+    // Le point revient a l equipe qui vient de jouer, pas a celle du debut
+    const equipeDuTour = etat().turnTeam;
+    const scoreAvant = etat().teams[equipeDuTour].score;
+    retour().click();
+    check('elle ramene a l ecran de comptage', ecran() === 'screen-turn-end');
+    check('les cartes du tour precedent y sont toujours', comptees().length > 0);
+
+    const aRetirer = comptees()[0];
+    ligne('turn-found-list', aRetirer).querySelector('button').click();
+    check('on peut encore corriger apres coup',
+          etat().teams[equipeDuTour].score === scoreAvant - 1);
+
+    $('btn-next-turn').click();
+    await wait(200);
+    check('et on revient d ou l on venait', ecran() === 'screen-round');
+
+    // ===== La fleche disparait des que le tour suivant demarre =====
+    // Les cartes du tour precedent sont alors effacees : il n y a plus rien a corriger.
+    $('btn-start-turn').click();
+    await wait(200);
+    check('le tour est lance', ecran() === 'screen-game');
+    $('btn-found').click();
+    let n2 = 0;
+    while (ecran() === 'screen-game' && n2 < 200) { $('btn-found').click(); n2++; }
+    $('btn-next-turn').click();
+    await wait(300);
+
+    // ===== La fleche existe aussi sur la fin de manche =====
+    if (ecran() === 'screen-round-end') {
+      const retourManche = $('btn-retour-correction-manche');
+      check('la fin de manche propose aussi de corriger',
+            retourManche.style.display !== 'none');
+      // Les deux colonnes, pas une : une carte rejouee peut changer d equipe,
+      // et c est le total de la manche qui doit rester juste.
+      const totalManche = () => [...d.querySelectorAll('#end-scores .score-total .score')]
+        .reduce((t, c) => t + parseInt(c.textContent, 10), 0);
+      const totalAvant = totalManche();
+      retourManche.click();
+      check('on retrouve le comptage du dernier tour', ecran() === 'screen-turn-end');
+
+      // Retirer une carte la remet dans le paquet : la manche n est donc plus
+      // finie, et il faut la rejouer. C est ce qui garantit que le tableau
+      // recapitulatif ne reste jamais sur un total dementi.
+      const equipeFin = etat().turnTeam;
+      const avantFin = etat().teams[equipeFin].score;
+      ligne('turn-found-list', comptees()[0]).querySelector('button').click();
+      check('le point est repris', etat().teams[equipeFin].score === avantFin - 1);
+      $('btn-next-turn').click();
+      await wait(300);
+      check('la manche rouvre, il reste une carte a jouer', ecran() === 'screen-round');
+
+      // On rejoue cette carte, la manche se referme, et le tableau doit avoir suivi
+      $('btn-start-turn').click();
+      await wait(200);
+      let n3 = 0;
+      while (ecran() === 'screen-game' && n3 < 50) { $('btn-found').click(); n3++; }
+      $('btn-next-turn').click();
+      await wait(300);
+      check('la manche se termine a nouveau', ecran() === 'screen-round-end');
+      const totalApres = totalManche();
+      log('       total de la manche : ' + totalAvant + ' -> ' + totalApres);
+      check('le tableau recapitulatif est recalcule, pas fige',
+            totalApres === totalAvant);
+    } else {
+      log('       (la manche n est pas terminee, fin de manche non eprouvee ici)');
+    }
 
     log('SCENARIO 15 TERMINE');
   } catch (e) { log('EXCEPTION: ' + e.message + '\n' + e.stack); }

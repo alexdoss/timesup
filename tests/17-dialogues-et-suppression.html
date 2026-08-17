@@ -48,7 +48,7 @@ f.addEventListener('load', async () => {
 
     // ===== VALIDATION : plus aucun alert() du navigateur =====
     $('btn-start').click();
-    $('btn-next-mode').click();
+    d.querySelector('[data-source="themes"]').click();
     $('btn-next-step').click();   // aucun theme coche
     check('on reste sur l etape des themes', ecran() === 'screen-themes');
     check('une boite maison explique le blocage', ouverte());
@@ -112,7 +112,7 @@ f.addEventListener('load', async () => {
     // ===== IL DISPARAIT AUSSI DE LA SELECTION DE PARTIE =====
     d.querySelector('#screen-library .btn-close').click();
     $('btn-start').click();
-    $('btn-next-mode').click();
+    d.querySelector('[data-source="themes"]').click();
     check('le theme supprime n est plus proposable', !boutonTheme('Souvenirs de vacances'));
     check('il ne compte plus dans la selection', !!boutonTheme('Bureau') && boutonTheme('Bureau').classList.contains('active'));
     $('btn-next-step').click();

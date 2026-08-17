@@ -5,20 +5,22 @@ sessions. Rien ici n'est bloquant : ce sont des choix reportés, pas des oublis.
 
 ## Idées à trancher
 
-**Reconnaître l'organisateur sans lui demander.** En rejeu, l'app sait qui tenait
-le téléphone à la partie précédente. Elle pourrait le pré-sélectionner et n'afficher
-qu'un « Tu es Marc — ce n'est pas toi ? », au lieu de la liste de prénoms.
-*Pour :* zéro clic dans le cas courant. *Contre :* si le téléphone change de mains
-entre deux parties, on saisit sous le mauvais nom sans s'en apercevoir ; la liste
-oblige à un geste conscient. Proposé le 13 août 2026, non recommandé en l'état.
-
 **Suivre une partie sans saisie partagée.** Les parties sur thèmes prédéfinis n'ont
 pas de session, donc pas de code, donc pas de suivi. Il faudrait un bouton
-« 📡 Suivi de partie » côté organisateur qui ouvre une session à la demande.
+« 👀 Suivi de partie » côté organisateur qui ouvre une session à la demande.
 Maquetté dans `proto-ecrans-invite.html`, écrans ② et ③.
 
-**Le lien de suivi à travers les parties.** « Rejouer » ouvre une nouvelle session,
-donc un nouveau code : les invités doivent rescanner entre deux parties.
+**Le téléphone qui change de mains, et le joueur qui arrive en cours de soirée.**
+Deux exceptions écartées volontairement le 16 août 2026, le temps de traiter le cas
+nominal. La première est couverte par « ce n'est pas moi » ; la seconde ne l'est
+pas : la liste se referme sur les joueurs de la partie précédente, un nouveau venu
+est refusé.
+
+**Se retirer soi-même n'est pas authentifié.** Le bouton « je quitte la partie »
+présente l'identifiant du joueur, que `etat` publie déjà à qui possède le code.
+N'importe qui connaissant le code pourrait donc retirer n'importe qui. Assumé : le
+modèle de confiance est le même pour rejoindre sous un faux nom ou saisir
+n'importe quoi. À revoir si Rush sort du cercle des amis.
 
 ## Défauts connus, sans gravité
 

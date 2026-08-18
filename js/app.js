@@ -1717,7 +1717,8 @@ function endRound() {
       publierEtat('fin-partie');
       showFinalScreen(game.teams, session, getRoundHistory());
       if (game.nominativeMode) {
-        renderPlayerStats(getPlayerBreakdown(), game.teams, getRoundHistory());
+        renderPlayerStats(getPlayerBreakdown(), game.teams, getRoundHistory(),
+                          session ? session.parties : 0);
       } else {
         document.getElementById('player-stats').innerHTML = '';
       }

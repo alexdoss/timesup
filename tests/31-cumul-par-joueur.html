@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head><meta charset="utf-8"><title>Test Rush — cumul des points par joueur sur la série</title></head>
+<body>
+<pre id="log">demarrage...</pre>
+<div id="hote"></div>
+<script>
+const out = [];
+function log(s) { out.push(s); document.getElementById('log').textContent = out.join('\n'); }
+function check(name, cond) { log((cond ? 'PASS' : 'FAIL') + ' -- ' + name); }
+const wait = ms => new Promise(r => setTimeout(r, ms));
+
+localStorage.removeItem('timesup_partie_en_cours');
+
+const f = document.createElement('iframe');
+f.src = '/';
+f.style.cssText = 'width:420px;height:1000px;border:1px solid #ccc';
+document.getElementById('hote').appendChild(f);
+
+let demarre = false;
+f.addEventListener('load', async () => {
+  if (demarre) return;
+  demarre = true;
+
+  const d = f.contentDocument, w = f.contentWindow;
+  w.onerror = (m, s, l) => log('ERREUR APP: ' + m + ' @' + s + ':' + l);
+  const $ = id => d.getElementById(id);
+  const ecran = () => [...d.querySelectorAll('.screen')].find(s => s.classList.contains('active'))?.id;
+  const etat = () => JSON.parse(w.localStorage.getItem('timesup_partie_en_cours') || 'null')?.state;
+  const entier = txt => parseInt(txt, 10);
+
+  function ajouterJoueur(nom) {
+    $('player-name-input').value = nom;
+    $('btn-add-player').click();
+  }
+
+  async function jouerLaManche() {
+    $('btn-start-turn').click();
+    let clics = 0;
+    while (ecran() === 'screen-game' && clics < 400) { $('btn-found').click(); clics++; }
+    $('btn-next-turn').click();
+    await wait(200);
+  }
+
+  async function jouerLaPartie() {
+    for (let manche = 1; manche <= 3; manche++) {
+      await jouerLaManche();
+      $('btn-next-round').click();
+      await wait(300);
+    }
+  }
+
+  // Lit le tableau de l ecran de fin de partie : un objet par joueur.
+  // Le tableau garde toujours la meme forme — manches, puis total — seule
+  // l echelle des chiffres change quand une serie est en cours.
+  function lireTableau() {
+    const tiroir = $('stats-joueurs');
+    if (!tiroir) return null;
+    const enTetes = [...tiroir.querySelectorAll('thead th')].map(th => th.textContent);
+    const lignes = [...tiroir.querySelectorAll('tbody tr')].map(tr => {
+      const cases = [...tr.querySelectorAll('td')].map(td => entier(td.textContent));
+      return {
+        nom: tr.querySelector('th').textContent,
+        manches: cases.slice(0, cases.length - 1),
+        total: cases[cases.length - 1]
+      };
+    });
+    return {
+      enTetes, lignes,
+      resume: tiroir.querySelector('summary').textContent,
+      infobulleTotal: [...tiroir.querySelectorAll('thead th')].pop().title
+    };
+  }
+
+  const somme = t => t.reduce((a, b) => a + b, 0);
+
+  try {
+    await wait(1200);
+
+    // ===== Une partie nominative a quatre joueurs =====
+    $('btn-start').click();
+    d.querySelector('[data-source="themes"]').click();
+    d.querySelectorAll('#theme-selector .btn-theme')[0].click();
+    $('btn-next-step').click();
+    ['Ana', 'Bob', 'Cleo', 'Dan'].forEach(ajouterJoueur);
+    check('quatre joueurs inscrits', $('player-count').textContent.startsWith('4'));
+    $('btn-next-players').click();
+    $('btn-next-rounds').click();
+    $('btn-play').click();
+    await wait(600);
+    check('la partie demarre', ecran() === 'screen-round');
+
+    // ===== Partie 1 : rien de nouveau, le tableau est celui de la partie =====
+    await jouerLaPartie();
+    check('fin de la partie 1', ecran() === 'screen-final');
+    let t = lireTableau();
+    log('       colonnes partie 1 : ' + t.enTetes.join(' | '));
+    check('une colonne par manche, plus le total', t.enTetes.length === 5);
+    check('aucune colonne de cumul n a ete ajoutee', !t.enTetes.includes('Σ'));
+    check('la derniere colonne reste le total', t.enTetes[t.enTetes.length - 1] === 'Tot.');
+    check('et son infobulle parle bien de la partie',
+          t.infobulleTotal === 'Total de la partie');
+    check('le resume ne parle pas encore de serie', !t.resume.includes('parties'));
+    check('il annonce le meilleur et son score',
+          t.resume === `📊 Les joueurs — ${[...t.lignes].sort((a, b) => b.total - a.total)[0].nom}`
+                     + ` en tête avec ${Math.max(...t.lignes.map(l => l.total))}`);
+
+    // On garde ce que chacun a marque, partie par partie, manche par manche
+    const parPartie = [{}];
+    t.lignes.forEach(l => { parPartie[0][l.nom] = l.manches; });
+    log('       partie 1 : ' + t.lignes.map(l =>
+      `${l.nom} ${l.manches.join('/')}=${l.total}`).join('  |  '));
+
+    // ===== Parties 2 et 3, enchainees par « Rejouer » =====
+    for (const numero of [2, 3]) {
+      $('btn-replay').click();
+      await wait(700);
+      check(`la partie ${numero} demarre`, ecran() === 'screen-round');
+
+      // Le detail de la partie precedente est mis de cote, manche par manche
+      const e = etat();
+      const report = e.sessionPlayerStats || {};
+      const attenduReport = {};
+      parPartie.forEach(partie => Object.entries(partie).forEach(([nom, manches]) => {
+        manches.forEach((v, i) => {
+          attenduReport[nom] = attenduReport[nom] || {};
+          attenduReport[nom][i] = (attenduReport[nom][i] || 0) + v;
+        });
+      }));
+      log(`       report avant la partie ${numero} : ` + Object.entries(report)
+        .map(([nom, s]) => `${nom} ${s.found}`).join('  |  '));
+      check(`au lancement de la partie ${numero}, la precedente est mise de cote`,
+            Object.entries(attenduReport).every(([nom, parManche]) =>
+              report[nom]?.found === somme(Object.values(parManche))));
+      check(`et le report garde le detail par manche`,
+            Object.entries(attenduReport).every(([nom, parManche]) =>
+              Object.entries(parManche).every(([i, v]) =>
+                (report[nom]?.parManche?.[i] || 0) === v)));
+      check(`et les compteurs de la partie ${numero} repartent de zero`,
+            Object.values(e.playerStats).every(s => s.found === 0));
+
+      await jouerLaPartie();
+      check(`fin de la partie ${numero}`, ecran() === 'screen-final');
+
+      t = lireTableau();
+      check(`partie ${numero} : le tableau garde sa forme`, t.enTetes.length === 5);
+      check(`partie ${numero} : toujours aucune colonne de cumul`, !t.enTetes.includes('Σ'));
+      check(`partie ${numero} : l infobulle du total annonce la serie`,
+            t.infobulleTotal === `Cumul des ${numero} parties`);
+
+      // Ce que chacun a marque sur cette partie seule, deduit du cumul affiche
+      const cumulPrecedent = {};
+      parPartie.forEach(partie => Object.entries(partie).forEach(([nom, manches]) => {
+        cumulPrecedent[nom] = (cumulPrecedent[nom] || manches.map(() => 0))
+          .map((v, i) => v + manches[i]);
+      }));
+      parPartie.push({});
+      t.lignes.forEach(l => {
+        parPartie[numero - 1][l.nom] = l.manches.map((v, i) => v - cumulPrecedent[l.nom][i]);
+      });
+      log(`       partie ${numero} : ` + t.lignes.map(l =>
+        `${l.nom} ${l.manches.join('/')}=${l.total}`).join('  |  '));
+
+      // Le coeur du sujet : chaque case porte le cumul de la serie
+      check(`partie ${numero} : chaque manche cumule les parties du joueur`,
+            t.lignes.every(l => l.manches.every((v, i) =>
+              v === somme(parPartie.map(p => (p[l.nom] || [])[i] || 0)))));
+      check(`partie ${numero} : le total reste la somme de la ligne`,
+            t.lignes.every(l => l.total === somme(l.manches)));
+      check(`partie ${numero} : et il depasse ce qui a ete marque sur cette partie`,
+            t.lignes.some(l => l.total > somme(parPartie[numero - 1][l.nom])));
+      check(`partie ${numero} : aucun report negatif, donc rien n a ete perdu`,
+            t.lignes.every(l => parPartie[numero - 1][l.nom].every(v => v >= 0)));
+
+      // Il doit s accorder avec le cumul des equipes, affiche juste au dessus
+      const cumulEquipes = [...d.querySelectorAll('#final-scores .score-cumul .score')]
+        .map(el => entier(el.textContent));
+      check(`partie ${numero} : le cumul des equipes est affiche`, cumulEquipes.length === 2);
+      check(`partie ${numero} : les joueurs totalisent le cumul des equipes`,
+            somme(t.lignes.map(l => l.total)) === somme(cumulEquipes));
+
+      // Et le resume du tiroir bascule sur l echelle de la serie : le nombre
+      // de parties y prend la place du score, qui est dans le tableau.
+      log('       resume : "' + t.resume + '"');
+      const meilleur = [...t.lignes].sort((a, b) => b.total - a.total)[0];
+      check(`partie ${numero} : le resume nomme le meilleur et annonce la serie`,
+            t.resume === `📊 Les joueurs — ${meilleur.nom} en tête (${numero} parties)`);
+    }
+
+    // ===== Une partie neuve remet les compteurs a zero =====
+    // « Nouvelle partie » quitte la serie : le cumul ne doit pas la suivre.
+    $('btn-restart').click();
+    await wait(400);
+    check('retour a l accueil', ecran() === 'screen-home');
+
+    $('btn-start').click();
+    d.querySelector('[data-source="themes"]').click();
+    d.querySelectorAll('#theme-selector .btn-theme')[0].click();
+    $('btn-next-step').click();
+    ['Ana', 'Bob', 'Cleo', 'Dan'].forEach(ajouterJoueur);
+    $('btn-next-players').click();
+    $('btn-next-rounds').click();
+    $('btn-play').click();
+    await wait(600);
+    check('une partie neuve demarre', ecran() === 'screen-round');
+    const neuf = etat();
+    log('       report apres « nouvelle partie » : '
+        + JSON.stringify(neuf.sessionPlayerStats));
+    check('le cumul par joueur est remis a zero',
+          Object.keys(neuf.sessionPlayerStats || {}).length === 0);
+    check('le cumul des equipes aussi', somme(neuf.sessionScores) === 0);
+
+    await jouerLaPartie();
+    t = lireTableau();
+    check('le tableau reparle de la partie seule',
+          t.infobulleTotal === 'Total de la partie');
+    check('et le resume ne parle plus de serie', !t.resume.includes('parties'));
+    // La ligne de cumul est toujours construite, puis masquee : c est son
+    // affichage qu il faut lire, pas sa presence dans le document.
+    check('la ligne de cumul des equipes est masquee',
+          $('session-row').style.display === 'none');
+    const totalPartie = [...d.querySelectorAll('#final-scores .score-total .score')]
+      .map(el => entier(el.textContent));
+    log('       partie neuve : joueurs ' + somme(t.lignes.map(l => l.total))
+        + ' — equipes ' + totalPartie.join(' + '));
+    check('les chiffres ne portent plus que cette partie',
+          somme(t.lignes.map(l => l.total)) === somme(totalPartie));
+
+    log('SCENARIO 31 TERMINE');
+  } catch (e) { log('EXCEPTION: ' + e.message + '\n' + e.stack); }
+});
+</script>
+</body>
+</html>

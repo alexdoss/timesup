@@ -95,8 +95,12 @@ document.getElementById('f').addEventListener('load', async () => {
     log('       colonnes : ' + enTetes.join(' | '));
     check('la premiere colonne nomme les joueurs', enTetes[0] === 'Joueur');
     check('la derniere donne le total', enTetes[enTetes.length - 1] === 'Tot.');
+    // Chaque manche porte son nom en infobulle, et la colonne « Tot. » dit
+    // quelle echelle elle affiche : la partie seule, ou le cumul de la serie.
     check('les manches sont reperees par leur icone',
-          tiroir.querySelectorAll('thead th[title]').length === 3);
+          [...tiroir.querySelectorAll('thead th[title]')]
+            .map(th => th.title).join(' | ')
+            === 'Description libre | Un mot | Mime | Total de la partie');
 
     // ===== Les deux equipes sont separees, pas classees =====
     const bascule = lignes.findIndex(tr => tr.classList.contains('change-equipe'));

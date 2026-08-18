@@ -363,8 +363,11 @@ localStorage.removeItem('timesup_rejoint');
     const cols = [...tiroir.querySelectorAll('thead th')].map(t => t.textContent);
     log('       colonnes : ' + cols.join(' | '));
     check('une colonne par manche, plus le total', cols.length === 5);
+    // Les trois manches, plus la colonne « Tot. » qui annonce son echelle
     check('les manches portent leur icone',
-          tiroir.querySelectorAll('thead th[title]').length === 3);
+          tiroir.querySelectorAll('thead th[title]').length === 4);
+    check('et le total dit qu il ne porte que cette partie',
+          [...tiroir.querySelectorAll('thead th')].pop().title === 'Total de la partie');
     check('chaque joueur porte la couleur de son equipe',
           lj.every(t => !!t.querySelector('.puce-equipe').style.background));
     check('un trait separe les deux equipes',

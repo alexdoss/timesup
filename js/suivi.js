@@ -145,7 +145,11 @@ function resume(etape) {
     }
     if (game.nominativeMode) {
       paquet.joueurs = getPlayerBreakdown().map(j => ({
-        nom: j.name, equipe: j.team, parManche: j.perRound, total: j.total
+        nom: j.name, equipe: j.team,
+        parManche: j.perRound, total: j.total,
+        // Le cumul de la série : c'est lui qu'affiche l'invité dès la
+        // deuxième partie, dans les mêmes colonnes.
+        serieParManche: j.seriePerRound, serieTotal: j.serieTotal
       }));
     }
   }

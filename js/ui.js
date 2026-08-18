@@ -759,19 +759,31 @@ function cellule(balise, texte, titre) {
 // Le détail des joueurs, replié : l'écran de fin reste court même à 10 joueurs
 // et 5 manches, et le résumé donne déjà le meilleur sans qu'on ouvre.
 // joueurs : getPlayerBreakdown() — manches : getRoundHistory()
-export function renderPlayerStats(joueurs, teams, manches) {
+// parties : nombre de parties de la série, 0 s'il n'y en a qu'une
+//
+// Dès la deuxième partie, les mêmes colonnes portent le cumul de la série au
+// lieu du score de la seule partie qui s'achève. Pas de colonne en plus : le
+// tableau garde sa forme, seule l'échelle change — et le résumé l'annonce.
+export function renderPlayerStats(joueurs, teams, manches, parties = 0) {
   const container = document.getElementById('player-stats');
   container.innerHTML = '';
   if (!joueurs.length) return;
 
-  const meilleur = [...joueurs].sort((a, b) => b.total - a.total)[0];
+  const serie = parties > 1;
+  const manchesDe = j => (serie ? j.seriePerRound : j.perRound) || j.perRound;
+  const totalDe = j => (serie ? j.serieTotal : j.total) ?? j.total;
+  const meilleur = [...joueurs].sort((a, b) => totalDe(b) - totalDe(a))[0];
 
   const tiroir = document.createElement('details');
   tiroir.className = 'drawer';
   tiroir.id = 'stats-joueurs';
 
   const resume = document.createElement('summary');
-  resume.textContent = `📊 Les joueurs — ${meilleur.name} en tête avec ${meilleur.total}`;
+  // En série, le nombre de parties prend la place du score : c'est lui qui dit
+  // à quelle échelle lire le tableau, et le score se retrouve dedans.
+  resume.textContent = serie
+    ? `📊 Les joueurs — ${meilleur.name} en tête (${parties} parties)`
+    : `📊 Les joueurs — ${meilleur.name} en tête avec ${meilleur.total}`;
   tiroir.appendChild(resume);
 
   const table = document.createElement('table');
@@ -782,7 +794,9 @@ export function renderPlayerStats(joueurs, teams, manches) {
   enTete.appendChild(cellule('th', 'Joueur'));
   // L'icône seule tient dans la colonne ; le nom complet reste en infobulle
   manches.forEach(m => enTete.appendChild(cellule('th', m.round.icon, m.round.name)));
-  enTete.appendChild(cellule('th', 'Tot.'));
+  // Le libellé ne bouge pas, l'infobulle dit de quelle échelle il s'agit
+  enTete.appendChild(cellule('th', 'Tot.',
+    serie ? `Cumul des ${parties} parties` : 'Total de la partie'));
   thead.appendChild(enTete);
   table.appendChild(thead);
 
@@ -803,8 +817,8 @@ export function renderPlayerStats(joueurs, teams, manches) {
     nom.appendChild(document.createTextNode(joueur.name));
     tr.appendChild(nom);
 
-    joueur.perRound.forEach(valeur => tr.appendChild(cellule('td', String(valeur))));
-    const total = cellule('td', String(joueur.total));
+    manchesDe(joueur).forEach(v => tr.appendChild(cellule('td', String(v))));
+    const total = cellule('td', String(totalDe(joueur)));
     total.className = 'total-joueur';
     tr.appendChild(total);
     corps.appendChild(tr);

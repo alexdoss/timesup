@@ -17,6 +17,8 @@ export const game = {
   ],
   players: [],             // liste de tous les joueurs
   playerStats: {},         // { playerName: { found: 0, parManche: { <indice de manche>: n } } }
+  // Même forme que playerStats, mais pour les parties DÉJÀ terminées de la série
+  sessionPlayerStats: {},  // { playerName: { found: 0, parManche: { <indice> : n } } }
   playerAssignments: {},   // { playerName: teamIndex }
   nominativeMode: true,    // true = avec noms de joueurs
   cardSource: 'themes',    // 'themes' | 'custom'
@@ -83,6 +85,7 @@ export function resetGame({ keepSession = false } = {}) {
   if (!keepSession) {
     game.sessionScores = [0, 0];
     game.gamesPlayed = 0;
+    game.sessionPlayerStats = {};
   }
   // Reset player stats
   game.playerStats = {};
@@ -115,10 +118,28 @@ export function replayGame() {
   ];
   game.gamesPlayed = (game.gamesPlayed || 0) + 1;
 
+  // Même chose joueur par joueur, et manche par manche : resetGame remet
+  // playerStats à zéro, donc ce qui a été marqué doit être mis de côté ici,
+  // avant l'effacement. Les indices de manche restent comparables d'une partie
+  // à l'autre : « Rejouer » reconduit les mêmes réglages, donc les mêmes manches.
+  const cumulJoueurs = {};
+  const noms = new Set([...Object.keys(game.sessionPlayerStats || {}),
+                        ...Object.keys(game.playerStats || {})]);
+  noms.forEach(nom => {
+    const avant = game.sessionPlayerStats?.[nom] || { found: 0, parManche: {} };
+    const partie = game.playerStats?.[nom] || { found: 0, parManche: {} };
+    const parManche = { ...(avant.parManche || {}) };
+    Object.entries(partie.parManche || {}).forEach(([manche, n]) => {
+      parManche[manche] = (parManche[manche] || 0) + n;
+    });
+    cumulJoueurs[nom] = { found: (avant.found || 0) + (partie.found || 0), parManche };
+  });
+
   // L'équipe qui vient d'ouvrir ne rouvre pas : sur une soirée entière, un
   // tirage au sort finirait par la faire commencer plusieurs fois d'affilée.
   const ouvreurPrecedent = game.startingTeam;
   resetGame({ keepSession: true });
+  game.sessionPlayerStats = cumulJoueurs;
   game.startingTeam = 1 - ouvreurPrecedent;
   game.currentTeam = game.startingTeam;
   game.turnTeam = game.startingTeam;
@@ -271,17 +292,27 @@ export function getRoundHistory() {
 
 // Un joueur par ligne, groupés par équipe, avec le détail manche par manche.
 // L'ordre suit les équipes : le tableau montre des formations, pas un classement.
+//
+// Deux échelles, comme pour les équipes : la partie qui s'achève, et la série
+// entière (partie courante comprise, sur le modèle de getSessionScores).
+// C'est l'affichage qui choisit laquelle montrer.
 export function getPlayerBreakdown() {
   const manches = (game.roundHistory || []).length;
   const lignes = [];
   game.teams.forEach((team, indexEquipe) => {
     team.players.forEach(nom => {
-      const parManche = game.playerStats?.[nom]?.parManche || {};
+      const partie = game.playerStats?.[nom] || {};
+      const avant = game.sessionPlayerStats?.[nom] || {};
+      const parManche = partie.parManche || {};
+      const avantParManche = avant.parManche || {};
       lignes.push({
         name: nom,
         team: indexEquipe,
         perRound: Array.from({ length: manches }, (_, i) => parManche[i] || 0),
-        total: game.playerStats?.[nom]?.found || 0
+        total: partie.found || 0,
+        seriePerRound: Array.from({ length: manches },
+          (_, i) => (avantParManche[i] || 0) + (parManche[i] || 0)),
+        serieTotal: (avant.found || 0) + (partie.found || 0)
       });
     });
   });

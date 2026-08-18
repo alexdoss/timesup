@@ -54,7 +54,11 @@ mode (thèmes prédéfinis / cartes perso) → thèmes → équipes & joueurs �
   et la **soirée** (`getSessionScores`, cumul des parties enchaînées par « Rejouer »). L'écran de
   lancement de tour affiche manche + partie, la fin de manche et la fin de partie détaillent chaque
   manche jouée (`recordRound` / `getRoundHistory`), et la fin de partie ajoute le détail par joueur
-  et par manche (`getPlayerBreakdown`, replié dans un tiroir).
+  et par manche (`getPlayerBreakdown`, replié dans un tiroir). Ce tiroir garde toujours la même
+  forme, mais change d'échelle : dès la **deuxième** partie ses colonnes portent le cumul de la
+  série au lieu du score de la seule partie (`seriePerRound` / `serieTotal`, alimentés par
+  `sessionPlayerStats` que `replayGame()` remplit avant que `resetGame()` n'efface `playerStats`).
+  Le résumé du tiroir et l'infobulle de la colonne « Tot. » disent laquelle des deux est affichée.
 
 ## Conventions
 

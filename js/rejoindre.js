@@ -613,8 +613,14 @@ function rendreConfiguration(suivi, heureServeur) {
   document.getElementById('bloc-resultats').style.display = enResultat ? '' : 'none';
   if (enLancement) rendreLancement(etat);
   if (enResultat) rendreResultats(etat);
-  if (enTour) ancrerTour(etat, suivi.publieA, heureServeur);
-  else ancreTour = null;
+  if (enTour) {
+    // Le paquet fond pendant le tour : c'est la seule chose, avec le chrono,
+    // qui bouge sous les yeux des invités.
+    document.getElementById('tour-restantes').textContent = libelleRestantes(etat.restantes);
+    ancrerTour(etat, suivi.publieA, heureServeur);
+  } else {
+    ancreTour = null;
+  }
 
   const equipes = suivi?.etat?.equipes || [];
   const nommees = equipes.filter(e => (e.joueurs || []).length > 0);
@@ -885,6 +891,15 @@ setInterval(() => {
   if (ancreTour && !ancreTour.gele) peindreChrono();
 }, 200);
 
+// Ce qu'il reste dans le paquet de la manche. Le même libellé que chez
+// l'organisateur, avec un mot pour la fin : c'est là que ça devient un enjeu.
+function libelleRestantes(n) {
+  if (typeof n !== 'number') return '';
+  if (n <= 0) return 'Plus de cartes';
+  if (n === 1) return 'Dernière carte !';
+  return `Cartes restantes : ${n}`;
+}
+
 // Le même écran que celui de l'organisateur au début d'un tour. On ne reprend
 // pas son bouton « Lancer le tour » : le départ reste à sa main.
 function rendreLancement(etat) {
@@ -902,6 +917,7 @@ function rendreLancement(etat) {
   T('lancement-s1', e1.manche);
   T('lancement-s2', e2.manche);
   T('lancement-total', `Total de la partie : ${e1.partie} – ${e2.partie}`);
+  T('lancement-restantes', libelleRestantes(etat.restantes));
 
   // `aVenir` et non `tour` : entre deux tours, `tour` désignerait encore
   // l'équipe qui vient de finir, pas celle qui s'apprête à jouer.

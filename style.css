@@ -1403,6 +1403,18 @@ input[readonly] {
   font-weight: 600;
 }
 
+/* Le même compte, côté invité : sur l'écran de suivi, le paquet qui fond est
+   la seule chose qui bouge avec le chrono. */
+.cartes-restantes {
+  font-size: 0.82rem;
+  color: var(--muted);
+  font-weight: 600;
+  margin-top: 6px;
+}
+.cartes-restantes:empty {
+  display: none;
+}
+
 .game-actions {
   display: flex;
   gap: 10px;

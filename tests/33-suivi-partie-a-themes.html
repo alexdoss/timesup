@@ -176,6 +176,19 @@ localStorage.removeItem('timesup_rejoint');
     log('       sablier invite : ' + reste + ' — ' + L('tour-qui'));
     check('un decompte tourne', /\d/.test(reste));
 
+    // ===== Le paquet qui fond, sous les yeux des invites =====
+    const lire = () => parseInt((L('tour-restantes').match(/\d+/) || [])[0], 10);
+    log('       ' + L('tour-restantes'));
+    check('l invite voit combien de cartes il reste', Number.isInteger(lire()));
+    const avant = lire();
+    A('btn-found').click();
+    A('btn-found').click();
+    await wait(2800);
+    log('       apres deux cartes trouvees : ' + L('tour-restantes'));
+    check('le compte baisse quand l organisateur trouve', lire() === avant - 2);
+    check('et aucun mot du paquet ne transparait',
+          !di.body.textContent.includes(A('card-word').textContent.trim()));
+
     // ===== Aucun mot du paquet ne doit fuiter =====
     const motAffiche = A('card-word').textContent.trim();
     log('       mot a l ecran de l organisateur : ' + motAffiche);

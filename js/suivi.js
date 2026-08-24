@@ -16,7 +16,7 @@
 // empêcher de jouer. Une partie sans réseau se déroule normalement.
 
 import { game, ROUNDS, getRoundScores, getRoundHistory, getCurrentPlayer,
-         getSessionScores, getPlayerBreakdown } from './game.js';
+         getSessionScores, getPlayerBreakdown, getCardsRemaining } from './game.js';
 
 const ROUTE = '/api/session';
 const CLE = 'timesup_suivi';
@@ -113,6 +113,9 @@ function resume(etape) {
       // c'est elle qui dit ce qui est permis pendant le tour.
       regle: manche.desc
     } : null,
+    // Combien de cartes il reste dans le paquet de la manche. Un nombre, jamais
+    // un mot : c'est ce qui dit si la manche touche à sa fin, sans rien révéler.
+    restantes: getCardsRemaining(),
     equipes: game.teams.map((equipe, index) => ({
       nom: equipe.name,
       couleur: equipe.color,

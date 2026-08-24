@@ -129,6 +129,8 @@ f.addEventListener('load', async () => {
     check('les scores partent de zero',
           depart.etat.equipes.every(e => e.partie === 0 && e.manche === 0));
     check('aucun tour en cours', depart.etat.tour === null);
+    log('       cartes restantes publiees : ' + depart.etat.restantes);
+    check('le paquet entier reste a jouer', depart.etat.restantes === 12);
 
     // ===== AUCUNE CARTE ne doit transiter =====
     const paquet = JSON.parse(w.localStorage.getItem('timesup_partie_en_cours')).state.masterDeck;
@@ -161,6 +163,8 @@ f.addEventListener('load', async () => {
     check('le point est publie', total === 1);
     check('le score de manche suit aussi',
           apresPoint.etat.equipes.reduce((t, e) => t + e.manche, 0) === 1);
+    log('       cartes restantes : ' + depart.etat.restantes + ' -> ' + apresPoint.etat.restantes);
+    check('et le paquet a perdu une carte', apresPoint.etat.restantes === 11);
 
     // ===== Mise en pause =====
     $('btn-pause').click();
@@ -184,6 +188,7 @@ f.addEventListener('load', async () => {
     const finTour = await attendreEtape('entre-tours');
     check('la fin de tour est publiee', finTour.etat.etape === 'entre-tours');
     check('aucun tour n est plus en cours', finTour.etat.tour === null);
+    check('le paquet est vide, la manche est finie', finTour.etat.restantes === 0);
 
     $('btn-next-turn').click();
     await wait(500);

@@ -1,0 +1,480 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Rush — les joueurs s'inscrivent eux-mêmes (partie à thèmes)</title>
+<style>
+:root {
+  --primary: #6D28D9; --primary-hover: #7C3AED; --primary-soft: rgba(109,40,217,.16);
+  --background: #0F172A; --surface: #1E293B; --surface-2: #273449;
+  --border: #334155; --text: #F8FAFC; --muted: #94A3B8; --muted-strong: #CBD5E1;
+  --muted-2: #64748B; --success: #22C55E; --secondary: #F59E0B; --error: #EF4444;
+  --t1: #d6336c; --t2: #33c26a;
+  --r-sm: 8px; --r-md: 12px; --r-lg: 16px;
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  background: #060B18; color: var(--text); padding: 22px 16px 60px; line-height: 1.5;
+}
+.wrap { max-width: 1020px; margin: 0 auto; }
+h1 { font-size: 1.4rem; margin-bottom: 4px; }
+.intro { color: var(--muted); font-size: .93rem; margin-bottom: 16px; }
+.intro b { color: var(--muted-strong); }
+
+.choix-option { display: flex; gap: 8px; margin-bottom: 14px; flex-wrap: wrap; }
+.choix-option button { background: var(--surface); color: var(--muted-strong);
+  border: 1px solid var(--border); border-radius: var(--r-md); padding: 10px 16px;
+  font-size: .9rem; font-weight: 700; cursor: pointer; font-family: inherit; }
+.choix-option button.on { background: var(--secondary); border-color: var(--secondary);
+  color: #1a1206; }
+
+.tabs { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 18px; }
+.tab { background: var(--surface); color: var(--muted-strong); border: 1px solid var(--border);
+  border-radius: var(--r-md); padding: 9px 15px; font-size: .86rem; font-weight: 600;
+  cursor: pointer; font-family: inherit; }
+.tab.on { background: var(--primary); border-color: var(--primary-hover); color: #fff; }
+.tab .role { display: block; font-size: .66rem; text-transform: uppercase;
+  letter-spacing: .05em; opacity: .7; }
+
+.stage { display: flex; gap: 28px; align-items: flex-start; flex-wrap: wrap; }
+.phone { width: 340px; flex-shrink: 0; background: var(--background);
+  border: 1px solid var(--border); border-radius: 30px; overflow: hidden;
+  box-shadow: 0 14px 44px rgba(0,0,0,.55); position: relative; }
+.barre { display: flex; align-items: center; gap: 8px; padding: 13px 18px 11px;
+  border-bottom: 1px solid var(--border); font-size: .74rem; color: var(--muted); }
+.barre .marque { font-weight: 800; color: var(--text); }
+.barre .qui { margin-left: auto; }
+.corps { padding: 20px 18px 26px; text-align: center; min-height: 450px; }
+
+.etape { font-size: .68rem; text-transform: uppercase; letter-spacing: .06em;
+  color: var(--primary-hover); font-weight: 800; }
+h2.titre { font-size: 1.2rem; font-weight: 800; margin: 4px 0 3px; }
+.hint { font-size: .84rem; color: var(--muted); margin-bottom: 12px; }
+
+.btn { display: block; width: 100%; padding: 13px; border: 0; border-radius: var(--r-md);
+  background: var(--primary); color: #fff; font-size: .98rem; font-weight: 700;
+  font-family: inherit; cursor: pointer; margin-top: 12px; }
+.btn.sec { background: var(--surface-2); color: var(--text);
+  border: 1px solid var(--border); margin-top: 9px; }
+.btn:disabled { opacity: .35; cursor: default; }
+.lien { background: none; border: 0; color: var(--muted-strong); font-size: .84rem;
+  text-decoration: underline; cursor: pointer; font-family: inherit; margin-top: 10px; }
+
+.cap { font-size: .72rem; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); }
+.code { font-size: 2.1rem; font-weight: 800; letter-spacing: .28em;
+  color: var(--secondary); margin: 8px 0 2px; }
+.qr { background: #fff; padding: 8px; border-radius: var(--r-md);
+  width: fit-content; margin: 4px auto 8px; }
+.adresse { font-size: .76rem; color: var(--muted-strong); background: var(--surface-2);
+  border-radius: var(--r-sm); padding: 6px 9px; word-break: break-all; }
+
+.champ { width: 100%; padding: 12px; border-radius: var(--r-md); border: 1px solid var(--border);
+  background: var(--surface-2); color: var(--text); font-size: 1rem; font-family: inherit;
+  text-align: center; }
+
+ul.gens { list-style: none; text-align: left; margin: 10px 0 4px; }
+ul.gens li { display: flex; align-items: center; gap: 9px; padding: 9px 11px;
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-md);
+  margin-bottom: 6px; font-size: .92rem; }
+ul.gens li .tag { margin-left: auto; font-size: .68rem; text-transform: uppercase;
+  letter-spacing: .04em; color: var(--muted-2); }
+ul.gens li.attente { border-style: dashed; opacity: .72; }
+ul.gens li.manuel .tag { color: var(--secondary); }
+
+.equipes { display: grid; grid-template-columns: 1fr 1fr; gap: 9px; margin: 12px 0 4px; }
+.equipes .col { background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--r-md); padding: 10px 8px; }
+.equipes .col h4 { font-size: .7rem; text-transform: uppercase; letter-spacing: .05em;
+  margin-bottom: 7px; }
+.equipes .col.e1 h4 { color: var(--t1); } .equipes .col.e2 h4 { color: var(--t2); }
+.equipes .col span { display: block; font-size: .88rem; padding: 5px 0;
+  border-bottom: 1px solid var(--border); }
+.equipes .col span:last-child { border-bottom: 0; }
+
+table.tab-j { width: 100%; border-collapse: collapse; margin-top: 8px; font-size: .84rem; }
+table.tab-j th, table.tab-j td { padding: 6px 4px; }
+table.tab-j thead th { font-size: .66rem; text-transform: uppercase; color: var(--muted);
+  letter-spacing: .04em; }
+table.tab-j tbody th { text-align: left; font-weight: 600; }
+table.tab-j tbody th.moi { color: var(--primary-hover); font-weight: 800; }
+table.tab-j td { text-align: center; color: var(--muted-strong); }
+table.tab-j .sep th, table.tab-j .sep td { border-top: 1px solid var(--border); }
+.puce { display: inline-block; width: 7px; height: 7px; border-radius: 50%; margin-right: 6px; }
+
+.roue { font-size: 3rem; animation: tourne 4s linear infinite; }
+@keyframes tourne { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .roue { animation: none; } }
+.grand { font-size: 2.8rem; margin: 8px 0 4px; }
+
+.notes { flex: 1; min-width: 260px; background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--r-md); padding: 16px; font-size: .9rem; }
+.notes h3 { font-size: .75rem; text-transform: uppercase; letter-spacing: .05em;
+  color: var(--muted); margin-bottom: 10px; }
+.notes p { margin-bottom: 10px; } .notes p:last-child { margin-bottom: 0; }
+.plus::before { content: '＋ '; color: var(--success); font-weight: 700; }
+.minus::before { content: '− '; color: var(--secondary); font-weight: 700; }
+.question { background: rgba(245,158,11,.14); border-left: 3px solid var(--secondary);
+  border-radius: 0 var(--r-md) var(--r-md) 0; padding: 11px 13px; margin-top: 12px;
+  font-size: .87rem; color: var(--muted-strong); }
+.parcours { background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--r-md); padding: 12px 14px; margin-bottom: 16px; font-size: .86rem;
+  color: var(--muted-strong); }
+.parcours b { color: var(--text); }
+.parcours .fleche { color: var(--muted-2); margin: 0 5px; }
+.parcours .neuf { color: var(--secondary); font-weight: 700; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <h1>Les joueurs s'inscrivent eux-mêmes — partie à thèmes</h1>
+  <p class="intro">Uniquement en mode <b>nominatif</b>. En mode simple il n'y a pas de prénoms,
+    donc rien ne change : le code reste proposé à la fin, juste avant de lancer.</p>
+
+  <div class="choix-option" id="options"></div>
+  <div class="parcours" id="parcours"></div>
+  <div class="tabs" id="tabs"></div>
+
+  <div class="stage">
+    <div class="phone">
+      <div class="barre" id="barre"></div>
+      <div class="corps" id="corps"></div>
+    </div>
+    <div class="notes" id="notes"></div>
+  </div>
+</div>
+
+<script type="module">
+import { creerQrSvg } from './js/qr.js';
+
+const LIEN = 'https://rush-alexina.vercel.app/rejoindre.html?c=K4T9';
+
+// ===== OPTION A : l'étape « joueurs » devient l'écran du QR =====
+const A = {
+  parcours: `<b>Mode nominatif, thèmes prédéfinis</b><br>
+    type de partie <span class="fleche">→</span> thèmes
+    <span class="fleche">→</span> équipes <span class="neuf">(allégée)</span>
+    <span class="fleche">→</span> <span class="neuf">QR : chacun s'inscrit</span>
+    <span class="fleche">→</span> <span class="neuf">répartition des équipes</span>
+    <span class="fleche">→</span> manches <span class="fleche">→</span> déroulement
+    <span class="fleche">→</span> c'est parti`,
+
+  ecrans: {
+    page3: {
+      onglet: 'La page 3, allégée', role: 'organisateur',
+      barre: ['Rush', 'nouvelle partie'],
+      corps: () => `
+        <span class="etape">Étape 3/6</span>
+        <h2 class="titre">Équipes & Joueurs</h2>
+        <div style="text-align:left;margin-top:14px">
+          <span class="cap">Mode de jeu</span>
+          <div class="equipes" style="grid-template-columns:1fr 1fr;margin:6px 0 4px">
+            <div class="col" style="background:var(--primary-soft);border-color:var(--primary-hover);text-align:center;font-weight:700;font-size:.9rem">Nominatif</div>
+            <div class="col" style="text-align:center;font-size:.9rem;color:var(--muted)">Simple</div>
+          </div>
+          <p class="hint">Chaque joueur est identifié. Rotation et statistiques individuelles.</p>
+          <span class="cap">Noms des équipes</span>
+          <div style="margin:7px 0 4px"><input class="champ" value="Équipe 1" readonly style="text-align:left"></div>
+          <div><input class="champ" value="Équipe 2" readonly style="text-align:left"></div>
+        </div>
+        <button class="btn">Suivant ▶️</button>
+        <p class="hint" style="margin-top:14px;opacity:.6">
+          ⌫ La liste des joueurs et le choix « aléatoire / choisie »<br>ne sont plus ici.</p>`,
+      notes: `<p class="plus">Oui : la page est conservée, elle perd seulement ce qui servait
+        à constituer les joueurs — <b>la liste des prénoms</b> et le réglage
+        <b>« Attribution des équipes »</b>.</p>
+        <p class="plus">Elle garde ce qu'elle est seule à porter : le <b>mode de jeu</b>
+          et les <b>noms des équipes</b>. Et c'est bien ici que le mode se choisit :
+          sans lui, l'app ne saurait pas s'il faut demander des prénoms.</p>
+        <p class="plus">L'attribution disparaît parce qu'elle fait doublon : l'écran de
+          répartition, plus loin, <i>est</i> l'attribution. C'est déjà comme ça en cartes perso.</p>
+        <p class="minus">En mode <b>simple</b>, rien ne change : pas de QR à cette étape,
+          et la pop-up « Partager le suivi ? » reste à la fin. Le parcours passe donc
+          de 5 à 6 étapes en nominatif seulement — les libellés se recalculent déjà
+          (<code>updateWizardLabels</code>).</p>`
+    },
+
+    qr: {
+      onglet: 'Chacun s\'inscrit', role: 'organisateur',
+      barre: ['Rush', 'nouvelle partie'],
+      corps: () => `
+        <span class="etape">Étape 4/6</span>
+        <h2 class="titre">Qui joue ?</h2>
+        <p class="hint">Chacun scanne et donne son prénom. Le code sert ensuite à suivre la partie.</p>
+        <div class="qr" id="qr"></div>
+        <div class="code">K4T9</div>
+        <div class="adresse">📤 rush-alexina.vercel.app/rejoindre</div>
+        <ul class="gens">
+          <li><span class="puce" style="background:var(--muted-2)"></span>Marc <span class="tag">inscrit</span></li>
+          <li><span class="puce" style="background:var(--muted-2)"></span>Sacha <span class="tag">inscrit</span></li>
+          <li class="manuel"><span class="puce" style="background:var(--muted-2)"></span>Papi <span class="tag">sans téléphone</span></li>
+          <li class="attente"><span class="puce" style="background:var(--muted-2)"></span>En attente…</li>
+        </ul>
+        <p class="cap">3 joueurs — il en faut au moins 4</p>
+        <button class="btn" disabled>Suivant ▶️</button>
+        <button class="lien">➕ Un joueur n'a pas de téléphone</button>
+        <button class="lien">Finalement, je saisis les prénoms moi-même</button>`,
+      notes: `<p class="plus">C'est exactement l'écran des cartes perso, amputé du décompte
+        de cartes. Rien à inventer : le QR, la liste qui se remplit, le joueur sans téléphone
+        et le repli manuel existent déjà.</p>
+        <p class="plus">L'organisateur ne tape plus dix prénoms sur son téléphone. C'est le
+          vrai gain, et il vaut indépendamment du suivi.</p>
+        <p class="minus">Le partage passe de la <b>fin</b> du parcours à son <b>milieu</b> :
+          l'US 1 telle qu'on l'a construite hier ne s'applique plus au mode nominatif.
+          La pop-up « Partager le suivi ? » n'a plus lieu d'être ici — le code est déjà donné.</p>
+        <p class="minus">Sans réseau, il faut pouvoir revenir à la saisie manuelle. D'où le
+          second lien en bas.</p>
+        <div class="question"><b>Un point d'ordre :</b> ici l'organisateur attend sur cet
+          écran que tout le monde ait scanné. En cartes perso, le QR vient <i>avant</i> tout
+          réglage, exprès : les joueurs saisissent pendant que l'organisateur configure.
+          Ici, donner un prénom prend dix secondes — l'attente est courte, et placer le QR
+          après le choix du mode évite de montrer un code pour une partie qui se révélerait
+          « simple ». C'est pour ça que je le mets là. Dis-moi si tu préfères l'inverse.</div>`
+    },
+
+    invite: {
+      onglet: 'Je m\'inscris', role: 'invité',
+      barre: ['Rush', 'rejoindre', 'K4T9'],
+      corps: () => `
+        <div class="grand">👋</div>
+        <h2 class="titre">Comment tu t'appelles ?</h2>
+        <p class="hint">Ton prénom apparaîtra dans les équipes et dans les scores.</p>
+        <input class="champ" value="Marc" readonly>
+        <button class="btn">C'est parti ▶️</button>`,
+      notes: `<p class="plus">L'écran existe déjà, mot pour mot : c'est celui des cartes perso.</p>
+        <p class="plus">Ce prénom est ce qui manquait. Il permet à l'invité de se repérer
+          dans le tableau final, et rend possible le « c'est à toi » plus tard.</p>`
+    },
+
+    question: {
+      onglet: 'Tu suis ?', role: 'invité',
+      barre: ['Rush', 'rejoindre', 'K4T9'],
+      corps: () => `
+        <div class="grand">✅</div>
+        <h2 class="titre">Te voilà inscrit, Marc</h2>
+        <p class="hint">Tu peux suivre les scores et le chrono depuis ce téléphone,
+          ou le ranger jusqu'à ton tour.</p>
+        <button class="btn">👀 Suivre la partie</button>
+        <button class="btn sec">📵 Je range mon téléphone</button>`,
+      notes: `<p class="plus">Ta demande : la question est posée une fois le prénom donné,
+        pas avant. L'inscription et le suivi sont deux choses différentes — on peut jouer
+        sans regarder son écran.</p>
+        <p class="plus">L'écran existe presque : c'est « C'est envoyé ! » des cartes perso,
+          avec son bouton <b>👀 Suivre la partie</b>. Il perd la mention des cartes et
+          gagne la seconde issue.</p>
+        <p class="plus">Répondre non économise batterie et données : le téléphone cesse
+          d'interroger le serveur toutes les deux secondes.</p>`
+    },
+
+    range: {
+      onglet: 'S\'il dit non', role: 'invité',
+      barre: ['Rush', 'à tout de suite', 'K4T9'],
+      corps: () => `
+        <div class="grand">📵</div>
+        <h2 class="titre">À tout de suite, Marc</h2>
+        <p class="hint">Tu es bien inscrit. Range ton téléphone,
+          la partie commence quand tout le monde est prêt.</p>
+        <button class="btn sec">👀 Finalement, je suis la partie</button>`,
+      notes: `<p class="plus">Une porte de sortie qui reste ouverte : on peut changer d'avis
+        sans rescanner.</p>
+        <p class="plus">Rien ne tourne sur cet écran. C'est le seul état du téléphone invité
+          qui ne coûte ni batterie ni requête.</p>`
+    },
+
+    attente: {
+      onglet: 'S\'il dit oui', role: 'invité',
+      barre: ['Rush', 'tu suis la partie', 'K4T9'],
+      corps: () => `
+        <div class="roue">⚙️</div>
+        <h2 class="titre">Configuration de la partie en cours</h2>
+        <p class="hint">L'organisateur prépare la partie. Elle démarre juste après.</p>
+        <ul class="gens">
+          <li><span class="puce" style="background:var(--muted-2)"></span>Marc <span class="tag">toi</span></li>
+          <li><span class="puce" style="background:var(--muted-2)"></span>Sacha</li>
+          <li><span class="puce" style="background:var(--muted-2)"></span>Papi</li>
+        </ul>
+        <p class="cap">3 joueurs inscrits</p>`,
+      notes: `<p class="plus">L'écran de suivi, déjà construit et déjà en local : de là,
+        l'invité glisse tout seul vers le lancement de tour, puis le sablier, puis les
+        résultats.</p>
+        <p class="plus">La liste des inscrits remplace celle des cartes saisies. Même écran,
+          un décompte de moins.</p>`
+    },
+
+    repartition: {
+      onglet: 'Les équipes', role: 'organisateur',
+      barre: ['Rush', 'nouvelle partie'],
+      corps: () => `
+        <span class="etape">Étape 5/6</span>
+        <h2 class="titre">Les équipes</h2>
+        <p class="hint">Touche un prénom pour le changer d'équipe.</p>
+        <div class="equipes">
+          <div class="col e1"><h4>Équipe 1</h4><span>Marc</span><span>Papi</span></div>
+          <div class="col e2"><h4>Équipe 2</h4><span>Sacha</span><span>Nour</span></div>
+        </div>
+        <button class="btn">Suivant ▶️</button>`,
+      notes: `<p class="plus">Écran existant, repris tel quel du parcours cartes perso.</p>
+        <p class="plus">En mode nominatif l'app doit de toute façon former les équipes :
+          qu'elles viennent d'une liste tapée ou de scans ne change rien à la suite.</p>`
+    },
+
+    final: {
+      onglet: 'À la fin', role: 'invité',
+      barre: ['Rush', 'tu suis la partie', 'K4T9'],
+      corps: () => `
+        <div class="grand">🏆</div>
+        <h2 class="titre">Fin de la partie !</h2>
+        <p class="hint">🎉 Équipe 1 gagne !</p>
+        <p class="cap" style="text-align:left;margin-top:10px">
+          📊 Les joueurs — Marc en tête avec 22</p>
+        <table class="tab-j">
+          <thead><tr><th>Joueur</th><th>💬</th><th>🔤</th><th>🎭</th><th>Tot.</th></tr></thead>
+          <tbody>
+            <tr><th class="moi"><span class="puce" style="background:var(--t1)"></span>Marc</th>
+              <td>8</td><td>7</td><td>7</td><td>22</td></tr>
+            <tr><th><span class="puce" style="background:var(--t1)"></span>Papi</th>
+              <td>3</td><td>2</td><td>4</td><td>9</td></tr>
+            <tr class="sep"><th><span class="puce" style="background:var(--t2)"></span>Sacha</th>
+              <td>5</td><td>6</td><td>3</td><td>14</td></tr>
+            <tr><th><span class="puce" style="background:var(--t2)"></span>Nour</th>
+              <td>4</td><td>4</td><td>5</td><td>13</td></tr>
+          </tbody>
+        </table>`,
+      notes: `<p class="plus">Voilà ce que l'inscription rachète : <b>Marc se voit</b>, en couleur,
+        dans le tableau final. Sans prénom, la ligne est là mais rien ne la distingue.</p>
+        <p class="plus">C'est aussi ce qui débloquerait un « 🎯 c'est à toi » sur le bon
+          téléphone, si tu le veux un jour.</p>`
+    },
+
+  }
+};
+
+// ===== OPTION B : la liste manuelle reste, le scan vient en plus =====
+const B = {
+  parcours: `<b>Mode nominatif, thèmes prédéfinis</b><br>
+    type de partie <span class="fleche">→</span> thèmes
+    <span class="fleche">→</span> joueurs <span class="neuf">(saisie manuelle + scan)</span>
+    <span class="fleche">→</span> manches <span class="fleche">→</span> déroulement
+    <span class="fleche">→</span> c'est parti`,
+
+  ecrans: {
+    avant: {
+      onglet: 'Avant le scan', role: 'organisateur',
+      barre: ['Rush', 'nouvelle partie'],
+      corps: () => `
+        <span class="etape">Étape 3/5</span>
+        <h2 class="titre">Équipes & joueurs</h2>
+        <p class="hint">Tape les prénoms, ou fais-les scanner.</p>
+        <input class="champ" placeholder="Prénom du joueur" readonly>
+        <ul class="gens">
+          <li><span class="puce" style="background:var(--muted-2)"></span>Marc <span class="tag">tapé</span></li>
+          <li><span class="puce" style="background:var(--muted-2)"></span>Sacha <span class="tag">tapé</span></li>
+        </ul>
+        <p class="cap">2 joueurs — il en faut au moins 4</p>
+        <button class="btn sec">👀 Faire scanner un QR code</button>
+        <button class="btn" disabled>Suivant ▶️</button>`,
+      notes: `<p class="plus">Rien ne change pour qui préfère taper : le parcours d'aujourd'hui
+        reste le chemin par défaut.</p>
+        <p class="plus">Le scan devient un raccourci, pas un passage obligé. Aucun repli à
+          prévoir : la saisie manuelle est déjà là.</p>`
+    },
+
+    apres: {
+      onglet: 'Après le scan', role: 'organisateur',
+      barre: ['Rush', 'nouvelle partie'],
+      corps: () => `
+        <span class="etape">Étape 3/5</span>
+        <h2 class="titre">Équipes & joueurs</h2>
+        <p class="hint">Les prénoms scannés rejoignent ta liste.</p>
+        <div class="qr" id="qr"></div>
+        <div class="code">K4T9</div>
+        <ul class="gens">
+          <li><span class="puce" style="background:var(--muted-2)"></span>Marc <span class="tag">tapé</span></li>
+          <li><span class="puce" style="background:var(--muted-2)"></span>Sacha <span class="tag">tapé</span></li>
+          <li><span class="puce" style="background:var(--muted-2)"></span>Nour <span class="tag">a scanné</span></li>
+          <li><span class="puce" style="background:var(--muted-2)"></span>Papi <span class="tag">a scanné</span></li>
+        </ul>
+        <p class="cap">4 joueurs</p>
+        <button class="btn">Suivant ▶️</button>`,
+      notes: `<p class="minus">Deux sources pour une même liste : que se passe-t-il si Marc,
+        déjà tapé, scanne aussi et retape son prénom ? Il faut détecter le doublon, décider
+        qui gagne, et le dire à l'écran.</p>
+        <p class="minus">L'organisateur peut supprimer un prénom tapé — mais un prénom scanné
+          appartient à quelqu'un qui attend sur son téléphone. Deux règles de retrait
+          au lieu d'une.</p>
+        <p class="minus">Plus de code à écrire que l'option A, pour un écran plus chargé.</p>`
+    }
+  }
+};
+
+const OPTIONS = {
+  A: { titre: 'Option A — l\'étape « joueurs » devient le QR', data: A },
+  B: { titre: 'Option B — la saisie manuelle, plus le scan', data: B }
+};
+
+let option = 'A';
+let courant = 'page3';
+
+const zoneOptions = document.getElementById('options');
+Object.entries(OPTIONS).forEach(([cle, o]) => {
+  const b = document.createElement('button');
+  b.dataset.option = cle;
+  b.textContent = o.titre;
+  zoneOptions.appendChild(b);
+});
+
+function ecransCourants() { return OPTIONS[option].data.ecrans; }
+
+function construireOnglets() {
+  const tabs = document.getElementById('tabs');
+  tabs.innerHTML = '';
+  Object.entries(ecransCourants()).forEach(([cle, e]) => {
+    const b = document.createElement('button');
+    b.className = 'tab' + (cle === courant ? ' on' : '');
+    b.dataset.ecran = cle;
+    b.innerHTML = `<span class="role">${e.role}</span>${e.onglet}`;
+    tabs.appendChild(b);
+  });
+}
+
+function rendre() {
+  document.querySelectorAll('[data-option]').forEach(b =>
+    b.classList.toggle('on', b.dataset.option === option));
+  document.getElementById('parcours').innerHTML = OPTIONS[option].data.parcours;
+
+  const e = ecransCourants()[courant];
+  const b = e.barre;
+  document.getElementById('barre').innerHTML =
+    `<span class="marque">${b[0]}</span><span>${b[1]}</span>` +
+    (b[2] ? `<span class="qui">${b[2]}</span>` : '');
+  document.getElementById('corps').innerHTML = e.corps();
+  document.getElementById('notes').innerHTML = '<h3>Ce qu\'il faut savoir</h3>' + e.notes;
+  document.querySelectorAll('.tab').forEach(t => t.classList.toggle('on', t.dataset.ecran === courant));
+
+  const boite = document.getElementById('qr');
+  if (boite) boite.appendChild(creerQrSvg(LIEN, { taille: 140 }));
+}
+
+zoneOptions.addEventListener('click', ev => {
+  const b = ev.target.closest('[data-option]');
+  if (!b) return;
+  option = b.dataset.option;
+  courant = Object.keys(ecransCourants())[0];
+  construireOnglets();
+  rendre();
+});
+
+document.getElementById('tabs').addEventListener('click', ev => {
+  const t = ev.target.closest('.tab');
+  if (!t) return;
+  courant = t.dataset.ecran;
+  rendre();
+});
+
+construireOnglets();
+rendre();
+</script>
+</body>
+</html>

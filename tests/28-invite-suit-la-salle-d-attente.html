@@ -172,8 +172,10 @@ async function sonder(adresse) {
           $('attente-titre').textContent.includes('Configuration'));
     check('on ne pretend pas que la partie a demarre',
           !$('attente-titre').textContent.includes('commencé'));
+    // Volontairement vague : selon le parcours l organisateur regle tout, ou
+    // ne choisit qu un theme en rejeu. La phrase doit valoir pour les deux.
     check('le texte dit ce que fait l organisateur',
-          $('attente-sous').textContent.includes('équipes'));
+          $('attente-sous').textContent === "L'organisateur prépare la partie. Elle démarre juste après.");
     check('le retour disparait : on ne modifie plus rien',
           $('btn-attente-retour').style.display === 'none');
     check('une roue signale que ca travaille',

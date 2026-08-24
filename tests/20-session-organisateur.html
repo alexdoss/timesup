@@ -275,35 +275,30 @@ f.addEventListener('load', async () => {
     await wait(500);
     $('dialog-confirm').click();
     await wait(900);
-    check('la configuration reprend par les equipes', ecran() === 'screen-players');
+    check('la configuration reprend par le mode de jeu', ecran() === 'screen-jeu-mode');
 
     r = await api('etat', { code });
     check('la saisie est close, plus personne ne peut rejoindre', r.corps.ouverte === false);
 
-    check('la liste des joueurs reste masquee', !visible('nominatif-block'));
-    check('une note recapitule qui a saisi', visible('note-joueurs-partages'));
-    log('       note : "' + $('note-joueurs-partages').textContent.trim() + '"');
-    check('elle nomme les joueurs', $('note-joueurs-partages').textContent.includes('Marc'));
-    check('elle annonce la repartition a venir',
-          $('note-joueurs-partages').textContent.includes('équipes'));
-    check('le retour arriere est retire, la session etant close',
-          d.querySelector('#screen-players .btn-back').style.display === 'none');
+    check('les deux facons de jouer sont proposees',
+          !!d.querySelector('[data-mode="nominatif"]') && !!d.querySelector('[data-mode="simple"]'));
+    check('aucune n est cochee d avance',
+          d.querySelectorAll('[data-mode].active').length === 0);
 
     // ===== A 3 joueurs, le mode nominatif est refuse =====
-    check('le mode nominatif est propose par defaut',
-          d.querySelector('[data-mode="nominatif"]').classList.contains('active'));
-    $('btn-next-players').click();
+    d.querySelector('[data-mode="nominatif"]').click();
     await wait(300);
     log('       message : "' + $('dialog-message').textContent + '"');
     check('a 3 joueurs, jouer avec les noms est refuse', $('dialog-overlay').style.display !== 'none');
     check('le message dit combien ont saisi', $('dialog-message').textContent.includes('3 ont saisi'));
-    check('il oriente vers le mode simple', $('dialog-message').textContent.includes('Simple'));
+    check('il oriente vers l autre mode', $('dialog-message').textContent.includes('deux équipes'));
     $('dialog-confirm').click();
     await wait(200);
-    check('on reste sur l etape des equipes', ecran() === 'screen-players');
+    check('on reste sur le choix du mode', ecran() === 'screen-jeu-mode');
 
     d.querySelector('[data-mode="simple"]').click();
-    $('btn-next-players').click();
+    check('sans prenoms, on passe aux equipes', ecran() === 'screen-repartition');
+    $('btn-repartition-jouer').click();
     check('en mode simple, on enchaine sur les manches', ecran() === 'screen-rounds');
 
     check('l app connait maintenant l effectif : aucune question posee',
@@ -318,6 +313,12 @@ f.addEventListener('load', async () => {
           $('cards-count-field').style.display === 'none');
 
     $('btn-play').click();
+
+    // Parties a themes : l app propose de partager le suivi avant de lancer
+
+    $('dialog-cancel').click();
+
+    await wait(0);
     await wait(900);
     check('la partie demarre', ecran() === 'screen-round');
 

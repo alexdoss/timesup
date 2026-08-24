@@ -78,13 +78,16 @@ f.addEventListener('load', async () => {
     await wait(500);
     $('dialog-confirm').click();          // paquet court, on passe outre
     await wait(700);
-    check('la configuration reprend', ecran() === 'screen-players');
-    $('btn-next-players').click();
+    check('la configuration reprend par le mode de jeu', ecran() === 'screen-jeu-mode');
+    d.querySelector('[data-mode="nominatif"]').click();
     await wait(300);
     $('btn-repartition-jouer').click();
     await wait(300);
     $('btn-next-rounds').click();
     $('btn-play').click();
+    // Parties a themes : l app propose de partager le suivi avant de lancer
+    $('dialog-cancel').click();
+    await wait(0);
     await wait(500);
     check('la partie 1 demarre', ecran() === 'screen-round');
 

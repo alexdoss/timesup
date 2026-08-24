@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Rush — où nommer les équipes ?</title>
+<style>
+:root {
+  --primary: #6D28D9; --primary-hover: #7C3AED; --primary-soft: rgba(109,40,217,.16);
+  --background: #0F172A; --surface: #1E293B; --surface-2: #273449;
+  --border: #334155; --text: #F8FAFC; --muted: #94A3B8; --muted-strong: #CBD5E1;
+  --muted-2: #64748B; --success: #22C55E; --secondary: #F59E0B; --error: #EF4444;
+  --t1: #d6336c; --t2: #33c26a;
+  --r-sm: 8px; --r-md: 12px; --r-lg: 16px;
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  background: #060B18; color: var(--text); padding: 22px 16px 60px; line-height: 1.5;
+}
+.wrap { max-width: 1020px; margin: 0 auto; }
+h1 { font-size: 1.4rem; margin-bottom: 4px; }
+.intro { color: var(--muted); font-size: .93rem; margin-bottom: 16px; }
+.intro b { color: var(--muted-strong); }
+
+.choix-option { display: flex; gap: 8px; margin-bottom: 14px; flex-wrap: wrap; }
+.choix-option button { background: var(--surface); color: var(--muted-strong);
+  border: 1px solid var(--border); border-radius: var(--r-md); padding: 10px 16px;
+  font-size: .9rem; font-weight: 700; cursor: pointer; font-family: inherit; }
+.choix-option button.on { background: var(--secondary); border-color: var(--secondary);
+  color: #1a1206; }
+
+.tabs { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 18px; }
+.tab { background: var(--surface); color: var(--muted-strong); border: 1px solid var(--border);
+  border-radius: var(--r-md); padding: 9px 15px; font-size: .86rem; font-weight: 600;
+  cursor: pointer; font-family: inherit; }
+.tab.on { background: var(--primary); border-color: var(--primary-hover); color: #fff; }
+.tab .role { display: block; font-size: .66rem; text-transform: uppercase;
+  letter-spacing: .05em; opacity: .7; }
+
+.stage { display: flex; gap: 28px; align-items: flex-start; flex-wrap: wrap; }
+.phone { width: 340px; flex-shrink: 0; background: var(--background);
+  border: 1px solid var(--border); border-radius: 30px; overflow: hidden;
+  box-shadow: 0 14px 44px rgba(0,0,0,.55); }
+.barre { display: flex; align-items: center; gap: 8px; padding: 13px 18px 11px;
+  border-bottom: 1px solid var(--border); font-size: .74rem; color: var(--muted); }
+.barre .marque { font-weight: 800; color: var(--text); }
+.corps { padding: 20px 18px 26px; min-height: 440px; }
+
+.etape { font-size: .68rem; text-transform: uppercase; letter-spacing: .06em;
+  color: var(--primary-hover); font-weight: 800; }
+h2.titre { font-size: 1.2rem; font-weight: 800; margin: 4px 0 3px; }
+.hint { font-size: .84rem; color: var(--muted); margin-bottom: 12px; }
+.cap { font-size: .72rem; text-transform: uppercase; letter-spacing: .05em;
+  color: var(--muted); display: block; margin-bottom: 6px; }
+
+.btn { display: block; width: 100%; padding: 13px; border: 0; border-radius: var(--r-md);
+  background: var(--primary); color: #fff; font-size: .98rem; font-weight: 700;
+  font-family: inherit; cursor: pointer; margin-top: 14px; }
+.btn.sec { background: var(--surface-2); color: var(--text);
+  border: 1px solid var(--border); margin-top: 9px; }
+
+.tuiles { display: grid; gap: 10px; margin-top: 14px; }
+.tuiles button { background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--r-lg); padding: 16px 14px; text-align: left; cursor: pointer;
+  font-family: inherit; color: var(--text); }
+.tuiles .ic { font-size: 1.7rem; display: block; }
+.tuiles .t { font-size: 1rem; font-weight: 800; display: block; margin: 4px 0 2px; }
+.tuiles .d { font-size: .82rem; color: var(--muted); display: block; }
+
+.ligne-eq { display: flex; align-items: center; gap: 9px; margin-bottom: 8px; }
+.pastille { width: 13px; height: 13px; border-radius: 50%; flex-shrink: 0; }
+.champ { flex: 1; padding: 11px; border-radius: var(--r-md); border: 1px solid var(--border);
+  background: var(--surface-2); color: var(--text); font-size: .95rem; font-family: inherit; }
+
+.equipier { display: flex; align-items: center; gap: 9px; padding: 8px 10px;
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-md);
+  margin-bottom: 6px; font-size: .92rem; }
+.equipier .bouton-eq { margin-left: auto; border: 0; border-radius: 999px;
+  padding: 5px 12px; font-size: .74rem; font-weight: 700; color: #fff;
+  font-family: inherit; cursor: pointer; }
+
+.notes { flex: 1; min-width: 260px; background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--r-md); padding: 16px; font-size: .9rem; }
+.notes h3 { font-size: .75rem; text-transform: uppercase; letter-spacing: .05em;
+  color: var(--muted); margin-bottom: 10px; }
+.notes p { margin-bottom: 10px; } .notes p:last-child { margin-bottom: 0; }
+.plus::before { content: '＋ '; color: var(--success); font-weight: 700; }
+.minus::before { content: '− '; color: var(--secondary); font-weight: 700; }
+.question { background: rgba(245,158,11,.14); border-left: 3px solid var(--secondary);
+  border-radius: 0 var(--r-md) var(--r-md) 0; padding: 11px 13px; margin-top: 12px;
+  font-size: .87rem; color: var(--muted-strong); }
+.parcours { background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--r-md); padding: 12px 14px; margin-bottom: 16px; font-size: .86rem;
+  color: var(--muted-strong); line-height: 1.9; }
+.parcours b { color: var(--text); }
+.parcours .fleche { color: var(--muted-2); margin: 0 4px; }
+.parcours .neuf { color: var(--secondary); font-weight: 700; }
+.parcours .part { color: var(--error); text-decoration: line-through; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <h1>Où nommer les équipes ?</h1>
+  <p class="intro">Si les noms quittent la page 3, il ne lui reste qu'une question :
+    <b>avec ou sans les prénoms</b>. Deux façons d'en tirer les conséquences.
+    Le piège : l'écran de répartition <b>n'existe qu'en mode nominatif</b>.</p>
+
+  <div class="choix-option" id="options"></div>
+  <div class="parcours" id="parcours"></div>
+  <div class="tabs" id="tabs"></div>
+
+  <div class="stage">
+    <div class="phone">
+      <div class="barre" id="barre"></div>
+      <div class="corps" id="corps"></div>
+    </div>
+    <div class="notes" id="notes"></div>
+  </div>
+</div>
+
+<script type="module">
+
+const champsEquipes = `
+  <span class="cap">Noms des équipes</span>
+  <div class="ligne-eq"><span class="pastille" style="background:var(--t1)"></span>
+    <input class="champ" value="Équipe 1" readonly></div>
+  <div class="ligne-eq"><span class="pastille" style="background:var(--t2)"></span>
+    <input class="champ" value="Équipe 2" readonly></div>`;
+
+const listeJoueurs = `
+  <span class="cap" style="margin-top:14px">Qui joue avec qui</span>
+  <div class="equipier"><span>Marc</span>
+    <button class="bouton-eq" style="background:var(--t1)">Équipe 1</button></div>
+  <div class="equipier"><span>Sacha</span>
+    <button class="bouton-eq" style="background:var(--t2)">Équipe 2</button></div>
+  <div class="equipier"><span>Papi</span>
+    <button class="bouton-eq" style="background:var(--t1)">Équipe 1</button></div>
+  <div class="equipier"><span>Nour</span>
+    <button class="bouton-eq" style="background:var(--t2)">Équipe 2</button></div>`;
+
+const ecranMode = (etape) => `
+  <span class="etape">${etape}</span>
+  <h2 class="titre">Comment on joue ?</h2>
+  <p class="hint">Un choix, et on avance.</p>
+  <div class="tuiles">
+    <button style="background:var(--primary-soft);border-color:var(--primary-hover)">
+      <span class="ic">🙋</span><span class="t">Avec les prénoms</span>
+      <span class="d">Chacun est nommé. Rotation des joueurs et scores individuels.
+        Minimum 4 joueurs.</span></button>
+    <button>
+      <span class="ic">👥</span><span class="t">Juste deux équipes</span>
+      <span class="d">Pas de prénoms. On note seulement les points de chaque équipe.</span></button>
+  </div>`;
+
+// ===== OPTION 1 : un écran « Les équipes », partout =====
+const UN = {
+  parcours: `
+    <b>Nominatif</b> : type de partie <span class="fleche">→</span> thèmes
+      <span class="fleche">→</span> <span class="neuf">comment on joue</span>
+      <span class="fleche">→</span> QR : chacun s'inscrit
+      <span class="fleche">→</span> <span class="neuf">les équipes (noms + répartition)</span>
+      <span class="fleche">→</span> manches <span class="fleche">→</span> déroulement<br>
+    <b>Simple</b> : type de partie <span class="fleche">→</span> thèmes
+      <span class="fleche">→</span> <span class="neuf">comment on joue</span>
+      <span class="fleche">→</span> <span class="neuf">les équipes (noms seuls)</span>
+      <span class="fleche">→</span> manches <span class="fleche">→</span> déroulement`,
+
+  ecrans: {
+    mode: {
+      onglet: 'Comment on joue', role: 'les deux modes',
+      barre: ['Rush', 'nouvelle partie'],
+      corps: () => ecranMode('Étape 3/6'),
+      notes: `<p class="plus">Ce qui restait de la page 3 : une seule question, deux tuiles,
+        un clic — comme l'écran « Type de partie » que tu viens de simplifier.
+        Pas de bouton « Suivant » : choisir, c'est avancer.</p>
+        <p class="plus">Le choix mérite son écran : il change tout le reste de la partie.
+          Noyé sous deux champs de texte, il se lisait mal.</p>`
+    },
+
+    equipesNominatif: {
+      onglet: 'Les équipes — nominatif', role: 'organisateur',
+      barre: ['Rush', 'nouvelle partie'],
+      corps: () => `
+        <span class="etape">Étape 5/6</span>
+        <h2 class="titre">Les équipes</h2>
+        <p class="hint">Nomme-les, et répartis les joueurs.</p>
+        ${champsEquipes}
+        ${listeJoueurs}
+        <button class="btn sec">🎲 Mélanger</button>
+        <button class="btn">Suivant ▶️</button>`,
+      notes: `<p class="plus">Ta proposition : on nomme les équipes là où on les voit.
+        Renommer « Équipe 1 » en « Les Bleus » pendant qu'on regarde qui la compose,
+        c'est le bon moment — et le bouton de chaque joueur affiche aussitôt le nouveau nom.</p>
+        <p class="plus">L'écran existe déjà (la répartition des cartes perso). Il gagne
+          deux champs en haut, et son titre passe de « Répartir les équipes » à
+          « Les équipes ».</p>`
+    },
+
+    equipesSimple: {
+      onglet: 'Les équipes — simple', role: 'organisateur',
+      barre: ['Rush', 'nouvelle partie'],
+      corps: () => `
+        <span class="etape">Étape 4/5</span>
+        <h2 class="titre">Les équipes</h2>
+        <p class="hint">Deux équipes s'affrontent. Donne-leur un nom si tu veux.</p>
+        ${champsEquipes}
+        <button class="btn">Suivant ▶️</button>`,
+      notes: `<p class="plus">Le même écran, sans les joueurs — puisqu'il n'y en a pas
+        de nommés. C'est la réponse au piège : en mode simple les noms d'équipes gardent
+        une maison, et c'est la même que dans l'autre mode.</p>
+        <p class="minus">Un écran avec deux champs et rien d'autre, c'est maigre.
+          Mais c'est déjà tout ce que la page 3 contient aujourd'hui en mode simple :
+          on ne perd rien, on renomme.</p>
+        <div class="question"><b>Ma recommandation :</b> celle-ci. Un écran = une idée,
+          les deux modes se ressemblent, et « Les équipes » veut dire la même chose
+          partout dans l'app.</div>`
+    }
+  }
+};
+
+// ===== OPTION 2 : on ne touche qu'au mode nominatif =====
+const DEUX = {
+  parcours: `
+    <b>Nominatif</b> : type de partie <span class="fleche">→</span> thèmes
+      <span class="fleche">→</span> <span class="neuf">page 3 : mode seul</span>
+      <span class="fleche">→</span> QR : chacun s'inscrit
+      <span class="fleche">→</span> <span class="neuf">répartition (avec les noms)</span>
+      <span class="fleche">→</span> manches <span class="fleche">→</span> déroulement<br>
+    <b>Simple</b> : type de partie <span class="fleche">→</span> thèmes
+      <span class="fleche">→</span> page 3 : mode <b>+ noms d'équipes</b>
+      <span class="fleche">→</span> manches <span class="fleche">→</span> déroulement`,
+
+  ecrans: {
+    page3Nominatif: {
+      onglet: 'Page 3 — nominatif', role: 'organisateur',
+      barre: ['Rush', 'nouvelle partie'],
+      corps: () => `
+        <span class="etape">Étape 3/6</span>
+        <h2 class="titre">Équipes & Joueurs</h2>
+        <p class="hint">&nbsp;</p>
+        <span class="cap">Mode de jeu</span>
+        <div class="tuiles" style="grid-template-columns:1fr 1fr;display:grid;gap:8px">
+          <button style="background:var(--primary-soft);border-color:var(--primary-hover);text-align:center;padding:11px">
+            <span class="t" style="margin:0">Nominatif</span></button>
+          <button style="text-align:center;padding:11px">
+            <span class="t" style="margin:0;color:var(--muted)">Simple</span></button>
+        </div>
+        <p class="hint" style="margin-top:8px">Chaque joueur est identifié.
+          Rotation et statistiques individuelles.</p>
+        <button class="btn">Suivant ▶️</button>`,
+      notes: `<p class="minus">Le titre ment : « Équipes & Joueurs » alors qu'on n'y trouve
+        ni équipe ni joueur. Il faudrait le renommer — et on retombe sur l'option 1.</p>
+        <p class="minus">Un écran presque vide, avec un bouton « Suivant » à presser
+          après avoir déjà cliqué une pastille : deux gestes pour une décision.</p>`
+    },
+
+    page3Simple: {
+      onglet: 'Page 3 — simple', role: 'organisateur',
+      barre: ['Rush', 'nouvelle partie'],
+      corps: () => `
+        <span class="etape">Étape 3/5</span>
+        <h2 class="titre">Équipes & Joueurs</h2>
+        <p class="hint">&nbsp;</p>
+        <span class="cap">Mode de jeu</span>
+        <div class="tuiles" style="grid-template-columns:1fr 1fr;display:grid;gap:8px">
+          <button style="text-align:center;padding:11px">
+            <span class="t" style="margin:0;color:var(--muted)">Nominatif</span></button>
+          <button style="background:var(--primary-soft);border-color:var(--primary-hover);text-align:center;padding:11px">
+            <span class="t" style="margin:0">Simple</span></button>
+        </div>
+        <p class="hint" style="margin-top:8px">Seules les équipes comptent les points.</p>
+        ${champsEquipes}
+        <button class="btn">Suivant ▶️</button>`,
+      notes: `<p class="minus">Le même écran porte deux contenus très différents selon
+        le mode : les noms d'équipes apparaissent ici, mais pas là. Difficile à expliquer,
+        et deux fois plus de cas à éprouver.</p>
+        <p class="plus">Seul avantage réel : c'est le changement le plus petit.
+          Le mode simple n'est pas touché du tout.</p>`
+    },
+
+    repartition2: {
+      onglet: 'La répartition', role: 'organisateur',
+      barre: ['Rush', 'nouvelle partie'],
+      corps: () => `
+        <span class="etape">Étape 5/6</span>
+        <h2 class="titre">Répartir les équipes</h2>
+        <p class="hint">Les prénoms viennent des joueurs eux-mêmes.</p>
+        ${champsEquipes}
+        ${listeJoueurs}
+        <button class="btn sec">🎲 Mélanger</button>
+        <button class="btn">Suivant ▶️</button>`,
+      notes: `<p class="plus">Identique à l'option 1 : c'est bien ici que les noms
+        d'équipes trouvent leur place naturelle.</p>
+        <p class="minus">Mais ils n'y sont qu'en mode nominatif. En simple, il faut aller
+          les chercher deux écrans plus tôt.</p>`
+    }
+  }
+};
+
+const OPTIONS = {
+  UN:   { titre: 'Option 1 — « Les équipes », un écran pour les deux modes', data: UN },
+  DEUX: { titre: 'Option 2 — on ne touche qu\'au nominatif', data: DEUX }
+};
+
+let option = 'UN';
+let courant = 'mode';
+
+const zoneOptions = document.getElementById('options');
+Object.entries(OPTIONS).forEach(([cle, o]) => {
+  const b = document.createElement('button');
+  b.dataset.option = cle;
+  b.textContent = o.titre;
+  zoneOptions.appendChild(b);
+});
+
+function ecransCourants() { return OPTIONS[option].data.ecrans; }
+
+function construireOnglets() {
+  const tabs = document.getElementById('tabs');
+  tabs.innerHTML = '';
+  Object.entries(ecransCourants()).forEach(([cle, e]) => {
+    const b = document.createElement('button');
+    b.className = 'tab' + (cle === courant ? ' on' : '');
+    b.dataset.ecran = cle;
+    b.innerHTML = `<span class="role">${e.role}</span>${e.onglet}`;
+    tabs.appendChild(b);
+  });
+}
+
+function rendre() {
+  document.querySelectorAll('[data-option]').forEach(b =>
+    b.classList.toggle('on', b.dataset.option === option));
+  document.getElementById('parcours').innerHTML = OPTIONS[option].data.parcours;
+
+  const e = ecransCourants()[courant];
+  document.getElementById('barre').innerHTML =
+    `<span class="marque">${e.barre[0]}</span><span>${e.barre[1]}</span>`;
+  document.getElementById('corps').innerHTML = e.corps();
+  document.getElementById('notes').innerHTML = '<h3>Ce qu\'il faut savoir</h3>' + e.notes;
+  document.querySelectorAll('.tab').forEach(t => t.classList.toggle('on', t.dataset.ecran === courant));
+}
+
+zoneOptions.addEventListener('click', ev => {
+  const b = ev.target.closest('[data-option]');
+  if (!b) return;
+  option = b.dataset.option;
+  courant = Object.keys(ecransCourants())[0];
+  construireOnglets();
+  rendre();
+});
+
+document.getElementById('tabs').addEventListener('click', ev => {
+  const t = ev.target.closest('.tab');
+  if (!t) return;
+  courant = t.dataset.ecran;
+  rendre();
+});
+
+construireOnglets();
+rendre();
+</script>
+</body>
+</html>

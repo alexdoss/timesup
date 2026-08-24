@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Rush — comment l'organisateur s'inscrit</title>
+<style>
+:root {
+  --primary: #6D28D9; --primary-hover: #7C3AED; --primary-soft: rgba(109,40,217,.16);
+  --background: #0F172A; --surface: #1E293B; --surface-2: #273449;
+  --border: #334155; --text: #F8FAFC; --muted: #94A3B8; --muted-strong: #CBD5E1;
+  --muted-2: #64748B; --success: #22C55E; --secondary: #F59E0B; --error: #EF4444;
+  --t1: #d6336c; --t2: #33c26a;
+  --r-sm: 8px; --r-md: 12px; --r-lg: 16px;
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  background: #060B18; color: var(--text); padding: 22px 16px 60px; line-height: 1.5;
+}
+.wrap { max-width: 1060px; margin: 0 auto; }
+h1 { font-size: 1.4rem; margin-bottom: 4px; }
+.intro { color: var(--muted); font-size: .93rem; margin-bottom: 16px; }
+.intro b { color: var(--muted-strong); }
+
+.choix-option { display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap; }
+.choix-option button { background: var(--surface); color: var(--muted-strong);
+  border: 1px solid var(--border); border-radius: var(--r-md); padding: 10px 16px;
+  font-size: .9rem; font-weight: 700; cursor: pointer; font-family: inherit; }
+.choix-option button.on { background: var(--secondary); border-color: var(--secondary);
+  color: #1a1206; }
+
+.duo { display: flex; gap: 24px; align-items: flex-start; flex-wrap: wrap; }
+.colonne { display: flex; flex-direction: column; gap: 8px; }
+.etiquette { font-size: .72rem; text-transform: uppercase; letter-spacing: .05em;
+  color: var(--muted); font-weight: 700; }
+.phone { width: 320px; flex-shrink: 0; background: var(--background);
+  border: 1px solid var(--border); border-radius: 28px; overflow: hidden;
+  box-shadow: 0 14px 44px rgba(0,0,0,.55); }
+.barre { display: flex; align-items: center; gap: 8px; padding: 12px 16px 10px;
+  border-bottom: 1px solid var(--border); font-size: .72rem; color: var(--muted); }
+.barre .marque { font-weight: 800; color: var(--text); }
+.corps { padding: 16px 16px 22px; }
+
+.etape { font-size: .66rem; text-transform: uppercase; letter-spacing: .06em;
+  color: var(--primary-hover); font-weight: 800; }
+h2.titre { font-size: 1.14rem; font-weight: 800; margin: 3px 0 2px; }
+.hint { font-size: .8rem; color: var(--muted); margin-bottom: 10px; }
+.cap { font-size: .68rem; text-transform: uppercase; letter-spacing: .05em;
+  color: var(--muted); display: block; margin: 12px 0 5px; }
+
+.faux-qr { background: #fff; border-radius: var(--r-sm); width: 92px; height: 92px;
+  margin: 6px auto 8px; display: grid; grid-template-columns: repeat(7, 1fr);
+  grid-template-rows: repeat(7, 1fr); padding: 7px; gap: 2px; }
+.faux-qr i { background: #0b1020; border-radius: 1px; }
+.faux-qr i.v { background: transparent; }
+.code { font-size: 1.7rem; font-weight: 800; letter-spacing: .26em;
+  color: var(--secondary); text-align: center; }
+.adresse { font-size: .72rem; color: var(--muted-strong); background: var(--surface-2);
+  border-radius: var(--r-sm); padding: 5px 8px; text-align: center; margin-top: 5px; }
+
+.rangee { display: flex; gap: 7px; }
+.champ { flex: 1; padding: 10px; border-radius: var(--r-md); border: 1px solid var(--border);
+  background: var(--surface-2); color: var(--text); font-size: .92rem; font-family: inherit; }
+.champ.vide { color: var(--muted-2); }
+.plus-btn { width: 44px; border: 0; border-radius: var(--r-md); background: var(--primary);
+  color: #fff; font-size: 1.2rem; font-weight: 700; font-family: inherit; }
+
+.gens { margin-top: 8px; }
+.gens div { display: flex; align-items: center; gap: 8px; padding: 8px 10px;
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-md);
+  margin-bottom: 5px; font-size: .88rem; }
+.gens div.vide { border-style: dashed; color: var(--muted-2); justify-content: center; }
+.gens .tag { margin-left: auto; font-size: .66rem; text-transform: uppercase;
+  letter-spacing: .04em; color: var(--muted-2); }
+.gens .tag.moi { color: var(--primary-hover); font-weight: 700; }
+.gens .x { margin-left: auto; color: var(--muted-2); font-size: .8rem; }
+.gens .puce { width: 7px; height: 7px; border-radius: 50%; background: var(--muted-2); }
+
+.compte { font-size: .78rem; color: var(--muted); margin-top: 8px; }
+.btn { display: block; width: 100%; padding: 12px; border: 0; border-radius: var(--r-md);
+  background: var(--primary); color: #fff; font-size: .95rem; font-weight: 700;
+  font-family: inherit; margin-top: 12px; }
+.btn:disabled { opacity: .35; }
+.lien { display: block; width: 100%; background: none; border: 0; color: var(--muted-strong);
+  font-size: .82rem; text-decoration: underline; font-family: inherit; margin-top: 10px; }
+
+.notes { flex: 1; min-width: 250px; background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--r-md); padding: 16px; font-size: .89rem; }
+.notes h3 { font-size: .73rem; text-transform: uppercase; letter-spacing: .05em;
+  color: var(--muted); margin-bottom: 10px; }
+.notes p { margin-bottom: 10px; } .notes p:last-child { margin-bottom: 0; }
+.plus::before { content: '＋ '; color: var(--success); font-weight: 700; }
+.minus::before { content: '− '; color: var(--secondary); font-weight: 700; }
+.question { background: rgba(245,158,11,.14); border-left: 3px solid var(--secondary);
+  border-radius: 0 var(--r-md) var(--r-md) 0; padding: 11px 13px; margin-top: 12px;
+  font-size: .86rem; color: var(--muted-strong); }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <h1>Comment l'organisateur s'inscrit</h1>
+  <p class="intro">Il tient le téléphone qui mène la partie : son prénom est le seul
+    qui ne peut pas arriver par un scan. Les deux états de l'écran sont montrés
+    côte à côte — <b>avant</b> qu'il se nomme, et <b>après</b>.</p>
+
+  <div class="choix-option" id="options"></div>
+
+  <div class="duo">
+    <div class="colonne">
+      <span class="etiquette">Avant</span>
+      <div class="phone"><div class="barre"><span class="marque">Rush</span><span>nouvelle partie</span></div>
+        <div class="corps" id="avant"></div></div>
+    </div>
+    <div class="colonne">
+      <span class="etiquette">Après</span>
+      <div class="phone"><div class="barre"><span class="marque">Rush</span><span>nouvelle partie</span></div>
+        <div class="corps" id="apres"></div></div>
+    </div>
+    <div class="notes" id="notes"></div>
+  </div>
+</div>
+
+<script>
+const QR = '<div class="faux-qr">' + Array.from({ length: 49 },
+  (_, i) => `<i class="${[0,1,2,5,6,7,8,12,14,16,20,21,24,26,28,30,33,35,36,38,42,44,46,47,48].includes(i) ? '' : 'v'}"></i>`).join('') + '</div>';
+
+const enTete = `
+  <span class="etape">Étape 4/7</span>
+  <h2 class="titre">Qui joue ?</h2>
+  <p class="hint">Chacun scanne et donne son prénom. Le code sert ensuite à suivre la partie.</p>
+  ${QR}
+  <div class="code">K4T9</div>
+  <div class="adresse">📤 rush-alexina.vercel.app/rejoindre</div>`;
+
+const ligne = (nom, tag, classe = '') =>
+  `<div><span class="puce"></span>${nom}<span class="tag ${classe}">${tag}</span></div>`;
+const ligneX = nom => `<div><span class="puce"></span>${nom}<span class="x">✕</span></div>`;
+
+const OPTIONS = {
+  actuel: {
+    titre: 'Actuel — deux liens',
+    avant: `${enTete}
+      <div class="gens">${ligneX('Marc')}${ligneX('Sacha')}</div>
+      <p class="compte">2 inscrit(s) — il en faut au moins 4</p>
+      <button class="btn" disabled>Suivant ▶️</button>
+      <button class="lien">✋ Je joue aussi</button>
+      <button class="lien">➕ Un joueur n'a pas de téléphone</button>`,
+    apres: `${enTete}
+      <span class="cap">Ton prénom</span>
+      <div class="rangee"><input class="champ" value="Alex" readonly>
+        <button class="plus-btn">+</button></div>
+      <div class="gens">${ligneX('Marc')}${ligneX('Sacha')}</div>
+      <p class="compte">2 inscrit(s) — il en faut au moins 4</p>
+      <button class="btn" disabled>Suivant ▶️</button>
+      <button class="lien">➕ Un joueur n'a pas de téléphone</button>`,
+    notes: `<p class="minus">Le champ n'existe qu'après un clic sur un lien. Pour la seule
+      personne qui <b>ne peut pas</b> scanner, c'est un geste de trop.</p>
+      <p class="minus">Deux liens qui se ressemblent en bas d'écran : on lit les deux
+        avant de choisir.</p>`
+  },
+
+  A: {
+    titre: 'Option A — ton prénom, en haut, toujours visible',
+    avant: `${enTete}
+      <span class="cap">Toi</span>
+      <div class="rangee"><input class="champ vide" value="Ton prénom" readonly>
+        <button class="plus-btn">+</button></div>
+      <span class="cap">Ceux qui ont scanné</span>
+      <div class="gens">${ligneX('Marc')}${ligneX('Sacha')}</div>
+      <p class="compte">2 inscrit(s) — il en faut au moins 4</p>
+      <button class="btn" disabled>Suivant ▶️</button>
+      <button class="lien">➕ Un joueur n'a pas de téléphone</button>`,
+    apres: `${enTete}
+      <span class="cap">Toi</span>
+      <div class="gens">${ligne('Alex', 'toi ✎', 'moi')}</div>
+      <span class="cap">Ceux qui ont scanné</span>
+      <div class="gens">${ligneX('Marc')}${ligneX('Sacha')}</div>
+      <p class="compte">3 inscrit(s) — il en faut au moins 4</p>
+      <button class="btn" disabled>Suivant ▶️</button>
+      <button class="lien">➕ Un joueur n'a pas de téléphone</button>`,
+    notes: `<p class="plus">Le champ est là dès l'arrivée : l'organisateur se nomme en
+      un geste, pendant que les autres scannent.</p>
+      <p class="plus">« Toi » et « Ceux qui ont scanné » séparent clairement ce qui dépend
+        de lui de ce qui arrive tout seul. Une fois nommé, le champ devient une ligne
+        avec un crayon pour se corriger.</p>
+      <p class="plus">Le cas rare — quelqu'un sans téléphone — reste un lien : il ne
+        concerne pas toutes les parties.</p>
+      <p class="minus">Deux zones de saisie sur l'écran quand le lien est déplié.
+        L'écran s'allonge un peu.</p>
+      <div class="question"><b>Ma recommandation.</b> C'est ce que tu décris : un champ
+        « nom » directement accessible, et rien d'autre à découvrir.</div>`
+  },
+
+  B: {
+    titre: 'Option B — un seul champ « ajouter », sans distinction',
+    avant: `${enTete}
+      <span class="cap">Ajouter quelqu'un sans téléphone</span>
+      <div class="rangee"><input class="champ vide" value="Prénom" readonly>
+        <button class="plus-btn">+</button></div>
+      <div class="gens">${ligneX('Marc')}${ligneX('Sacha')}</div>
+      <p class="compte">2 inscrit(s) — il en faut au moins 4</p>
+      <button class="btn" disabled>Suivant ▶️</button>`,
+    apres: `${enTete}
+      <span class="cap">Ajouter quelqu'un sans téléphone</span>
+      <div class="rangee"><input class="champ vide" value="Prénom" readonly>
+        <button class="plus-btn">+</button></div>
+      <div class="gens">${ligneX('Marc')}${ligneX('Sacha')}${ligneX('Alex')}${ligneX('Papi')}</div>
+      <p class="compte">4 joueurs inscrits</p>
+      <button class="btn">Suivant ▶️</button>`,
+    notes: `<p class="plus">Un seul champ, aucun lien, aucun rôle. L'organisateur s'ajoute
+      comme il ajouterait son grand-père : c'est le même geste.</p>
+      <p class="plus">L'écran le plus court des trois, et le plus simple à expliquer.</p>
+      <p class="minus">L'app ne sait plus lequel est l'organisateur : plus de repère
+        « toi » dans la liste, et rien sur quoi s'appuyer si tu veux un jour prévenir
+        le bon téléphone que c'est son tour.</p>
+      <p class="minus">Le libellé doit couvrir deux cas d'un coup — « toi, ou quelqu'un
+        qui n'a pas de téléphone » — ce qui l'allonge, ou reste vague.</p>`
+  }
+};
+
+let option = 'A';
+const zone = document.getElementById('options');
+Object.entries(OPTIONS).forEach(([cle, o]) => {
+  const b = document.createElement('button');
+  b.dataset.option = cle;
+  b.textContent = o.titre;
+  zone.appendChild(b);
+});
+
+function rendre() {
+  document.querySelectorAll('[data-option]').forEach(b =>
+    b.classList.toggle('on', b.dataset.option === option));
+  const o = OPTIONS[option];
+  document.getElementById('avant').innerHTML = o.avant;
+  document.getElementById('apres').innerHTML = o.apres;
+  document.getElementById('notes').innerHTML = "<h3>Ce qu'il faut savoir</h3>" + o.notes;
+}
+
+zone.addEventListener('click', ev => {
+  const b = ev.target.closest('[data-option]');
+  if (!b) return;
+  option = b.dataset.option;
+  rendre();
+});
+
+rendre();
+</script>
+</body>
+</html>

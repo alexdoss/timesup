@@ -58,6 +58,8 @@ $SCENARIOS = @(
   @{ f = '30-equite-entre-parties.html';           b = 40000; p = 'ad' }
   @{ f = '31-cumul-par-joueur.html';               b = 50000; p = 'ae' }
   @{ f = '32-cumul-par-joueur-cote-invite.html';   b = 40000; p = 'af' }
+  @{ f = '33-suivi-partie-a-themes.html';          b = 130000; p = 'ag' }
+  @{ f = '34-inscription-par-qr.html';             b = 160000; p = 'ah' }
 )
 
 function Resolve-Chrome {

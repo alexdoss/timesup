@@ -2,13 +2,15 @@
 // Orchestre les modules et gère les événements
 
 import { loadThemes } from './themes.js';
-import { game, ROUNDS, shuffle, resetGame, replayGame, buildDeck, startNewRound, getCurrentCard, cardFound, cardPassed, switchTeam, isRoundOver, isGameOver, nextRound, getCardsRemaining, addPlayer, removePlayer, assignTeamsRoundRobin, getCurrentPlayer, advancePlayer, getActiveRound, setPlayerTeam, syncChosenTeams, canPass, getPlannedTeamSizes, beginTurn, closeTurn, uncountCard, countCard, getRoundScores, getSessionScores, playerExists, recordRound, getRoundHistory, getPlayerBreakdown } from './game.js';
-import { showScreen, updateTimer, showCard, updateRoundScreen, updateTurnInfo, updateGameHeader, showTurnResult, showRoundEnd, showFinalScreen, renderThemeButtons, renderPlayerList, updateCurrentPlayer, renderPlayerStats, renderRoundsSelector, renderAssignMode, applyTeamAccent, showResumeOption, renderSoundSetting, renderRules, showPauseOverlay, showPauseCountdown, hidePause, showPuppetConfirm, setRoundsNextEnabled, renderThemeEditor, showThemeEditError, renderCustomThemes, showDialog,
-         afficherInvitation, renderSession, renderBoutonMesCartes, renderSaisieLocale,
+import { game, ROUNDS, shuffle, resetGame, replayGame, buildDeck, startNewRound, getCurrentCard, cardFound, cardPassed, switchTeam, isRoundOver, isGameOver, nextRound, getCardsRemaining, addPlayer, removePlayer, assignTeamsRoundRobin, getCurrentPlayer, advancePlayer, getActiveRound, syncChosenTeams, canPass, getPlannedTeamSizes, beginTurn, closeTurn, uncountCard, countCard, getRoundScores, getSessionScores, playerExists, recordRound, getRoundHistory, getPlayerBreakdown } from './game.js';
+import { showScreen, updateTimer, showCard, updateRoundScreen, updateTurnInfo, updateGameHeader, showTurnResult, showRoundEnd, showFinalScreen, renderThemeButtons, renderPlayerList, updateCurrentPlayer, renderPlayerStats, renderRoundsSelector, applyTeamAccent, showResumeOption, renderSoundSetting, renderRules, showPauseOverlay, showPauseCountdown, hidePause, showPuppetConfirm, setRoundsNextEnabled, renderThemeEditor, showThemeEditError, renderCustomThemes, showDialog,
+         afficherInvitation, afficherPartageSuivi, afficherInscription, renderInscrits,
+         renderSession, renderBoutonMesCartes, renderSaisieLocale,
          showSaisieError, renderRepartition,
          afficherEquipes, masquerEquipes, afficherBoutonEquipes } from './ui.js';
 import { activerSuivi, couperSuivi, publierEtat } from './suivi.js';
-import { ouvrirSession, sessionCourante, oublierSession, adresseInvitation, adresseLisible,
+import { ouvrirSession, ouvrirSuiviSeul, ouvrirInscription, sessionCourante, oublierSession,
+         adresseInvitation, adresseLisible,
          inscrire, deposerCartes, retirerJoueur, fermerSession, relancerSession, lireEtat,
          suivre, arreterSuivi } from './session.js';
 import { creerQrSvg } from './qr.js';
@@ -33,6 +35,8 @@ let repartition = [];          // joueurs revenus de la session, pour l'écran d
 let joueursAttendus = 6;       // prévision d'effectif, pour dimensionner le paquet
 let modeRejeu = false;         // session ouverte pour rejouer : équipes et réglages déjà faits
 let listeJoueurs = [];         // liste fermée des joueurs attendus, en cas de rejeu
+let rejeuThemes = false;       // rejeu d'une partie à thèmes : on revient choisir le paquet
+let inscriptionRefusee = false;// l'organisateur préfère taper les prénoms lui-même
 
 // ===== INIT =====
 async function init() {
@@ -60,16 +64,17 @@ function preparerNouvellePartie() {
   // Aucune tuile n'est pré-sélectionnée : choisir, c'est avancer. Une tuile
   // déjà allumée laisserait croire qu'il reste quelque chose à valider.
   document.querySelectorAll('[data-source]').forEach(tuile => tuile.classList.remove('active'));
-  document.querySelectorAll('[data-mode]').forEach(pastille => {
-    pastille.classList.toggle('active',
-      (pastille.dataset.mode === 'nominatif') === game.nominativeMode);
-  });
+  document.querySelectorAll('[data-mode]').forEach(tuile => tuile.classList.remove('active'));
 
   saisieMode = 'partagee';
   repartition = [];
   moiJoueur = null;
   modeRejeu = false;
   listeJoueurs = [];
+  inscriptionRefusee = false;
+  // L'écran des thèmes redevient une étape de l'assistant : sans ça, un rejeu
+  // quitté par la croix laisserait « C'est parti » à la place de « Suivant ».
+  quitterLeRejeuDesThemes();
   oublierSession();
   // Une nouvelle configuration abandonne la partie précédente : ceux qui la
   // suivaient ne doivent pas recevoir les états d'une partie qui n'est plus la leur.
@@ -127,12 +132,10 @@ function syncTeamNamesFromInputs() {
 }
 
 function refreshPlayerList() {
-  syncTeamNamesFromInputs();
-  renderPlayerList(game.players, game.assignMode, game.teams, game.playerAssignments, (name) => {
+  renderPlayerList(game.players, (name) => {
     removePlayer(name);
-    refreshPlayerList();
-  }, (playerName, teamIndex) => {
-    setPlayerTeam(playerName, teamIndex);
+    // Un prénom retiré ne doit pas réapparaître sur l'écran des équipes
+    repartition = repartition.filter(j => j.prenom !== name);
     refreshPlayerList();
   });
 }
@@ -141,11 +144,12 @@ function refreshPlayerList() {
 // simple, ou saisie partagée où les joueurs ne se sont pas encore inscrits.
 // null déclenche la question posée à l'organisateur pour la manche pantin.
 function effectifsConnus() {
+  // Les équipes viennent d'être formées à la main : ce sont les vrais chiffres,
+  // quel que soit le parcours qui a fourni les prénoms.
+  if (game.nominativeMode && repartition.length > 0) {
+    return game.teams.map((_, index) => repartition.filter(j => j.equipe === index).length);
+  }
   if (saisiePartagee() && repartition.length > 0) {
-    // Mode nominatif : les équipes viennent d'être formées, on a les vrais chiffres.
-    if (game.nominativeMode) {
-      return game.teams.map((_, index) => repartition.filter(j => j.equipe === index).length);
-    }
     // Mode simple : on connaît le nombre de joueurs, pas leur répartition —
     // on suppose des équipes aussi équilibrées que possible.
     return [Math.ceil(repartition.length / 2), Math.floor(repartition.length / 2)];
@@ -242,7 +246,15 @@ function setupListeners() {
       });
       return;
     }
-    showScreen('screen-players');
+    // En rejeu, ce bouton lance la partie : équipes et manches sont déjà réglées
+    if (rejeuThemes) {
+      quitterLeRejeuDesThemes();
+      buildDeck(THEMES);
+      beginRound();
+      return;
+    }
+    updateWizardLabels();
+    showScreen('screen-jeu-mode');
   });
 
   // Add player
@@ -274,71 +286,38 @@ function setupListeners() {
     }
   });
 
-  // Game mode toggle (Nominatif / Simple)
-  document.querySelectorAll('[data-mode]').forEach(pill => {
-    pill.addEventListener('click', () => {
-      document.querySelectorAll('[data-mode]').forEach(p => p.classList.remove('active'));
-      pill.classList.add('active');
-      const mode = pill.dataset.mode;
-      game.nominativeMode = (mode === 'nominatif');
+  // Comment on joue : avec ou sans les prénoms. Choisir vaut avancer.
+  document.querySelectorAll('[data-mode]').forEach(tuile => {
+    tuile.addEventListener('click', () => {
+      document.querySelectorAll('[data-mode]').forEach(t => t.classList.remove('active'));
+      game.nominativeMode = (tuile.dataset.mode === 'nominatif');
       updateSimpleCustomBlock();
-      document.getElementById('mode-note').textContent = game.nominativeMode
-        ? "Chaque joueur est identifié. Rotation et statistiques individuelles."
-        : "Mode simple : seules les équipes et les scores sont suivis.";
+      etapeApresModeDeJeu();
     });
   });
 
-  // Assign mode toggle
-  document.querySelectorAll('[data-assign]').forEach(pill => {
-    pill.addEventListener('click', () => {
-      game.assignMode = pill.dataset.assign;
-      renderAssignMode(game.assignMode);
-      refreshPlayerList();
-    });
-  });
-
-  // Team name changes refresh player list (for dropdowns)
+  // Les noms d'équipes vivent sur l'écran des équipes : les changer redessine
+  // la répartition, dont chaque bouton porte le nom de son équipe.
   document.getElementById('team1-name').addEventListener('input', () => {
     syncTeamNamesFromInputs();
-    refreshPlayerList();
+    afficherRepartition();
   });
   document.getElementById('team2-name').addEventListener('input', () => {
     syncTeamNamesFromInputs();
-    refreshPlayerList();
+    afficherRepartition();
   });
 
-  // Players → Rounds (step 3)
+  // Les joueurs → les équipes
   document.getElementById('btn-next-players').addEventListener('click', () => {
-    // En saisie partagée, l'effectif est celui des joueurs qui ont scanné ;
-    // sinon, celui de la liste saisie à la main. Le mode de jeu étant choisi
-    // ici, c'est ici que se vérifie le minimum.
-    const effectif = saisiePartagee() ? repartition.length : game.players.length;
-    if (game.nominativeMode && effectif < 4) {
+    if (game.players.length < 4) {
       showDialog({
         title: 'Pas assez de joueurs',
-        message: saisiePartagee()
-          ? `Jouer avec les noms demande au moins 4 joueurs, et ${effectif} ont saisi leurs cartes. Choisis « Simple » pour jouer quand même.`
-          : "Il faut au moins 4 joueurs pour jouer avec les noms. Sinon, passe en mode sans les noms.",
+        message: "Il faut au moins 4 joueurs pour jouer avec les noms. Sinon, reviens en arrière et choisis « Juste deux équipes ».",
         confirmLabel: 'Compris'
       });
       return;
     }
-    if (!game.nominativeMode) {
-      game.players = [];
-      game.playerAssignments = {};
-      game.teams[0].players = [];
-      game.teams[1].players = [];
-    }
-    syncTeamNamesFromInputs();
-
-    // En saisie partagée nominative, les équipes se forment maintenant : les
-    // manches pourront alors raisonner sur des effectifs exacts.
-    if (joueursViennentDesScans()) {
-      afficherRepartition();
-      showScreen('screen-repartition');
-      return;
-    }
-    openRoundsStep();
+    ouvrirEcranDesEquipes();
   });
 
   // Confirmation d'effectif pour les manches qui l'exigent (mode simple)
@@ -445,6 +424,40 @@ function setupListeners() {
 
   // Session partagée — écran de l'organisateur
   document.getElementById('session-adresse').addEventListener('click', partagerLien);
+
+  // Inscription des joueurs par QR, parties à thèmes en mode nominatif
+  document.getElementById('inscription-adresse').addEventListener('click', partagerLien);
+  document.getElementById('btn-inscription-suivant').addEventListener('click', terminerLesInscriptions);
+  document.getElementById('btn-inscription-manuel').addEventListener('click', basculerEnSaisieManuelle);
+  document.getElementById('btn-inscription-moi-ok').addEventListener('click', inscrireOrganisateur);
+  document.getElementById('inscription-moi-prenom').addEventListener('keypress', e => {
+    if (e.key === 'Enter') inscrireOrganisateur();
+  });
+  document.getElementById('btn-inscription-sanstel').addEventListener('click', () => {
+    document.getElementById('inscription-ajout-bloc').style.display = '';
+    document.getElementById('inscription-erreur').textContent = '';
+    document.getElementById('inscription-ajout-prenom').focus();
+  });
+  document.getElementById('btn-inscription-ajout-ok')
+    .addEventListener('click', inscrireJoueurSansTelephone);
+  document.getElementById('inscription-ajout-prenom').addEventListener('keypress', e => {
+    if (e.key === 'Enter') inscrireJoueurSansTelephone();
+  });
+  document.getElementById('btn-inscription-retour').addEventListener('click', () => {
+    arreterSuivi();
+    oublierSession();
+    showScreen('screen-jeu-mode');
+  });
+
+  // Partage du suivi, parties à thèmes
+  document.getElementById('suivi-partage-adresse').addEventListener('click', partagerLien);
+  document.getElementById('btn-suivi-partage-lancer').addEventListener('click', lancerAvecSuivi);
+  // Revenir en arrière abandonne le code : personne ne l'a encore utilisé, et
+  // le laisser ouvert ferait suivre une partie que l'organisateur reconfigure.
+  document.getElementById('btn-suivi-partage-retour').addEventListener('click', () => {
+    oublierSession();
+    showScreen('screen-config');
+  });
   document.getElementById('btn-mes-cartes').addEventListener('click', () => ouvrirSaisieLocale('organisateur'));
   document.getElementById('btn-session-sanstel').addEventListener('click', () => ouvrirSaisieLocale('sansTel'));
   document.getElementById('btn-session-lancer').addEventListener('click', terminerSaisieEtConfigurer);
@@ -516,23 +529,25 @@ function setupListeners() {
   // Rejouer avec les mêmes joueurs : mêmes équipes, mêmes réglages, le cumul continue
   document.getElementById('btn-replay').addEventListener('click', () => {
     replayGame();
-    // La partie précédente est close. Sans cette coupure, ses battements
-    // continuaient de publier sur l'ancien code, mais sur un état déjà remis à
-    // zéro : les invités voyaient leur écran de résultats se vider. Le dernier
-    // état publié reste en place, et c'est le bon — celui de la partie finie.
-    couperSuivi();
 
     // En cartes perso, il faut de NOUVELLES cartes : sans ça on rejouerait le
     // paquet à l'identique, que tout le monde connaît déjà par cœur.
     if (saisiePartagee()) {
+      // La partie précédente est close. Sans cette coupure, ses battements
+      // continuaient de publier sur l'ancien code, mais sur un état déjà remis
+      // à zéro : les invités voyaient leur écran de résultats se vider.
+      couperSuivi();
       modeRejeu = true;
       listeJoueurs = game.players.length ? [...game.players] : repartition.map(j => j.prenom);
       ouvrirReglageSession();
       return;
     }
 
-    buildDeck(THEMES);
-    beginRound();
+    // Thèmes prédéfinis : on repasse par le choix du paquet. Rejouer les mêmes
+    // thèmes sans rien demander, c'est enchaîner sur des mots déjà vus — et
+    // c'était le seul endroit du jeu où l'on ne pouvait pas en changer.
+    // Les équipes et les manches, elles, ne bougent pas.
+    ouvrirChoixDesThemesEnRejeu();
   });
 
   // Nouvelle partie : retour à l'accueil, le cumul de la soirée s'arrête là
@@ -603,14 +618,21 @@ function setupListeners() {
 // ===== WIZARD HELPERS =====
 // Les deux parcours comptent cinq étapes ; seule la deuxième diffère —
 // le choix des thèmes, ou la saisie des cartes par les joueurs eux-mêmes.
+// Le parcours n'a plus un nombre d'étapes fixe : les prénoms n'existent qu'en
+// mode nominatif, et le paquet vient soit de thèmes, soit d'une saisie partagée.
+// On construit donc la liste des écrans réellement traversés, et on numérote.
 function updateWizardLabels() {
-  const steps = game.cardSource === 'themes'
-    ? { mode: 1, themes: 2, players: 3, rounds: 4, config: 5 }
-    : { mode: 1, session: 2, players: 3, rounds: 4, config: 5 };
+  const etapes = ['mode'];
+  if (game.cardSource === 'themes') etapes.push('themes');
+  else etapes.push('session');
+  etapes.push('jeumode');
+  if (game.nominativeMode) etapes.push('players');
+  etapes.push('equipes', 'rounds', 'config');
 
+  const total = etapes.length;
   document.querySelectorAll('[data-step]').forEach(el => {
-    const s = el.dataset.step;
-    if (steps[s]) el.textContent = `Étape ${steps[s]}/5`;
+    const rang = etapes.indexOf(el.dataset.step);
+    if (rang >= 0) el.textContent = `Étape ${rang + 1}/${total}`;
   });
 }
 
@@ -674,40 +696,112 @@ function joueursViennentDesScans() {
   return saisiePartagee() && game.nominativeMode;
 }
 
+// L'écran des joueurs ne sert plus qu'à la saisie manuelle des prénoms : quand
+// ils viennent des scans, l'assistant passe directement aux équipes, où la
+// liste des inscrits est de toute façon sous les yeux.
 function updateBlocJoueurs() {
   const bloc = document.getElementById('nominatif-block');
-  const note = document.getElementById('note-joueurs-partages');
-  if (!bloc) return;
-
-  const parLesJoueurs = joueursViennentDesScans();
-  bloc.style.display = game.nominativeMode && !parLesJoueurs ? '' : 'none';
-
-  if (note) {
-    note.style.display = parLesJoueurs ? '' : 'none';
-    if (parLesJoueurs) {
-      note.querySelector('p').textContent =
-        `📱 ${repartition.length} joueur(s) ont saisi leurs cartes : ${repartition.map(j => j.prenom).join(', ')}. Tu les répartiras en équipes juste avant de jouer.`;
-    }
-  }
-
-  // Une fois les cartes collectées, revenir en arrière n'a plus de sens :
-  // la session est close et le paquet figé.
-  const retour = document.querySelector('#screen-players .btn-back');
-  if (retour) retour.style.display = saisiePartagee() ? 'none' : '';
+  if (bloc) bloc.style.display = game.nominativeMode ? '' : 'none';
 }
 
-// L'écran précédant les manches dépend du parcours : en saisie partagée
-// nominative, la répartition des équipes s'intercale entre les deux.
-window.handleBackFromRounds = function() {
-  if (joueursViennentDesScans()) {
-    afficherRepartition();
-    showScreen('screen-repartition');
-  } else {
-    showScreen('screen-players');
+// ===== NAVIGATION DE L'ASSISTANT =====
+// Un écran = une décision. L'écran des équipes est le seul point de passage
+// obligé après le mode de jeu : c'est lui qui précède toujours les manches.
+
+// Après « comment on joue » : les prénoms, ou directement les équipes.
+function etapeApresModeDeJeu() {
+  // Les prénoms viennent des scans : leur nombre est déjà figé, et c'est ici
+  // qu'on peut encore renoncer aux prénoms. Dans le parcours manuel, la liste
+  // n'est pas encore saisie — le contrôle attend l'écran des joueurs.
+  if (game.nominativeMode && joueursViennentDesScans() && repartition.length < 4) {
+    showDialog({
+      title: 'Pas assez de joueurs',
+      message: `Jouer avec les noms demande au moins 4 joueurs, et ${repartition.length} ont saisi leurs cartes. Choisis « Juste deux équipes » pour jouer quand même.`,
+      confirmLabel: 'Compris'
+    });
+    game.nominativeMode = true;
+    return;
   }
+
+  updateWizardLabels();
+  updateCardsCountLabel();
+
+  // Partie à thèmes en mode nominatif : plutôt que de taper dix prénoms sur son
+  // téléphone, l'organisateur fait scanner un code. Le repli manuel reste offert.
+  if (game.nominativeMode && game.cardSource === 'themes'
+      && !inscriptionRefusee && !sessionCourante()) {
+    ouvrirInscriptionDesJoueurs();
+    return;
+  }
+
+  if (!game.nominativeMode) {
+    // Aucun prénom ne sert plus : on efface ce qu'une configuration
+    // précédente aurait laissé, sinon les équipes resteraient peuplées.
+    game.players = [];
+    game.playerAssignments = {};
+    game.teams[0].players = [];
+    game.teams[1].players = [];
+    // `repartition` n'est pas vidée : sans les prénoms, elle reste la seule
+    // trace du nombre de personnes qui ont scanné — ce dont les manches à
+    // effectif minimum ont besoin pour se verrouiller toutes seules.
+    ouvrirEcranDesEquipes();
+    return;
+  }
+  // Les prénoms viennent des scans : rien à saisir, on répartit directement.
+  if (joueursViennentDesScans()) {
+    ouvrirEcranDesEquipes();
+    return;
+  }
+  refreshPlayerList();
+  updateBlocJoueurs();
+  showScreen('screen-players');
+}
+
+// L'écran des équipes : les noms toujours, la répartition seulement s'il y a
+// des prénoms à répartir.
+function ouvrirEcranDesEquipes() {
+  syncTeamNamesFromInputs();
+  // La liste vient des scans quand il y en a eu, de la saisie manuelle sinon.
+  // Dans ce second cas elle est reconstruite à chaque passage : l'organisateur
+  // a pu revenir ajouter ou retirer un prénom. On garde les équipes déjà
+  // attribuées, sans quoi un ajout tardif rebattrait tout son travail.
+  if (game.nominativeMode && !joueursViennentDesScans()) {
+    const dejaPlaces = new Map(repartition.map(j => [j.prenom, j.equipe]));
+    repartition = game.players.map((prenom, index) => ({
+      prenom,
+      equipe: dejaPlaces.has(prenom) ? dejaPlaces.get(prenom) : index % game.teams.length
+    }));
+  }
+  document.getElementById('bloc-repartition').style.display =
+    game.nominativeMode ? '' : 'none';
+  document.getElementById('equipes-hint').textContent = game.nominativeMode
+    ? 'Nomme-les, et répartis les joueurs.'
+    : "Deux équipes s'affrontent. Donne-leur un nom si tu veux.";
+  afficherRepartition();
+  updateWizardLabels();
+  showScreen('screen-repartition');
+}
+
+// L'écran précédant les manches est toujours celui des équipes.
+window.handleBackFromRounds = function() {
+  ouvrirEcranDesEquipes();
+};
+
+window.handleBackFromEquipes = function() {
+  if (game.nominativeMode && !joueursViennentDesScans()) {
+    refreshPlayerList();
+    updateBlocJoueurs();
+    showScreen('screen-players');
+    return;
+  }
+  showScreen('screen-jeu-mode');
 };
 
 window.handleBackFromPlayers = function() {
+  showScreen('screen-jeu-mode');
+};
+
+window.handleBackFromJeuMode = function() {
   showScreen(game.cardSource === 'themes' ? 'screen-themes' : 'screen-mode');
 };
 
@@ -740,7 +834,7 @@ function etapeApresTypeDePartie() {
     // pendant que l'organisateur n'a encore rien réglé.
     ouvrirReglageSession();
   } else {
-    showScreen('screen-players');
+    showScreen('screen-jeu-mode');
   }
 }
 
@@ -827,7 +921,7 @@ async function demarrerSessionPartagee() {
       cancelLabel: 'Revenir en arrière'
     });
     if (basculer) basculerEnSequentiel();
-    else showScreen('screen-players');
+    else showScreen('screen-jeu-mode');
   }
 }
 
@@ -838,8 +932,10 @@ function basculerEnSequentiel() {
   arreterSuivi();
   oublierSession();
   saisieMode = 'sequentielle';
+  repartition = [];
   updateSimpleCustomBlock();
-  showScreen('screen-players');
+  updateWizardLabels();
+  showScreen('screen-jeu-mode');
 }
 
 function surEtatSession(etat) {
@@ -894,9 +990,12 @@ function surPanneSession() {
 }
 
 async function confirmerRetraitJoueur(joueur) {
+  const inscriptionSeule = !!sessionCourante()?.inscription;
   const partir = await showDialog({
     title: `Retirer ${joueur.prenom} ?`,
-    message: `Ses ${joueur.nbCartes} carte(s) déjà envoyées seront abandonnées. Il pourra rejoindre à nouveau avec le même code.`,
+    message: inscriptionSeule
+      ? `${joueur.prenom} ne jouera pas cette partie. Il pourra s'inscrire à nouveau avec le même code.`
+      : `Ses ${joueur.nbCartes} carte(s) déjà envoyées seront abandonnées. Il pourra rejoindre à nouveau avec le même code.`,
     confirmLabel: 'Retirer',
     cancelLabel: 'Attendre encore',
     danger: true
@@ -906,7 +1005,9 @@ async function confirmerRetraitJoueur(joueur) {
   try {
     await retirerJoueur(joueur.id);
     if (moiJoueur && moiJoueur.id === joueur.id) moiJoueur = null;
-    surEtatSession(await lireEtatSansAttendre());
+    const etat = await lireEtatSansAttendre();
+    if (inscriptionSeule) surEtatInscription(etat);
+    else surEtatSession(etat);
   } catch (err) {
     showDialog({ title: 'Retrait impossible', message: err.message, confirmLabel: 'Compris' });
   }
@@ -1160,7 +1261,8 @@ async function terminerSaisieEtConfigurer() {
     // raisonnent dessus comme dans une partie ordinaire.
     repartition = resultat.joueurs.map((j, index) => ({ ...j, equipe: index % game.teams.length }));
     updateBlocJoueurs();
-    showScreen('screen-players');
+    updateWizardLabels();
+    showScreen('screen-jeu-mode');
   } catch (err) {
     if (err.statut === 409 && err.details?.enAttente) {
       return showDialog({
@@ -1188,6 +1290,14 @@ function melangerRepartition() {
 // Valide la répartition et passe aux manches. Une équipe vide bloquerait la
 // partie bien plus loin, sur un message obscur : on la refuse ici.
 function validerRepartition() {
+  syncTeamNamesFromInputs();
+
+  // En mode simple il n'y a personne à répartir : seuls les noms comptent.
+  if (!game.nominativeMode) {
+    openRoundsStep();
+    return;
+  }
+
   const vides = game.teams
     .map((equipe, index) => ({ equipe, nombre: repartition.filter(j => j.equipe === index).length }))
     .filter(t => t.nombre === 0);
@@ -1240,8 +1350,224 @@ function onPlayClicked() {
       startCustomCardsEntry();
     }
   } else {
-    startGame();
+    // Thèmes prédéfinis : avant de lancer, proposer un code de suivi à ceux qui
+    // veulent regarder. Une seule fois par soirée — une session déjà ouverte
+    // sert aussi bien aux parties suivantes.
+    if (!preparerLancement()) return;
+    if (sessionCourante()) { lancerLaPartie(); return; }
+    proposerLeSuivi();
   }
+}
+
+// ===== INSCRIPTION DES JOUEURS PAR QR (parties à thèmes, mode nominatif) =====
+// Les prénoms arrivent des téléphones. La même session servira ensuite à suivre
+// la partie : le code donné ici est celui de toute la soirée.
+
+const MINIMUM_JOUEURS = 4;
+
+async function ouvrirInscriptionDesJoueurs() {
+  try {
+    const session = await ouvrirInscription();
+    afficherInscription(
+      creerQrSvg(adresseInvitation(), { taille: 190 }),
+      session.code,
+      adresseLisible()
+    );
+    moiJoueur = null;
+    document.getElementById('inscription-ajout-bloc').style.display = 'none';
+    document.getElementById('inscription-erreur').textContent = '';
+    document.getElementById('inscription-moi-prenom').value = '';
+    renderInscrits([], MINIMUM_JOUEURS, confirmerRetraitJoueur, corrigerSonPrenom);
+    updateWizardLabels();
+    showScreen('screen-inscription');
+    suivre(surEtatInscription, surPanneInscription);
+  } catch (err) {
+    // Pas de réseau : on retombe sur la saisie des prénoms à la main, qui
+    // fonctionne hors ligne. Le suivi sera reproposé avant le lancement.
+    await showDialog({
+      title: 'Inscription par QR indisponible',
+      message: `${err.message} Tu peux saisir les prénoms toi-même.`,
+      confirmLabel: 'Saisir les prénoms'
+    });
+    basculerEnSaisieManuelle();
+  }
+}
+
+function surEtatInscription(etat) {
+  repartition = etat.joueurs.map((j, index) => ({
+    ...j, equipe: index % game.teams.length
+  }));
+  renderInscrits(etat.joueurs, MINIMUM_JOUEURS, confirmerRetraitJoueur, corrigerSonPrenom);
+}
+
+function surPanneInscription() {
+  // Coupure passagère : on garde la dernière liste plutôt que de la vider
+}
+
+// L'organisateur se nomme dans le champ offert d'emblée. Corriger son prénom
+// revient à se retirer puis se réinscrire : la session ne sait pas renommer,
+// et c'est un geste assez rare pour ne pas mériter une action de plus côté serveur.
+async function inscrireOrganisateur() {
+  const champ = document.getElementById('inscription-moi-prenom');
+  const erreur = document.getElementById('inscription-erreur');
+  const prenom = champ.value.trim();
+  if (!prenom) return;
+
+  try {
+    if (moiJoueur) {
+      await retirerJoueur(moiJoueur.id);
+      moiJoueur = null;
+    }
+    const inscrit = await inscrire(prenom, 'organisateur');
+    moiJoueur = { id: inscrit.idJoueur, prenom: inscrit.prenom };
+    champ.value = '';
+    erreur.textContent = '';
+    surEtatInscription(await lireEtatSansAttendre());
+  } catch (err) {
+    erreur.textContent = err.message;
+    surEtatInscription(await lireEtatSansAttendre());
+  }
+}
+
+// Le crayon remet le champ, garni du prénom actuel.
+function corrigerSonPrenom(joueur) {
+  const champ = document.getElementById('inscription-moi-prenom');
+  document.getElementById('inscription-moi-ligne').style.display = 'none';
+  document.getElementById('inscription-moi-champ').style.display = '';
+  champ.value = joueur.prenom;
+  champ.focus();
+  champ.select();
+}
+
+// Un joueur sans téléphone : c'est l'organisateur qui le nomme.
+async function inscrireJoueurSansTelephone() {
+  const champ = document.getElementById('inscription-ajout-prenom');
+  const erreur = document.getElementById('inscription-erreur');
+  const prenom = champ.value.trim();
+  if (!prenom) return;
+
+  try {
+    await inscrire(prenom, 'sansTel');
+    champ.value = '';
+    erreur.textContent = '';
+    document.getElementById('inscription-ajout-bloc').style.display = 'none';
+    surEtatInscription(await lireEtatSansAttendre());
+  } catch (err) {
+    erreur.textContent = err.message;
+  }
+}
+
+// L'organisateur renonce au QR : les prénoms se tapent, comme avant.
+function basculerEnSaisieManuelle() {
+  arreterSuivi();
+  oublierSession();
+  inscriptionRefusee = true;
+  repartition = [];
+  updateWizardLabels();
+  refreshPlayerList();
+  updateBlocJoueurs();
+  showScreen('screen-players');
+}
+
+// Tout le monde est inscrit : la session se ferme aux nouveaux venus et change
+// de métier — elle sert désormais à suivre la partie.
+async function terminerLesInscriptions() {
+  try {
+    const session = sessionCourante();
+    const resultat = await fermerSession();
+    arreterSuivi();
+    repartition = resultat.joueurs.map((j, index) => ({
+      ...j, equipe: index % game.teams.length
+    }));
+    game.players = repartition.map(j => j.prenom);
+    if (session) activerSuivi(session.code, session.jeton);
+    ouvrirEcranDesEquipes();
+  } catch (err) {
+    showDialog({ title: 'Impossible de continuer', message: err.message, confirmLabel: 'Réessayer' });
+  }
+}
+
+// ===== SUIVI D'UNE PARTIE À THÈMES =====
+// Rien à saisir : la session ne sert qu'à donner un code aux spectateurs.
+
+async function proposerLeSuivi() {
+  const partager = await showDialog({
+    title: '👀 Partager le suivi ?',
+    message: "Ceux qui n'ont pas le téléphone en main peuvent suivre les scores et le chrono depuis le leur.",
+    confirmLabel: 'Oui, montrer le code',
+    cancelLabel: 'Non, lancer directement'
+  });
+  if (!partager) { lancerLaPartie(); return; }
+
+  try {
+    const session = await ouvrirSuiviSeul();
+    afficherPartageSuivi(
+      creerQrSvg(adresseInvitation(), { taille: 190 }),
+      session.code,
+      adresseLisible()
+    );
+    showScreen('screen-suivi-partage');
+  } catch (err) {
+    // Pas de réseau, ou stockage non configuré : la partie n'a pas à en pâtir.
+    // On le dit, et on lance — le suivi est un supplément, pas une condition.
+    await showDialog({
+      title: 'Suivi indisponible',
+      message: `${err.message} La partie peut commencer sans.`,
+      confirmLabel: 'Lancer la partie'
+    });
+    lancerLaPartie();
+  }
+}
+
+// ===== REJEU D'UNE PARTIE À THÈMES =====
+// Le même écran que dans l'assistant, mais en bout de course : ni étape, ni
+// retour en arrière, et « Suivant » devient « C'est parti ». Les équipes et les
+// manches ne sont pas rejouées, elles n'ont pas changé.
+
+function majBoutonRejeuThemes(themes) {
+  const bouton = document.getElementById('btn-next-step');
+  const pret = themes.size > 0;
+  bouton.disabled = !pret;
+  document.getElementById('themes-hint').textContent = pret
+    ? 'Prêt à lancer, avec un paquet tout neuf.'
+    : 'Choisis au moins un thème : le paquet sera renouvelé.';
+}
+
+function ouvrirChoixDesThemesEnRejeu() {
+  rejeuThemes = true;
+  // Les invités attendaient les résultats : leur dire que ça repart, sinon ils
+  // resteraient sur le tableau de la partie précédente jusqu'au premier tour.
+  publierEtat('configuration');
+
+  document.getElementById('themes-etape').style.display = 'none';
+  document.getElementById('btn-themes-retour').style.display = 'none';
+  document.getElementById('themes-titre').textContent = 'Une nouvelle partie';
+  document.getElementById('btn-next-step').textContent = "C'est parti ! 🚀";
+
+  refreshThemeSelector();
+  majBoutonRejeuThemes(game.selectedThemes);
+  showScreen('screen-themes');
+}
+
+// Retour à l'assistant : l'écran des thèmes redevient une étape parmi d'autres.
+function quitterLeRejeuDesThemes() {
+  if (!rejeuThemes) return;
+  rejeuThemes = false;
+  document.getElementById('themes-etape').style.display = '';
+  document.getElementById('btn-themes-retour').style.display = '';
+  document.getElementById('themes-titre').textContent = 'Choisis tes thèmes';
+  document.getElementById('themes-hint').textContent = 'Sélectionne un ou plusieurs thèmes';
+  const bouton = document.getElementById('btn-next-step');
+  bouton.textContent = 'Suivant ▶️';
+  bouton.disabled = false;
+}
+
+// L'organisateur a montré le code : la session change de métier, elle sert
+// maintenant à publier l'état de la partie.
+function lancerAvecSuivi() {
+  const session = sessionCourante();
+  if (session) activerSuivi(session.code, session.jeton);
+  lancerLaPartie();
 }
 
 function startCustomCardsEntry() {
@@ -1384,7 +1710,10 @@ function finishCurrentPlayerEntry() {
 }
 
 // ===== GAME FLOW =====
-function startGame() {
+// Les contrôles sont séparés du lancement : sur une partie à thèmes, la
+// proposition de partager le suivi s'intercale entre les deux, et elle ne doit
+// pas s'afficher pour une configuration qui sera de toute façon refusée.
+function preparerLancement() {
   collectActiveRounds();
   syncTeamNamesFromInputs();
   if (game.nominativeMode) {
@@ -1396,12 +1725,20 @@ function startGame() {
         message: "Chaque équipe doit compter au moins un joueur. Change l'équipe d'un joueur avant de lancer.",
         confirmLabel: 'Compris'
       });
-      return;
+      return false;
     }
   }
+  return true;
+}
+
+function lancerLaPartie() {
   resetGame();
   buildDeck(THEMES);
   beginRound();
+}
+
+function startGame() {
+  if (preparerLancement()) lancerLaPartie();
 }
 
 function beginRound() {
@@ -1737,7 +2074,8 @@ function endRound() {
 
 // ===== LIBRARY FUNCTIONS =====
 function refreshThemeSelector() {
-  renderThemeButtons(THEMES, game.selectedThemes, document.getElementById('theme-selector'));
+  renderThemeButtons(THEMES, game.selectedThemes, document.getElementById('theme-selector'),
+                     rejeuThemes ? majBoutonRejeuThemes : null);
 }
 
 function renderCustomThemesList() {

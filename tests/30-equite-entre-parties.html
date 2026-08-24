@@ -62,11 +62,19 @@ f.addEventListener('load', async () => {
     d.querySelector('[data-source="themes"]').click();
     d.querySelectorAll('#theme-selector .btn-theme')[0].click();
     $('btn-next-step').click();
+    d.querySelector('[data-mode="nominatif"]').click();
+    await wait(600);   // l ouverture de la session d inscription est un aller-retour
+    // Ce scenario saisit les prenoms a la main plutot que par QR
+    $('btn-inscription-manuel').click();
     ['Arthur', 'Marina', 'Bilal', 'Nour', 'Elio', 'Sara'].forEach(ajouterJoueur);
     check('six joueurs inscrits', $('player-count').textContent.startsWith('6'));
     $('btn-next-players').click();
+    $('btn-repartition-jouer').click();
     $('btn-next-rounds').click();
     $('btn-play').click();
+    // Parties a themes : l app propose de partager le suivi avant de lancer
+    $('dialog-cancel').click();
+    await wait(0);
     await wait(600);
     check('la partie demarre', ecran() === 'screen-round');
 
@@ -81,6 +89,9 @@ f.addEventListener('load', async () => {
       await jouerLaPartie();
       check(`fin de la partie ${numero - 1}`, ecran() === 'screen-final');
       $('btn-replay').click();
+      await wait(400);
+      // Rejouer repasse par le choix du paquet, sans toucher aux equipes
+      $('btn-next-step').click();
       await wait(700);
       check(`la partie ${numero} demarre`, ecran() === 'screen-round');
 

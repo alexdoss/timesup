@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head><meta charset="utf-8"><title>Test Rush — suivre une partie jouée avec des thèmes</title></head>
+<body>
+<pre id="log">demarrage...</pre>
+<div id="hote" style="display:flex;gap:8px"></div>
+<script>
+const out = [];
+function log(s) { out.push(s); document.getElementById('log').textContent = out.join('\n'); }
+function check(name, cond) { log((cond ? 'PASS' : 'FAIL') + ' -- ' + name); }
+const wait = ms => new Promise(r => setTimeout(r, ms));
+
+async function api(action, donnees = {}) {
+  const r = await fetch('/api/session', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ action, ...donnees })
+  });
+  return { statut: r.status, corps: await r.json().catch(() => ({})) };
+}
+
+const L2 = (doc, id) => doc.getElementById(id).textContent.trim();
+
+function cadre(src, largeur) {
+  const f = document.createElement('iframe');
+  f.src = src;
+  f.style.cssText = `width:${largeur}px;height:1000px;border:1px solid #ccc`;
+  document.getElementById('hote').appendChild(f);
+  return new Promise(r => f.addEventListener('load', () => r(f), { once: true }));
+}
+
+localStorage.removeItem('timesup_partie_en_cours');
+localStorage.removeItem('timesup_suivi');
+localStorage.removeItem('timesup_rejoint');
+
+(async () => {
+  try {
+    const app = await cadre('/', 400);
+    const da = app.contentDocument, wa = app.contentWindow;
+    wa.onerror = (m, s, l) => log('ERREUR APP: ' + m + ' @' + s + ':' + l);
+    const A = id => da.getElementById(id);
+    const ecranApp = () => [...da.querySelectorAll('.screen')].find(s => s.classList.contains('active'))?.id;
+    await wait(1200);
+
+    // Le wizard, jusqu au dernier ecran avant le lancement. En mode simple :
+    // sans prenoms, personne ne s inscrit, et c est la proposition de partage
+    // au lancement qui ouvre le suivi. Le mode nominatif, ou les joueurs
+    // s inscrivent eux-memes par QR, fait l objet du scenario 34.
+    async function configurerPartieAThemes() {
+      A('btn-start').click();
+      da.querySelector('[data-source="themes"]').click();
+      const theme = da.querySelectorAll('#theme-selector .btn-theme')[0];
+      // Un theme deja coche se decocherait : le paquet partirait vide
+      if (!theme.classList.contains('active')) theme.click();
+      A('btn-next-step').click();
+      da.querySelector('[data-mode="simple"]').click();
+      A('btn-repartition-jouer').click();
+      A('btn-next-rounds').click();
+      await wait(200);
+      return ecranApp() === 'screen-config';
+    }
+
+    check('l organisateur est sur le dernier ecran de reglage',
+          await configurerPartieAThemes());
+
+    // ===== US 1 : la proposition de partager le suivi =====
+    A('btn-play').click();
+    await wait(100);
+    log('       boite : "' + A('dialog-title').textContent + '"');
+    check('une boite propose de partager le suivi',
+          A('dialog-overlay').style.display !== 'none');
+    check('elle est nommee sans ambiguite',
+          A('dialog-title').textContent.includes('Partager le suivi'));
+    check('elle explique a quoi ca sert',
+          A('dialog-message').textContent.includes('suivre les scores'));
+    check('on peut accepter', A('dialog-confirm').textContent.includes('montrer le code'));
+    check('on peut refuser', A('dialog-cancel').textContent.includes('lancer directement'));
+    check('la partie n a pas encore demarre', ecranApp() === 'screen-config');
+
+    // ===== Refuser lance la partie, sans ouvrir de session =====
+    A('dialog-cancel').click();
+    await wait(300);
+    check('refuser lance la partie', ecranApp() === 'screen-round');
+    check('aucun code n a ete cree',
+          !wa.localStorage.getItem('timesup_suivi'));
+
+    // ===== On recommence, et cette fois on accepte =====
+    A('btn-pause').click();
+    await wait(100);
+    A('btn-abandon-game').click();
+    await wait(100);
+    A('dialog-confirm').click();
+    await wait(400);
+    check('retour a l accueil', ecranApp() === 'screen-home');
+
+    check('la partie est reconfigurable a l identique',
+          await configurerPartieAThemes());
+    check('aucun code n a survecu a l abandon', !wa.localStorage.getItem('timesup_suivi'));
+    A('btn-play').click();
+    await wait(100);
+    A('dialog-confirm').click();
+    await wait(900);
+    check('l ecran du code de suivi s affiche', ecranApp() === 'screen-suivi-partage');
+
+    const code = A('suivi-partage-code').textContent.trim();
+    log('       code de suivi : ' + code);
+    check('un code de quatre caracteres est propose', /^[A-Z0-9]{4}$/.test(code));
+    check('un QR code est dessine', !!da.querySelector('#suivi-partage-qr svg'));
+    check('l adresse a recopier est donnee',
+          A('suivi-partage-adresse').textContent.includes('/rejoindre'));
+    check('le bouton de lancement est propose',
+          A('btn-suivi-partage-lancer').textContent.includes("C'est parti"));
+    check('la partie n a toujours pas demarre', ecranApp() === 'screen-suivi-partage');
+
+    // La session est bien du type « suivi seul » : rien a saisir
+    const etatSession = (await api('etat', { code })).corps;
+    log('       session : suiviSeul=' + etatSession.suiviSeul
+        + ' ouverte=' + etatSession.ouverte
+        + ' joueurs=' + etatSession.joueurs.length);
+    check('la session est marquee « suivi seul »', etatSession.suiviSeul === true);
+    check('elle nait close : personne n a de cartes a saisir', etatSession.ouverte === false);
+    check('et elle ne compte aucun joueur', etatSession.joueurs.length === 0);
+
+    // ===== US 3 : l invite scanne et atterrit directement sur le suivi =====
+    const inv = await cadre('/rejoindre.html?c=' + code, 400);
+    const di = inv.contentDocument, wi = inv.contentWindow;
+    wi.onerror = (m, s, l) => log('ERREUR INVITE: ' + m + ' @' + s + ':' + l);
+    const I = id => di.getElementById(id);
+    const L = id => I(id).textContent.trim();
+    const ecranInv = () => [...di.querySelectorAll('.screen')].find(s => s.classList.contains('active'))?.id;
+    await wait(900);
+
+    log('       ecran invite : ' + ecranInv() + ' — "' + L('attente-titre') + '"');
+    check('l invite entre directement sur le suivi', ecranInv() === 'screen-attente');
+    check('on ne lui demande pas son prenom', ecranInv() !== 'screen-prenom');
+    check('ni de saisir des cartes', ecranInv() !== 'screen-cartes');
+    check('il n est pas repousse par « la partie a demarre »', ecranInv() !== 'screen-message');
+    check('l ecran annonce la configuration en cours',
+          L('attente-titre') === 'Configuration de la partie en cours');
+    check('et dit ce qui se passe',
+          L('attente-sous') === "L'organisateur prépare la partie. Elle démarre juste après.");
+    check('la roue tourne', I('attente-roue').style.display !== 'none');
+    check('aucun retour en arriere : il n a pas de saisie ou revenir',
+          I('btn-attente-retour').style.display === 'none');
+    check('aucune liste de joueurs, personne ne saisit rien',
+          I('attente-joueurs').style.display === 'none');
+    check('aucun tableau de resultats pour l instant',
+          I('bloc-resultats').style.display === 'none');
+
+    // ===== L organisateur lance : l invite suit =====
+    A('btn-suivi-partage-lancer').click();
+    await wait(600);
+    check('la partie demarre', ecranApp() === 'screen-round');
+
+    await wait(2800);
+    log('       invite : bloc-lancement '
+        + (I('bloc-lancement').style.display === 'none' ? 'masque' : 'affiche'));
+    check('l invite voit l ecran de lancement de tour',
+          I('bloc-lancement').style.display !== 'none');
+    check('l en-tete « configuration » a cede la place',
+          I('attente-titre').parentElement.style.display === 'none');
+    check('la manche est annoncee', L('lancement-titre').includes('Manche'));
+    check('on sait quelle equipe joue', L('lancement-tour').length > 0);
+    // Sans prenoms, il n y a ni joueur a nommer ni composition a consulter
+    check('aucun joueur nomme en mode simple', L('lancement-joueur') === '');
+    check('et aucune composition a consulter',
+          I('btn-voir-equipes').style.display === 'none');
+
+    // ===== Un tour lance : le sablier =====
+    A('btn-start-turn').click();
+    await wait(3000);
+    check('l organisateur joue', ecranApp() === 'screen-game');
+    check('l invite voit le sablier', I('bloc-tour').style.display !== 'none');
+    check('et plus l ecran de lancement', I('bloc-lancement').style.display === 'none');
+    const reste = L('tour-chrono');
+    log('       sablier invite : ' + reste + ' — ' + L('tour-qui'));
+    check('un decompte tourne', /\d/.test(reste));
+
+    // ===== Aucun mot du paquet ne doit fuiter =====
+    const motAffiche = A('card-word').textContent.trim();
+    log('       mot a l ecran de l organisateur : ' + motAffiche);
+    check('le mot en cours n apparait nulle part chez l invite',
+          motAffiche.length > 0 && !di.body.textContent.includes(motAffiche));
+
+    // ===== Le suivi est retenu : recharger la page y ramene =====
+    const inv2 = await cadre('/rejoindre.html', 400);
+    const di2 = inv2.contentDocument;
+    await wait(900);
+    const ecranInv2 = () => [...di2.querySelectorAll('.screen')].find(s => s.classList.contains('active'))?.id;
+    log('       apres rechargement : ' + ecranInv2());
+    check('sans code dans l adresse, le spectateur retrouve son suivi',
+          ecranInv2() === 'screen-attente');
+    check('et il voit toujours le tour en cours',
+          di2.getElementById('bloc-tour').style.display !== 'none');
+
+    // ===== US 2 : rejouer repasse par le choix du thème =====
+    // On termine la partie en cours, sans se soucier du detail des scores :
+    // ce qui compte ici, c est ce que voit l invite entre deux parties.
+    let garde = 0;
+    while (ecranApp() !== 'screen-final' && garde++ < 40) {
+      if (ecranApp() === 'screen-game') {
+        let k = 0;
+        while (ecranApp() === 'screen-game' && k < 400) { A('btn-found').click(); k++; }
+        await wait(300);
+      } else if (ecranApp() === 'screen-turn-end') { A('btn-next-turn').click(); await wait(400); }
+      else if (ecranApp() === 'screen-round-end') { A('btn-next-round').click(); await wait(400); }
+      else if (ecranApp() === 'screen-round') { A('btn-start-turn').click(); await wait(300); }
+      else await wait(300);
+    }
+    check('la partie est terminee', ecranApp() === 'screen-final');
+
+    await wait(2800);
+    check('l invite voit les resultats', I('bloc-resultats').style.display !== 'none');
+    check('et la fin de partie est annoncee',
+          L('resultats-titre').includes('Fin de la partie'));
+
+    A('btn-replay').click();
+    await wait(400);
+    log('       organisateur : ' + ecranApp() + ' — "' + L2(da, 'themes-titre') + '"');
+    check('rejouer ramene au choix du paquet', ecranApp() === 'screen-themes');
+    check('l ecran ne se presente plus comme une etape',
+          A('themes-etape').style.display === 'none');
+    check('et il n y a pas de retour en arriere',
+          A('btn-themes-retour').style.display === 'none');
+    check('le bouton lance la partie',
+          A('btn-next-step').textContent.includes("C'est parti"));
+    check('les equipes ne sont pas rejouees', ecranApp() !== 'screen-players');
+
+    // Le thème précédent reste coché : rejouer à l'identique tient en un geste
+    check('le theme precedent est toujours coche',
+          da.querySelectorAll('#theme-selector .btn-theme.active').length === 1);
+    check('le bouton est donc deja actif', !A('btn-next-step').disabled);
+
+    // Le decocher desactive le bouton : on ne lance pas sans paquet
+    da.querySelector('#theme-selector .btn-theme.active').click();
+    check('sans theme, le lancement est bloque', A('btn-next-step').disabled === true);
+    check('et l ecran dit quoi faire',
+          A('themes-hint').textContent.includes('au moins un thème'));
+
+    // ===== Pendant ce temps, l invite voit la configuration en cours =====
+    await wait(2800);
+    log('       invite pendant le choix : "' + L('attente-titre') + '"');
+    check('l invite quitte le tableau des resultats',
+          I('bloc-resultats').style.display === 'none');
+    check('il retrouve l ecran de configuration',
+          I('attente-titre').parentElement.style.display !== 'none'
+          && L('attente-titre') === 'Configuration de la partie en cours');
+    check('la roue tourne a nouveau', I('attente-roue').style.display !== 'none');
+
+    // ===== On choisit un autre thème, et la partie repart =====
+    const autre = [...da.querySelectorAll('#theme-selector .btn-theme')].filter(b => !b.disabled)[1];
+    autre.click();
+    log('       nouveau theme : ' + autre.textContent);
+    check('choisir un theme reactive le lancement', A('btn-next-step').disabled === false);
+    A('btn-next-step').click();
+    await wait(500);
+    check('la nouvelle partie demarre', ecranApp() === 'screen-round');
+
+    await wait(2800);
+    check('l invite suit la nouvelle partie',
+          I('bloc-lancement').style.display !== 'none');
+    check('et l en-tete de configuration a de nouveau cede la place',
+          I('attente-titre').parentElement.style.display === 'none');
+
+    log('SCENARIO 33 TERMINE');
+  } catch (e) { log('EXCEPTION: ' + e.message + '\n' + e.stack); }
+})();
+</script>
+</body>
+</html>

@@ -59,6 +59,8 @@ function Get-VuePublique($s) {
     mode            = $s.mode
     attendus        = @($s.attendus)
     ouverte         = $s.ouverte
+    suiviSeul       = [bool]$s.suiviSeul
+    inscription     = [bool]$s.inscription
     partie          = [int]($s.partie ?? 1)
     joueurs         = $liste
     total           = $total
@@ -80,19 +82,26 @@ function Invoke-FausseSession($corps) {
       if ($attendus | Where-Object { $_.ToLower() -eq $p.ToLower() }) { continue }
       $attendus += $p
     }
+    # Suivi seul : partie a themes, personne ne saisit, la session nait close
+    $suiviSeul = ($corps.suiviSeul -eq $true)
+    # Inscription : les invites donnent leur prenom, et rien d autre
+    $inscription = ($corps.inscription -eq $true)
     $code = New-Code
     $sessions[$code] = @{
       cartesParJoueur = $n
       mode            = ($corps.mode -eq 'nominatif') ? 'nominatif' : 'simple'
       jeton           = New-Id
-      ouverte         = $true
+      ouverte         = (-not $suiviSeul)
+      suiviSeul       = $suiviSeul
+      inscription     = $inscription
       attendus        = $attendus
       partie          = 1
       joueurs         = @{}
     }
     return @{ statut = 200; corps = [ordered]@{
       code = $code; jeton = $sessions[$code].jeton; cartesParJoueur = $n
-      mode = $sessions[$code].mode; attendus = $attendus; expireDans = 7200 } }
+      mode = $sessions[$code].mode; attendus = $attendus
+      suiviSeul = $suiviSeul; inscription = $inscription; expireDans = 7200 } }
   }
 
   $code = ([string]$corps.code).ToUpper().Trim()
@@ -207,6 +216,12 @@ function Invoke-FausseSession($corps) {
 
     'fermer' {
       if ($corps.jeton -ne $s.jeton) { return @{ statut = 403; corps = @{ error = "Action reservee a l'organisateur." } } }
+      # Inscription : ni attente a surveiller, ni paquet a rapatrier
+      if ($s.inscription) {
+        $s.ouverte = $false
+        $detail = @($s.joueurs.Values | ForEach-Object { [ordered]@{ prenom = $_.prenom; role = $_.role; nbCartes = 0 } })
+        return @{ statut = 200; corps = [ordered]@{ cartes = @(); joueurs = $detail } }
+      }
       $enAttente = @($s.joueurs.Values | Where-Object { -not $_.fini } | ForEach-Object { $_.prenom })
       if ($enAttente.Count -gt 0) {
         return @{ statut = 409; corps = [ordered]@{ error = 'Des joueurs saisissent encore leurs cartes.'; enAttente = $enAttente } }

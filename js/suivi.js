@@ -29,8 +29,10 @@ const BATTEMENT_MS = 15000;
 
 let etat = lireStockage();
 let battement = null;
-// Le moment de la partie que les battements rejouent entre deux changements
-let etapeCourante = 'attente';
+// Le moment de la partie que les battements rejouent entre deux changements.
+// Au repos c'est « configuration » : tant que rien n'a été publié, la partie
+// n'a pas commencé.
+let etapeCourante = 'configuration';
 
 function lireStockage() {
   try {
@@ -61,17 +63,19 @@ export function suiviActif() {
 export function activerSuivi(code, jeton) {
   if (!code || !jeton) return;
   etat = { code, jeton, version: 0 };
-  // Repartir de « attente » : sans ça, les battements d'une nouvelle session
-  // rejouaient l'étape de la partie précédente — « fin de partie » — sur un état
-  // de jeu déjà remis à zéro, et les invités voyaient un palmarès vide.
-  etapeCourante = 'attente';
   ecrireStockage();
-  relancerBattement();
+  // « Configuration », et publiée tout de suite. Deux raisons :
+  // — les battements ne doivent pas rejouer l'étape de la partie précédente
+  //   (« fin de partie ») sur un état déjà remis à zéro ;
+  // — surtout, ils ne doivent pas annoncer « attente », qui est l'écran de
+  //   lancement de tour : l'organisateur règle encore ses équipes, et les
+  //   invités verraient la partie démarrer avant l'heure.
+  publierEtat('configuration');
 }
 
 export function couperSuivi() {
   etat = null;
-  etapeCourante = 'attente';
+  etapeCourante = 'configuration';
   ecrireStockage();
   if (battement) clearInterval(battement);
   battement = null;

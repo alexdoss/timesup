@@ -210,6 +210,13 @@ async function validerCode(code) {
     session.mode = etat.mode;
     partieCourante = numeroDePartie(etat);
 
+    // Partie à thèmes : il n'y a pas de cartes à saisir, donc pas de prénom à
+    // donner. On entre directement en spectateur.
+    if (etat.suiviSeul) return entrerEnSpectateur();
+
+    // Inscription : on donne son prénom, et rien d'autre.
+    session.inscription = etat.inscription === true;
+
     if (!etat.ouverte) {
       return bloquer('🚪', 'La partie a démarré',
         "Cette partie est déjà lancée. Demande à l'organisateur d'en ouvrir une nouvelle.", null, null);
@@ -220,6 +227,45 @@ async function validerCode(code) {
   } catch (err) {
     surErreur(err);
   }
+}
+
+// ===== INSCRIT SANS CARTES — partie jouée avec des thèmes prédéfinis =====
+// Le prénom est donné, il n'y a rien d'autre à saisir. Suivre la partie est un
+// choix : un téléphone rangé n'interroge plus le serveur du tout.
+
+function proposerDeSuivre() {
+  document.getElementById('inscrit-titre').textContent = `Te voilà inscrit, ${session.prenom}`;
+  montrer('screen-inscrit');
+}
+
+function rangerLeTelephone() {
+  arreterAttente();
+  bloquer('📵', `À tout de suite, ${session.prenom}`,
+    'Tu es bien inscrit. Range ton téléphone, la partie commence quand tout le monde est prêt.',
+    '👀 Finalement, je suis la partie', () => ouvrirAttente());
+}
+
+// ===== SPECTATEUR — partie jouée avec des thèmes prédéfinis =====
+// Personne ne saisit de cartes : il n'y a ni prénom à donner, ni identifiant à
+// obtenir. On ouvre donc l'écran de suivi tout de suite, et on lit d'emblée
+// l'état publié — la liste des joueurs, elle, restera vide.
+function entrerEnSpectateur() {
+  session.idJoueur = null;
+  session.prenom = '';
+  session.spectateur = true;
+  sauvegarder();
+
+  saisieClose = true;
+  document.getElementById('attente-titre').textContent = 'Configuration de la partie en cours';
+  document.getElementById('attente-sous').textContent =
+    "L'organisateur prépare la partie. Elle démarre juste après.";
+  // Rien derrière : ce spectateur n'a pas de saisie où retourner
+  document.getElementById('btn-attente-retour').style.display = 'none';
+  document.getElementById('attente-roue').style.display = '';
+  ['attente-joueurs', 'attente-total'].forEach(id => {
+    document.getElementById(id).style.display = 'none';
+  });
+  ouvrirAttente();
 }
 
 // ===== Étape 2 : le prénom =====
@@ -293,6 +339,10 @@ async function rejoindreAvec(prenom) {
     session.partie = partieCourante;
     sauvegarder();
     reinitialiserSuivi();
+    // Partie à thèmes : rien à saisir. On demande seulement si ce téléphone
+    // doit suivre la partie, ou rester dans une poche jusqu'au tour de son
+    // propriétaire — s'inscrire et regarder sont deux choses différentes.
+    if (session.inscription) return proposerDeSuivre();
     ouvrirSaisie();
   } catch (err) {
     // Quelqu'un a pris cette place entre l'affichage et le tap : on rafraîchit
@@ -546,8 +596,13 @@ function rendreConfiguration(suivi, heureServeur) {
   const enLancement = ETAPES_LANCEMENT.includes(etape) && !!etat?.manche;
   const enTour = ETAPES_TOUR.includes(etape) && !!etat?.tour;
   const enResultat = ETAPES_RESULTAT.includes(etape);
-  // Dès la partie finie, on guette la suivante plutôt que l'état publié
-  if (etape === 'fin-partie') guetterRelance = true;
+  // Dès la partie finie, on guette la suivante plutôt que l'état publié —
+  // mais seulement quand il y a de nouvelles cartes à ressaisir. Sur une partie
+  // à thèmes, rien à resaisir : la session n'est jamais relancée, et c'est la
+  // publication suivante qui annonce la partie d'après. Guetter une relance qui
+  // n'arrivera pas laisserait ces téléphones figés sur le dernier score.
+  const aDesCartesARessaisir = !session.spectateur && !session.inscription;
+  if (etape === 'fin-partie' && aDesCartesARessaisir) guetterRelance = true;
 
   // L'en-tête « configuration en cours » cède la place dès que la partie tourne
   const enJeu = enLancement || enTour || enResultat;
@@ -900,17 +955,19 @@ function masquerEquipes() {
 function rendreAttente(etat) {
   // Une session fermée veut dire que le paquet est figé — pas que la partie a
   // commencé : l'organisateur enchaîne sur les équipes, les manches et les
-  // réglages. Les vrais écrans de suivi viendront ensuite.
-  //
-  // À traiter plus tard : en rejeu (« rejouer avec les mêmes joueurs »), la
-  // configuration est déjà faite et la partie démarre aussitôt. Ce libellé sera
-  // alors faux pendant quelques secondes.
+  // réglages. Le libellé reste vague à dessein : selon le parcours il règle
+  // tout, ou seulement un thème en rejeu, et la phrase doit valoir pour les deux.
   const configEnCours = etat.ouverte === false;
+  // Sur une partie à thèmes, personne ne saisit de cartes : on attend seulement
+  // que les derniers joueurs se soient inscrits.
+  const inscriptionSeule = etat.inscription === true;
   document.getElementById('attente-titre').textContent =
     configEnCours ? 'Configuration de la partie en cours' : 'En attente du départ';
   document.getElementById('attente-sous').textContent = configEnCours
-    ? "L'organisateur règle les équipes et les manches. La partie démarre juste après."
-    : "On attend que tout le monde ait saisi ses cartes.";
+    ? "L'organisateur prépare la partie. Elle démarre juste après."
+    : (inscriptionSeule
+        ? "On attend que tout le monde se soit inscrit."
+        : "On attend que tout le monde ait saisi ses cartes.");
   document.getElementById('btn-attente-retour').style.display = configEnCours ? 'none' : '';
   document.getElementById('attente-roue').style.display = configEnCours ? '' : 'none';
 
@@ -952,21 +1009,25 @@ function rendreAttente(etat) {
       qui.appendChild(marque);
     }
 
-    const compte = document.createElement('span');
-    compte.className = 'etat';
-    compte.textContent = joueur.fini
-      ? `${joueur.nbCartes} cartes ✓`
-      : `${joueur.nbCartes}/${etat.cartesParJoueur}…`;
-
     ligne.appendChild(qui);
-    ligne.appendChild(compte);
+    // Sans cartes à saisir, il n'y a rien à décompter : le prénom suffit.
+    if (!inscriptionSeule) {
+      const compte = document.createElement('span');
+      compte.className = 'etat';
+      compte.textContent = joueur.fini
+        ? `${joueur.nbCartes} cartes ✓`
+        : `${joueur.nbCartes}/${etat.cartesParJoueur}…`;
+      ligne.appendChild(compte);
+    }
     liste.appendChild(ligne);
   });
 
   const prets = etat.joueurs.filter(j => j.fini).length;
-  document.getElementById('attente-total').textContent = configEnCours
-    ? `${etat.total} cartes dans le paquet`
-    : `${prets} joueur(s) sur ${etat.joueurs.length} ont terminé · ${etat.total} cartes`;
+  document.getElementById('attente-total').textContent = inscriptionSeule
+    ? `${etat.joueurs.length} joueur(s) inscrit(s)`
+    : (configEnCours
+        ? `${etat.total} cartes dans le paquet`
+        : `${prets} joueur(s) sur ${etat.joueurs.length} ont terminé · ${etat.total} cartes`);
 }
 
 // Revenir modifier repasse le joueur en saisie : côté organisateur, le
@@ -997,6 +1058,14 @@ async function reprendre(sauvegarde) {
     // Celui qui avait rangé son téléphone le rallume : une nouvelle partie a pu
     // commencer entre-temps, et il doit pouvoir la rejoindre d'ici.
     if (nouvellePartieDisponible(etat)) return proposerRejeu(etat);
+
+    // Partie à thèmes : ce joueur est inscrit et n'a rien à saisir. Que la
+    // partie soit lancée ou non, ce qui l'intéresse est de la suivre.
+    session.inscription = etat.inscription === true;
+    if (session.inscription) {
+      sauvegarder();
+      return ouvrirAttente();
+    }
 
     if (!etat.ouverte) {
       return bloquer('🚪', 'La partie a démarré',
@@ -1050,6 +1119,8 @@ function brancherEvenements() {
 
   document.getElementById('btn-terminer').addEventListener('click', terminer);
   document.getElementById('btn-suivre').addEventListener('click', ouvrirAttente);
+  document.getElementById('btn-inscrit-suivre').addEventListener('click', ouvrirAttente);
+  document.getElementById('btn-inscrit-ranger').addEventListener('click', rangerLeTelephone);
   document.getElementById('btn-rejouer-oui').addEventListener('click', accepterRejeu);
   document.getElementById('btn-rejouer-autre').addEventListener('click', refuserIdentite);
   document.getElementById('btn-rejouer-quitter').addEventListener('click', quitterLaPartie);
@@ -1073,6 +1144,11 @@ async function demarrer() {
   const code = codeDepuisAdresse();
   const sauvegarde = relire();
 
+  // Un spectateur n'a pas d'identifiant : c'est le code qui le ramène au suivi.
+  if (sauvegarde?.spectateur && (!code || sauvegarde.code === code)) {
+    session = { ...session, ...sauvegarde };
+    return validerCode(sauvegarde.code);
+  }
   // Une saisie en cours sur cette même partie : on la reprend là où elle s'est arrêtée
   if (sauvegarde?.idJoueur && (!code || sauvegarde.code === code)) {
     return reprendre(sauvegarde);

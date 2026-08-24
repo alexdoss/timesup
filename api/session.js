@@ -175,6 +175,17 @@ async function creer(req, res) {
   const mode = req.body.mode === 'nominatif' ? 'nominatif' : 'simple';
   const attendus = nettoyerListe(req.body.joueursAttendus);
 
+  // Partie jouée avec des thèmes prédéfinis : personne ne saisit de cartes, la
+  // session ne sert qu'à regarder. Elle naît donc close — il n'y a rien à
+  // attendre — et les invités qui la rejoignent sont de simples spectateurs.
+  const suiviSeul = req.body.suiviSeul === true;
+
+  // Partie à thèmes en mode nominatif : les invités donnent leur prénom, et
+  // rien d'autre. La session reste ouverte le temps des inscriptions, mais
+  // personne n'y dépose de carte — c'est ce qui la distingue de la saisie
+  // partagée, et ce qui permet de la clore sans exiger un paquet.
+  const inscription = req.body.inscription === true;
+
   if (!(await garderPlafondCreation(req))) {
     return res.status(429).json({ error: "Trop de sessions ouvertes depuis cette connexion aujourd'hui." });
   }
@@ -192,7 +203,10 @@ async function creer(req, res) {
   }
 
   const jeton = tirerIdentifiant();
-  const config = { creee: Date.now(), cartesParJoueur, mode, jeton, ouverte: true, attendus, partie: 1 };
+  const config = {
+    creee: Date.now(), cartesParJoueur, mode, jeton,
+    ouverte: !suiviSeul, attendus, partie: 1, suiviSeul, inscription
+  };
 
   await commandeKV(['HSET', cleSession(code), 'config', JSON.stringify(config)]);
   await commandeKV(['EXPIRE', cleSession(code), DUREE_SESSION_S]);
@@ -203,6 +217,8 @@ async function creer(req, res) {
     cartesParJoueur,
     mode,
     attendus,
+    suiviSeul,
+    inscription,
     expireDans: DUREE_SESSION_S
   });
 }
@@ -279,6 +295,10 @@ function etat(req, res, session) {
     mode: session.config.mode,
     attendus: session.config.attendus || [],
     ouverte: session.config.ouverte !== false,
+    // Session de suivi seul : rien à saisir, on entre directement en spectateur
+    suiviSeul: session.config.suiviSeul === true,
+    // Session d'inscription : on donne son prénom, et rien d'autre
+    inscription: session.config.inscription === true,
     // Numéro de partie : c'est lui qui dit à un invité qu'une nouvelle a commencé
     partie: Number(session.config.partie) || 1,
     joueurs,
@@ -316,6 +336,18 @@ async function fermer(req, res, session, code) {
   }
 
   const joueurs = Object.values(session.joueurs);
+
+  // Session d'inscription : personne ne saisit de carte, il n'y a donc ni
+  // attente à surveiller ni paquet à rapatrier. On la clôt sur les prénoms.
+  if (session.config.inscription) {
+    await commandeKV(['HSET', cleSession(code), 'config',
+      JSON.stringify({ ...session.config, ouverte: false })]);
+    return res.status(200).json({
+      cartes: [],
+      joueurs: joueurs.map(j => ({ prenom: j.prenom, role: j.role, nbCartes: 0 }))
+    });
+  }
+
   const enCours = joueurs.filter(j => !j.fini);
   if (enCours.length > 0) {
     return res.status(409).json({

@@ -92,11 +92,11 @@ f.addEventListener('load', async () => {
     $('btn-next-step').click();
     await wait(300);
     log('       ecran : ' + ecran() + (($('dialog-overlay').style.display !== 'none') ? ' + boite « ' + $('dialog-title').textContent + ' »' : ''));
-    check('la selection est prise en compte', ecran() === 'screen-players');
+    check('la selection est prise en compte', ecran() === 'screen-jeu-mode');
     check('aucune boite « Aucun thème sélectionné »', $('dialog-overlay').style.display === 'none');
 
     // ===== Et la deselection fonctionne toujours =====
-    d.querySelector('#screen-players .btn-back').click();
+    d.querySelector('#screen-jeu-mode .btn-back').click();
     check('retour au choix des themes', ecran() === 'screen-themes');
     themes()[0].click();
     check('le theme se decoche', !themes()[0].classList.contains('active'));

@@ -116,7 +116,7 @@ f.addEventListener('load', async () => {
     check('le theme supprime n est plus proposable', !boutonTheme('Souvenirs de vacances'));
     check('il ne compte plus dans la selection', !!boutonTheme('Bureau') && boutonTheme('Bureau').classList.contains('active'));
     $('btn-next-step').click();
-    check('la partie peut demarrer avec le theme restant', ecran() === 'screen-players');
+    check('la partie peut demarrer avec le theme restant', ecran() === 'screen-jeu-mode');
 
     // ===== LA SUPPRESSION SURVIT AU RECHARGEMENT =====
     const rechargee = new Promise(r => f.addEventListener('load', r, { once: true }));

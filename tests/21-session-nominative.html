@@ -84,16 +84,15 @@ f.addEventListener('load', async () => {
           $('dialog-overlay').style.display !== 'none');
     $('dialog-confirm').click();
     await wait(700);
-    check('la configuration reprend par les equipes', ecran() === 'screen-players');
-    check('le mode nominatif est propose par defaut',
-          d.querySelector('[data-mode="nominatif"]').classList.contains('active'));
-    check('la note nomme les quatre joueurs',
-          ['Marc', 'Inès', 'Sam', 'Jo'].every(p => $('note-joueurs-partages').textContent.includes(p)));
+    check('la configuration reprend par le mode de jeu', ecran() === 'screen-jeu-mode');
+    check('les deux facons de jouer sont proposees',
+          !!d.querySelector('[data-mode="nominatif"]') && !!d.querySelector('[data-mode="simple"]'));
 
     const r = await api('etat', { code });
     check('la saisie est close', r.corps.ouverte === false);
 
-    $('btn-next-players').click();
+    // Les prenoms viennent des scans : on passe directement aux equipes
+    d.querySelector('[data-mode="nominatif"]').click();
     await wait(300);
     check('a 4 joueurs, on passe a la repartition', ecran() === 'screen-repartition');
     check('aucune boite d erreur', $('dialog-overlay').style.display === 'none');
@@ -140,8 +139,8 @@ f.addEventListener('load', async () => {
 
     // ===== Retour en arriere, puis suite =====
     d.querySelector('#screen-repartition .btn-back').click();
-    check('le retour ramene au mode de jeu', ecran() === 'screen-players');
-    $('btn-next-players').click();
+    check('le retour ramene au mode de jeu', ecran() === 'screen-jeu-mode');
+    d.querySelector('[data-mode="nominatif"]').click();
     await wait(300);
     check('et on revient a la repartition', ecran() === 'screen-repartition');
 
@@ -166,6 +165,9 @@ f.addEventListener('load', async () => {
     $('btn-next-rounds').click();
     check('puis le deroulement', ecran() === 'screen-config');
     $('btn-play').click();
+    // Parties a themes : l app propose de partager le suivi avant de lancer
+    $('dialog-cancel').click();
+    await wait(0);
     await wait(700);
     check('la partie demarre', ecran() === 'screen-round');
 

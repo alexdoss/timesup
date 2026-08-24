@@ -87,9 +87,9 @@ localStorage.removeItem('timesup_rejoint');
     await wait(600);
     A('dialog-confirm').click();     // paquet court, on lance quand meme
     await wait(900);
-    check('l organisateur passe aux equipes', ecranApp() === 'screen-players');
-    check('le mode nominatif est bien celui par defaut',
-          da.querySelector('[data-mode="nominatif"]').classList.contains('active'));
+    check('l organisateur choisit comment on joue', ecranApp() === 'screen-jeu-mode');
+    check('les deux facons de jouer sont proposees',
+          !!da.querySelector('[data-mode="nominatif"]') && !!da.querySelector('[data-mode="simple"]'));
 
     // La saisie est close : l invite doit basculer sur l ecran de configuration
     await wait(2600);
@@ -99,7 +99,7 @@ localStorage.removeItem('timesup_rejoint');
     check('aucun acces aux equipes : elles ne sont pas encore reparties',
           I('btn-voir-equipes').style.display === 'none');
 
-    A('btn-next-players').click();
+    da.querySelector('[data-mode="nominatif"]').click();
     await wait(400);
     check('l organisateur arrive sur la repartition', ecranApp() === 'screen-repartition');
 

@@ -225,7 +225,9 @@ export function showFinalScreen(teams, session = null, history = []) {
   document.getElementById('winner').textContent = winnerText;
 }
 
-export function renderThemeButtons(themes, selectedThemes, container) {
+// onChange : appelé après chaque clic, pour les écrans dont un bouton dépend
+// de la sélection (le rejeu, où « C'est parti » attend un thème).
+export function renderThemeButtons(themes, selectedThemes, container, onChange = null) {
   container.innerHTML = '';
   Object.entries(themes).forEach(([key, theme]) => {
     const btn = document.createElement('button');
@@ -251,57 +253,35 @@ export function renderThemeButtons(themes, selectedThemes, container) {
       } else {
         selectedThemes.add(key);
       }
+      if (onChange) onChange(selectedThemes);
     });
     container.appendChild(btn);
   });
 }
 
-export function renderPlayerList(players, assignMode, teams, playerAssignments, onRemove, onTeamChange) {
+// La liste des prénoms, sans équipe : c'est l'écran suivant qui les répartit.
+// Annoncer une équipe ici la promettrait avant qu'elle ne soit décidée.
+export function renderPlayerList(players, onRemove) {
   const list = document.getElementById('player-list');
   list.innerHTML = '';
-  const teamColors = ['var(--brand)', 'var(--good)'];
 
-  players.forEach((name, index) => {
+  players.forEach(name => {
     const li = document.createElement('li');
-    const teamIndex = assignMode === 'chosen'
-      ? (Number.isInteger(playerAssignments[name]) ? playerAssignments[name] : 0)
-      : (index % teams.length);
 
     const swatch = document.createElement('span');
     swatch.className = 'swatch';
-    swatch.style.background = teamColors[teamIndex] || 'var(--muted)';
+    swatch.style.background = 'var(--muted)';
 
     const nameSpan = document.createElement('span');
     nameSpan.className = 'player-name';
     nameSpan.textContent = name;
 
-    if (assignMode === 'chosen') {
-      const chip = document.createElement('button');
-      chip.type = 'button';
-      chip.className = 'team-chip team-' + teamIndex;
-      chip.textContent = teams[teamIndex]?.name || `Équipe ${teamIndex + 1}`;
-      chip.addEventListener('click', () => {
-        const nextTeam = (teamIndex + 1) % teams.length;
-        onTeamChange(name, nextTeam);
-      });
-      li.appendChild(swatch);
-      li.appendChild(nameSpan);
-      li.appendChild(chip);
-    } else {
-      const teamLabel = document.createElement('span');
-      teamLabel.className = 'player-team-label';
-      teamLabel.textContent = teams[teamIndex]?.name || `Équipe ${teamIndex + 1}`;
-      li.appendChild(swatch);
-      li.appendChild(nameSpan);
-      li.appendChild(teamLabel);
-    }
-
     const removeBtn = document.createElement('button');
     removeBtn.className = 'btn-remove';
     removeBtn.textContent = '✕';
     removeBtn.addEventListener('click', () => onRemove(name));
-    li.appendChild(removeBtn);
 
+    li.append(swatch, nameSpan, removeBtn);
     list.appendChild(li);
   });
   document.getElementById('player-count').textContent = `${players.length} joueur(s)`;
@@ -373,19 +353,6 @@ export function setRoundsNextEnabled(enabled) {
   if (btn) btn.disabled = !enabled;
 }
 
-export function renderAssignMode(mode) {
-  document.querySelectorAll('[data-assign]').forEach(pill => {
-    pill.classList.toggle('active', pill.dataset.assign === mode);
-  });
-
-  const note = document.getElementById('assign-mode-note');
-  if (note) {
-    note.textContent = mode === 'chosen'
-      ? "Tape sur l'équipe d'un joueur pour la changer."
-      : "Répartition automatique, un joueur sur deux, dans l'ordre d'ajout.";
-  }
-}
-
 // La liste des manches est construite depuis le moteur : la page de règles
 // ne peut pas se désynchroniser si une manche est ajoutée ou renommée.
 export function renderRules(rounds) {
@@ -417,6 +384,105 @@ export function afficherInvitation(svgQr, code, adresse, rappel) {
   // L'adresse sert deux usages : on la lit pour la recopier à la main, et on
   // la touche pour ouvrir le menu de partage du téléphone.
   document.getElementById('session-adresse').textContent = `📤 ${adresse}`;
+}
+
+// Inscription : le QR, puis la liste des prénoms qui arrivent. Pas de décompte
+// de cartes — les invités ne saisissent rien, ils se nomment.
+export function afficherInscription(svgQr, code, adresse) {
+  const bloc = document.getElementById('inscription-qr');
+  bloc.innerHTML = '';
+  bloc.appendChild(svgQr);
+  document.getElementById('inscription-code').textContent = code;
+  document.getElementById('inscription-adresse').textContent = `📤 ${adresse}`;
+}
+
+// L'organisateur a sa propre ligne, en haut : son prénom est le seul qui ne
+// peut pas arriver par un scan, et tant qu'il ne l'a pas donné c'est un champ
+// de saisie qui occupe la place.
+export function renderInscrits(joueurs, minimum, onRetirer, onRenommerMoi) {
+  const moi = joueurs.find(j => j.role === 'organisateur') || null;
+  const autres = joueurs.filter(j => j !== moi);
+
+  document.getElementById('inscription-moi-champ').style.display = moi ? 'none' : '';
+  const ligneMoi = document.getElementById('inscription-moi-ligne');
+  ligneMoi.style.display = moi ? '' : 'none';
+  ligneMoi.innerHTML = '';
+  if (moi) {
+    const ligne = document.createElement('div');
+    ligne.className = 'connecte fini';
+    const qui = document.createElement('span');
+    qui.className = 'qui';
+    qui.textContent = `● ${moi.prenom} `;
+    const marque = document.createElement('span');
+    marque.className = 'sans-tel';
+    marque.textContent = '· toi';
+    qui.appendChild(marque);
+    ligne.appendChild(qui);
+
+    const corriger = document.createElement('button');
+    corriger.type = 'button';
+    corriger.id = 'btn-inscription-moi-corriger';
+    corriger.className = 'retirer-joueur';
+    corriger.textContent = '✎';
+    corriger.title = 'Corriger ton prénom';
+    corriger.addEventListener('click', () => onRenommerMoi(moi));
+    ligne.appendChild(corriger);
+    ligneMoi.appendChild(ligne);
+  }
+
+  const liste = document.getElementById('inscription-joueurs');
+  liste.innerHTML = '';
+
+  if (autres.length === 0) {
+    const vide = document.createElement('div');
+    vide.className = 'connecte vide';
+    vide.textContent = "Personne n'a encore rejoint";
+    liste.appendChild(vide);
+  }
+
+  autres.forEach(joueur => {
+    const ligne = document.createElement('div');
+    ligne.className = 'connecte fini';
+
+    const qui = document.createElement('span');
+    qui.className = 'qui';
+    // textContent : le prénom vient du téléphone d'un invité
+    qui.textContent = `● ${joueur.prenom} `;
+    if (joueur.role === 'sansTel') {
+      const marque = document.createElement('span');
+      marque.className = 'sans-tel';
+      marque.textContent = '· sans téléphone';
+      qui.appendChild(marque);
+    }
+    ligne.appendChild(qui);
+
+    const retirer = document.createElement('button');
+    retirer.type = 'button';
+    retirer.className = 'retirer-joueur';
+    retirer.textContent = '✕';
+    retirer.title = `Retirer ${joueur.prenom} de la partie`;
+    retirer.addEventListener('click', () => onRetirer(joueur));
+    ligne.appendChild(retirer);
+
+    liste.appendChild(ligne);
+  });
+
+  // Le compte porte sur tout le monde, l'organisateur compris : il joue.
+  const manque = minimum - joueurs.length;
+  document.getElementById('inscription-compteur').textContent = manque > 0
+    ? `${joueurs.length} inscrit(s) — il en faut au moins ${minimum}`
+    : `${joueurs.length} joueurs inscrits`;
+  document.getElementById('btn-inscription-suivant').disabled = manque > 0;
+}
+
+// Le même code, mais pour une partie à thèmes : les invités ne saisissent rien,
+// ils viennent seulement regarder. L'écran n'a donc ni liste ni compteur.
+export function afficherPartageSuivi(svgQr, code, adresse) {
+  const bloc = document.getElementById('suivi-partage-qr');
+  bloc.innerHTML = '';
+  bloc.appendChild(svgQr);
+  document.getElementById('suivi-partage-code').textContent = code;
+  document.getElementById('suivi-partage-adresse').textContent = `📤 ${adresse}`;
 }
 
 // etat      : la réponse du serveur (qui a fini, jamais quoi)

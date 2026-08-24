@@ -40,14 +40,45 @@ Un module ajouté à `js/` doit être importé depuis `app.js` (ES modules natif
 
 ## Déroulé d'une partie
 
-Wizard en 5 étapes (4 en mode cartes perso, les libellés sont recalculés par `updateWizardLabels()`) :
-mode (thèmes prédéfinis / cartes perso) → thèmes → équipes & joueurs → manches → déroulement.
+Wizard à nombre d'étapes variable : `updateWizardLabels()` construit la liste des écrans
+réellement traversés et les numérote. Un écran = une décision.
+
+```
+type de partie → thèmes | session de cartes → comment on joue
+                                                    ├─ avec les prénoms → les joueurs (saisie
+                                                    │    manuelle) ou inscription par QR
+                                                    └─ juste deux équipes
+                                              → les équipes → manches → déroulement
+```
+
+- **« Comment on joue »** (`screen-jeu-mode`) porte le choix nominatif / simple, seul sur son
+  écran : choisir vaut avancer, comme pour le type de partie.
+- **« Les équipes »** (`screen-repartition`) porte les noms d'équipes **dans les deux modes**, et
+  la répartition des joueurs quand il y a des prénoms. C'est le seul point de passage avant les
+  manches. Il n'y a plus de réglage « Attribution des équipes » : cet écran *est* l'attribution.
+- **« Les joueurs »** (`screen-players`) ne sert plus qu'à la saisie manuelle des prénoms.
 
 - 2 équipes, 5 manches possibles (`ROUNDS` dans `game.js`) : les 3 premières sont obligatoires (description, un mot, mime), pose figée et pantin sont optionnelles.
 - Mode **nominatif** (joueurs nommés, rotation, stats individuelles, min. 4 joueurs) ou **simple** (équipes seules).
 - Mode **cartes perso**, deux façons de saisir (choix sur l'écran du type de partie, `[data-saisie]`) :
   - **partagée** — l'organisateur ouvre une session, les invités scannent un QR et saisissent chacun sur son téléphone. En mode nominatif, l'étape « joueurs » disparaît : les prénoms arrivent avec les scans, et un écran de répartition des équipes prend le relais. Exige du réseau.
   - **séquentielle** — on se passe le téléphone, input en `type="password"` + liste masquée (`••••`). Fonctionne hors ligne, et sert de repli quand la session partagée échoue.
+- Mode **thèmes prédéfinis**, deux façons d'ouvrir une session — jamais les deux :
+  - **nominatif** → **inscription par QR** (`ouvrirInscription()`, `inscription: true` côté
+    serveur) à la place de la saisie des prénoms : chacun scanne et se nomme. La session reste
+    ouverte le temps des inscriptions, ne réclame aucune carte, et `fermer` la clôt sur les seuls
+    prénoms. L'invité inscrit se voit demander s'il veut **suivre** ou **ranger son téléphone**.
+    Repli manuel si le réseau manque (`basculerEnSaisieManuelle()`, drapeau `inscriptionRefusee`).
+  - **simple** → au clic sur « C'est parti », l'app propose de partager un code de suivi
+    (`proposerLeSuivi()`). Accepter ouvre une session **« suivi seul »** (`ouvrirSuiviSeul()`,
+    `suiviSeul: true`) : elle naît close, et l'invité entre **directement en spectateur**
+    (`entrerEnSpectateur()`), sans prénom donc sans identité.
+  - La proposition de partage n'apparaît que si aucune session n'existe déjà : après une
+    inscription, le code a déjà été donné.
+- « **Rejouer** » sur une partie à thèmes ramène au choix du paquet (`rejeuThemes`), pas directement
+  au jeu : mêmes équipes, mêmes manches, thèmes rechoisis — les précédents restent cochés. L'écran
+  perd son numéro d'étape et sa flèche de retour, et « Suivant » devient « C'est parti ».
+  Y arriver publie l'étape `configuration`, qui remet les spectateurs sur l'écran d'attente.
 - Le nombre de cartes par joueur vient du réglage « Cartes saisies par joueur » de l'étape *Déroulement* (`game.numCards`, minimum 3, défaut 5) — il n'existe qu'à cet endroit.
 - Le même `masterDeck` est rebattu à chaque manche (`startNewRound`), le score est cumulatif.
 - Trois échelles de score coexistent : la **manche** (`getRoundScores`), la **partie** (`team.score`)

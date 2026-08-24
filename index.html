@@ -212,14 +212,44 @@
       </div>
     </div>
 
-    <!-- ÉCRAN CONFIG — ÉTAPE 2 (mode thèmes) : THÈMES -->
-    <div id="screen-themes" class="screen">
-      <button class="btn-back" onclick="showScreen('screen-mode')">←</button>
+    <!-- ÉCRAN CONFIG — COMMENT ON JOUE : avec ou sans les prénoms.
+         Une seule question, deux tuiles : choisir vaut avancer, comme pour le
+         type de partie. C'est ce choix qui décide de tout le reste du parcours. -->
+    <div id="screen-jeu-mode" class="screen">
+      <button id="btn-jeu-mode-retour" class="btn-back" onclick="handleBackFromJeuMode()">←</button>
       <button class="btn-close" onclick="showScreen('screen-home')">✕</button>
       <div class="wizard-header">
-        <span class="wizard-step" data-step="themes">Étape 2/5</span>
-        <h2>Choisis tes thèmes</h2>
-        <p class="wizard-hint">Sélectionne un ou plusieurs thèmes</p>
+        <span class="wizard-step" data-step="jeumode">Étape 3/6</span>
+        <h2>Comment on joue ?</h2>
+        <p class="wizard-hint">Un choix, et on avance.</p>
+      </div>
+      <div class="config-form">
+        <div class="mode-choice">
+          <button type="button" class="mode-tile" data-mode="nominatif">
+            <span class="mode-tile-icon">🙋</span>
+            <span class="mode-tile-title">Avec les prénoms</span>
+            <span class="mode-tile-desc">Chacun est nommé. Rotation des joueurs et scores individuels. Minimum 4 joueurs.</span>
+          </button>
+          <button type="button" class="mode-tile" data-mode="simple">
+            <span class="mode-tile-icon">👥</span>
+            <span class="mode-tile-title">Juste deux équipes</span>
+            <span class="mode-tile-desc">Pas de prénoms. On note seulement les points de chaque équipe.</span>
+          </button>
+        </div>
+        <div id="simple-custom-block" class="config-section" style="display:none">
+          <p class="wizard-hint">Chaque joueur saisira ses cartes tour à tour au début de la partie.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- ÉCRAN CONFIG — ÉTAPE 2 (mode thèmes) : THÈMES -->
+    <div id="screen-themes" class="screen">
+      <button id="btn-themes-retour" class="btn-back" onclick="showScreen('screen-mode')">←</button>
+      <button class="btn-close" onclick="showScreen('screen-home')">✕</button>
+      <div class="wizard-header">
+        <span id="themes-etape" class="wizard-step" data-step="themes">Étape 2/5</span>
+        <h2 id="themes-titre">Choisis tes thèmes</h2>
+        <p id="themes-hint" class="wizard-hint">Sélectionne un ou plusieurs thèmes</p>
       </div>
       <div class="config-form">
         <div id="theme-selector" class="theme-selector"></div>
@@ -232,47 +262,13 @@
       <button class="btn-back" onclick="handleBackFromPlayers()">←</button>
       <button class="btn-close" onclick="showScreen('screen-home')">✕</button>
       <div class="wizard-header">
-        <span class="wizard-step" data-step="players">Étape 3/5</span>
-        <h2>Équipes & Joueurs</h2>
+        <span class="wizard-step" data-step="players">Étape 4/7</span>
+        <h2>Les joueurs</h2>
+        <p class="wizard-hint">Minimum 4 joueurs. Tu les répartiras en équipes juste après.</p>
       </div>
       <div class="config-form">
-        <div class="config-section">
-          <span class="field-label">Mode de jeu</span>
-          <div class="pillgroup">
-            <button type="button" class="pill active" data-mode="nominatif">Nominatif</button>
-            <button type="button" class="pill" data-mode="simple">Simple</button>
-          </div>
-          <p id="mode-note" class="wizard-hint">Chaque joueur est identifié. Rotation et statistiques individuelles.</p>
-        </div>
-        <div id="simple-custom-block" class="config-section" style="display:none">
-          <p class="wizard-hint">Chaque joueur saisira ses cartes tour à tour au début de la partie.</p>
-        </div>
-        <div id="note-joueurs-partages" class="config-section" style="display:none">
-          <p class="wizard-hint"></p>
-        </div>
-        <div class="config-section">
-          <span class="field-label">Noms des équipes</span>
-          <div class="team-row">
-            <span class="swatch" style="background:var(--brand)"></span>
-            <input type="text" id="team1-name" value="Équipe 1" maxlength="15">
-          </div>
-          <div class="team-row">
-            <span class="swatch" style="background:var(--good)"></span>
-            <input type="text" id="team2-name" value="Équipe 2" maxlength="15">
-          </div>
-        </div>
         <div id="nominatif-block">
-          <div id="assign-mode-block" class="config-section">
-            <span class="field-label">Attribution des équipes</span>
-            <div class="pillgroup">
-              <button type="button" class="pill active" data-assign="random">Aléatoire</button>
-              <button type="button" class="pill" data-assign="chosen">Choisie</button>
-            </div>
-            <p id="assign-mode-note" class="wizard-hint">Répartition automatique, un joueur sur deux, dans l'ordre d'ajout.</p>
-          </div>
           <div class="config-section">
-            <span class="field-label">Joueurs</span>
-            <p class="wizard-hint">Minimum 4 joueurs</p>
             <div class="player-input-row">
               <input type="text" id="player-name-input" placeholder="Prénom du joueur" maxlength="20">
               <button id="btn-add-player" class="btn btn-add">+</button>
@@ -471,6 +467,75 @@
       </div>
     </div>
 
+    <!-- INSCRIPTION — parties à thèmes en mode nominatif : chacun donne son
+         prénom depuis son téléphone, plutôt que l'organisateur ne les tape.
+         Le même code servira ensuite à suivre la partie. -->
+    <div id="screen-inscription" class="screen">
+      <button id="btn-inscription-retour" class="btn-back">←</button>
+      <button class="btn-close" onclick="showScreen('screen-home')">✕</button>
+      <div class="wizard-header">
+        <span class="wizard-step" data-step="inscription">Étape 4/7</span>
+        <h2>Qui joue ?</h2>
+        <p class="wizard-hint">Chacun scanne et donne son prénom. Le code sert ensuite à suivre la partie.</p>
+      </div>
+
+      <div id="inscription-qr" class="qr-bloc"></div>
+      <div id="inscription-code" class="code-session"></div>
+      <button type="button" id="inscription-adresse" class="adresse-session"></button>
+
+      <div class="config-form">
+        <!-- Le seul prénom qui ne peut pas arriver par un scan est celui de
+             l'organisateur, qui tient l'appareil : son champ est donc offert
+             d'emblée, sans rien à déplier. -->
+        <div class="config-section">
+          <span class="field-label">Toi</span>
+          <div id="inscription-moi-champ" class="player-input-row">
+            <input type="text" id="inscription-moi-prenom" placeholder="Ton prénom" maxlength="20" autocomplete="off">
+            <button id="btn-inscription-moi-ok" class="btn btn-add">+</button>
+          </div>
+          <div id="inscription-moi-ligne" class="connectes" style="display:none"></div>
+        </div>
+
+        <div class="config-section">
+          <span class="field-label">Les autres joueurs</span>
+          <div id="inscription-joueurs" class="connectes"></div>
+          <p id="inscription-compteur" class="wizard-hint"></p>
+        </div>
+
+        <!-- Cas rare, donc replié : quelqu'un qui n'a pas de téléphone -->
+        <div id="inscription-ajout-bloc" style="display:none">
+          <span class="field-label">Son prénom</span>
+          <div class="player-input-row">
+            <input type="text" id="inscription-ajout-prenom" placeholder="Prénom" maxlength="20" autocomplete="off">
+            <button id="btn-inscription-ajout-ok" class="btn btn-add">+</button>
+          </div>
+        </div>
+        <p id="inscription-erreur" class="wizard-hint" style="min-height:18px"></p>
+        <button id="btn-inscription-suivant" class="btn btn-primary" disabled>Suivant ▶️</button>
+        <button id="btn-inscription-sanstel" class="btn-link">➕ Un joueur n'a pas de téléphone</button>
+        <button id="btn-inscription-manuel" class="btn-link">Finalement, je saisis les prénoms moi-même</button>
+      </div>
+    </div>
+
+    <!-- SUIVI DE PARTIE — parties à thèmes : le code à montrer avant de lancer.
+         Rien à saisir ici, contrairement à #screen-session : les invités ne
+         font que regarder, l'organisateur attend qu'ils aient scanné. -->
+    <div id="screen-suivi-partage" class="screen">
+      <button id="btn-suivi-partage-retour" class="btn-back">←</button>
+      <div class="wizard-header">
+        <h2>👀 Suivre la partie</h2>
+        <p class="wizard-hint">Fais scanner ce code à ceux qui veulent suivre les scores sur leur téléphone.</p>
+      </div>
+
+      <div id="suivi-partage-qr" class="qr-bloc"></div>
+      <div id="suivi-partage-code" class="code-session"></div>
+      <button type="button" id="suivi-partage-adresse" class="adresse-session"></button>
+
+      <div class="config-form">
+        <button id="btn-suivi-partage-lancer" class="btn btn-primary">C'est parti ! 🚀</button>
+      </div>
+    </div>
+
     <!-- ÉCRAN SAISIE — organisateur, ou joueur sans téléphone sur son appareil -->
     <div id="screen-saisie-locale" class="screen">
       <button id="btn-saisie-retour" class="btn-back">←</button>
@@ -503,17 +568,33 @@
     </div>
 
     <!-- ÉCRAN RÉPARTITION — mode nominatif, après la session -->
+    <!-- LES ÉQUIPES — on les nomme là où on les voit se former. Le même écran
+         dans les deux modes : en simple il ne porte que les deux noms. -->
     <div id="screen-repartition" class="screen">
-      <button class="btn-back" onclick="showScreen('screen-players')">←</button>
+      <button id="btn-equipes-retour" class="btn-back" onclick="handleBackFromEquipes()">←</button>
       <button class="btn-close" onclick="showScreen('screen-home')">✕</button>
       <div class="wizard-header">
-        <span class="wizard-step" data-step="players">Étape 3/5</span>
-        <h2>Répartir les équipes</h2>
-        <p class="wizard-hint">Les prénoms viennent des joueurs eux-mêmes. Tape sur une équipe pour la changer.</p>
+        <span class="wizard-step" data-step="equipes">Étape 5/7</span>
+        <h2>Les équipes</h2>
+        <p id="equipes-hint" class="wizard-hint">Nomme-les, et répartis les joueurs.</p>
       </div>
       <div class="config-form">
-        <div id="repartition-liste" class="equipes"></div>
-        <button id="btn-repartition-melanger" class="btn btn-secondary">🎲 Mélanger</button>
+        <div class="config-section">
+          <span class="field-label">Noms des équipes</span>
+          <div class="team-row">
+            <span class="swatch" style="background:var(--brand)"></span>
+            <input type="text" id="team1-name" value="Équipe 1" maxlength="15">
+          </div>
+          <div class="team-row">
+            <span class="swatch" style="background:var(--good)"></span>
+            <input type="text" id="team2-name" value="Équipe 2" maxlength="15">
+          </div>
+        </div>
+        <div id="bloc-repartition" class="config-section">
+          <span class="field-label">Qui joue avec qui</span>
+          <div id="repartition-liste" class="equipes"></div>
+          <button id="btn-repartition-melanger" class="btn btn-secondary">🎲 Mélanger</button>
+        </div>
         <button id="btn-repartition-jouer" class="btn btn-primary">Suivant ▶️</button>
       </div>
     </div>

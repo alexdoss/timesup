@@ -29,7 +29,12 @@ document.getElementById('f').addEventListener('load', async () => {
     d.querySelector('[data-source="themes"]').click();
     d.querySelectorAll('#theme-selector .btn-theme')[0].click();
     $('btn-next-step').click();
-    // mode nominatif actif par defaut
+    check('l app demande comment on joue', screen() === 'screen-jeu-mode');
+    d.querySelector('[data-mode="nominatif"]').click();
+    await wait(600);   // l ouverture de la session d inscription est un aller-retour
+    // Ce scenario saisit les prenoms a la main plutot que par QR
+    $('btn-inscription-manuel').click();
+    check('avec les prenoms, on passe a la liste des joueurs', screen() === 'screen-players');
     ['Ana', 'Bob', 'Cleo', 'Dan'].forEach(ajouterJoueur);
     check('4 joueurs ajoutes', $('player-count').textContent.startsWith('4'));
 
@@ -45,6 +50,8 @@ document.getElementById('f').addEventListener('load', async () => {
     d.querySelectorAll('#player-list .btn-remove')[4].click();
     check('retour a 4 joueurs', $('player-count').textContent.startsWith('4'));
     $('btn-next-players').click();
+    check('etape des equipes', screen() === 'screen-repartition');
+    $('btn-repartition-jouer').click();
     check('etape des manches', screen() === 'screen-rounds');
 
     // --- 4 joueurs = 2 par equipe : la manche doit etre verrouillee ---
@@ -63,12 +70,16 @@ document.getElementById('f').addEventListener('load', async () => {
     check('la manche verrouillee ne peut pas etre selectionnee', !pilule('bouger').classList.contains('active'));
 
     // --- On revient ajouter 2 joueurs : 3 par equipe ---
+    // Deux retours : les manches suivent les equipes, qui suivent les joueurs
     d.querySelector('#screen-rounds .btn-back').click();
+    check('retour a l etape des equipes', screen() === 'screen-repartition');
+    d.querySelector('#screen-repartition .btn-back').click();
     check('retour a l etape joueurs', screen() === 'screen-players');
     ajouterJoueur('Eve');
     ajouterJoueur('Femi');
     check('6 joueurs', $('player-count').textContent.startsWith('6'));
     $('btn-next-players').click();
+    $('btn-repartition-jouer').click();
 
     pantin = pilule('bouger');
     check('la manche est debloquee a 3 joueurs par equipe', !pantin.disabled);
@@ -80,6 +91,9 @@ document.getElementById('f').addEventListener('load', async () => {
 
     $('btn-next-rounds').click();
     $('btn-play').click();
+    // Parties a themes : l app propose de partager le suivi avant de lancer
+    $('dialog-cancel').click();
+    await wait(0);
     $('btn-start-turn').click();
     await wait(500);
     const snap = JSON.parse(w.localStorage.getItem('timesup_partie_en_cours'));

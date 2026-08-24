@@ -51,9 +51,12 @@ document.getElementById('f').addEventListener('load', async () => {
     d.querySelectorAll('#theme-selector .btn-theme')[0].click();
     $('btn-next-step').click();
     d.querySelector('[data-mode="simple"]').click();
-    $('btn-next-players').click();
+    $('btn-repartition-jouer').click();
     $('btn-next-rounds').click();
     $('btn-play').click();
+    // Parties a themes : l app propose de partager le suivi avant de lancer
+    $('dialog-cancel').click();
+    await wait(0);
     const total1 = [0, 0];
 
     // --- Manche 1 ---
@@ -130,8 +133,16 @@ document.getElementById('f').addEventListener('load', async () => {
     check('on peut aussi repartir de zero', !!$('btn-restart'));
 
     // ===== PARTIE 2, MEMES JOUEURS =====
+    // Rejouer repasse par le choix du thème : le paquet peut changer, les
+    // équipes et les manches non. Le thème précédent reste coché.
     $('btn-replay').click();
-    check('la partie suivante demarre directement', ecran() === 'screen-round');
+    check('on revient choisir le paquet', ecran() === 'screen-themes');
+    check('le theme precedent est toujours coche',
+          d.querySelectorAll('#theme-selector .btn-theme.active').length > 0);
+    check('le bouton lance la partie', $('btn-next-step').textContent.includes("C'est parti"));
+    check('et il est deja actif, puisqu un theme est choisi', !$('btn-next-step').disabled);
+    $('btn-next-step').click();
+    check('la partie suivante demarre', ecran() === 'screen-round');
     const etat = sauvegarde().state;
     check('les scores de partie repartent a zero', etat.teams[0].score === 0 && etat.teams[1].score === 0);
     check('la partie precedente est mise de cote',

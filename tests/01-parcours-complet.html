@@ -34,11 +34,26 @@ f.addEventListener('load', async () => {
     click('btn-start');              check('etape 1 : mode', screen() === 'screen-mode');
     d.querySelector('[data-source="themes"]').click();          check('etape 2 : themes', screen() === 'screen-themes');
     themeBtns[0].click();
-    click('btn-next-step');          check('etape 3 : joueurs', screen() === 'screen-players');
+    click('btn-next-step');          check('etape 3 : comment on joue', screen() === 'screen-jeu-mode');
+    // Choisir vaut avancer : sans prenoms, on va droit aux equipes
     d.querySelector('[data-mode="simple"]').click();
-    click('btn-next-players');       check('etape 4 : manches', screen() === 'screen-rounds');
-    click('btn-next-rounds');        check('etape 5 : deroulement', screen() === 'screen-config');
-    click('btn-play');               check('debut de manche', screen() === 'screen-round');
+    check('etape 4 : les equipes', screen() === 'screen-repartition');
+    check('aucune repartition a faire sans prenoms',
+          $('bloc-repartition').style.display === 'none');
+    check('mais les deux noms d equipes sont la',
+          !!$('team1-name') && !!$('team2-name'));
+    click('btn-repartition-jouer');  check('etape 5 : manches', screen() === 'screen-rounds');
+    click('btn-next-rounds');        check('etape 6 : deroulement', screen() === 'screen-config');
+    log('       numerotation : ' + [...d.querySelectorAll('[data-step]')]
+      .map(e => e.dataset.step + '=' + e.textContent).join('  '));
+    // L app propose de partager le suivi avant de lancer une partie a themes
+    click('btn-play');
+    check('proposition de partager le suivi',
+          $('dialog-overlay').style.display !== 'none'
+          && $('dialog-title').textContent.includes('Partager le suivi'));
+    click('dialog-cancel');          // « Non, lancer directement »
+    await wait(0);
+    check('debut de manche', screen() === 'screen-round');
 
     const brut1 = w.localStorage.getItem('timesup_partie_en_cours');
     check('sauvegarde ecrite des le debut de manche', !!brut1);

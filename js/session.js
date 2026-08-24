@@ -58,6 +58,35 @@ export async function ouvrirSession(cartesParJoueur, joueursAttendus = []) {
   return courante;
 }
 
+// Partie jouée avec des thèmes prédéfinis : rien à saisir, la session ne sert
+// qu'à donner un code aux invités qui veulent regarder. Elle naît close, et la
+// page des invités les fait entrer directement en spectateurs.
+export async function ouvrirSuiviSeul() {
+  const reponse = await appeler('creer', { suiviSeul: true });
+  courante = {
+    code: reponse.code,
+    jeton: reponse.jeton,
+    cartesParJoueur: reponse.cartesParJoueur,
+    mode: reponse.mode,
+    suiviSeul: true
+  };
+  return courante;
+}
+
+// Partie à thèmes en mode nominatif : les invités donnent leur prénom, et rien
+// d'autre. La session reste ouverte le temps des inscriptions, puis sert à suivre.
+export async function ouvrirInscription() {
+  const reponse = await appeler('creer', { inscription: true });
+  courante = {
+    code: reponse.code,
+    jeton: reponse.jeton,
+    cartesParJoueur: reponse.cartesParJoueur,
+    mode: reponse.mode,
+    inscription: true
+  };
+  return courante;
+}
+
 // Adresse à encoder dans le QR code. Construite depuis l'adresse courante :
 // aucune configuration à maintenir entre le développement et la production.
 export function adresseInvitation(code = courante?.code) {

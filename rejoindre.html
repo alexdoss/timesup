@@ -85,35 +85,6 @@
       </div>
     </div>
 
-    <!-- CONFIRMATION -->
-    <div id="screen-envoye" class="screen">
-      <div class="rejoindre-content">
-        <div class="grand-emoji">✅</div>
-        <div class="wizard-header"><h2>C'est envoyé !</h2></div>
-        <p class="wizard-hint">
-          Tes <b id="total-envoye">0</b> cartes sont bien arrivées.
-        </p>
-        <button id="btn-suivre" class="btn btn-primary" style="margin-top:20px">👀 Suivre la partie</button>
-        <button id="btn-modifier" class="btn btn-secondary" style="margin-top:10px">Modifier mes cartes</button>
-        <p class="wizard-hint" style="margin-top:12px">Tant que tu modifies, l'organisateur ne peut pas lancer la partie.</p>
-      </div>
-    </div>
-
-    <!-- INSCRIT — partie à thèmes : rien à saisir. S'inscrire et regarder sont
-         deux choses différentes, on pose donc la question. -->
-    <div id="screen-inscrit" class="screen">
-      <div class="rejoindre-content">
-        <div class="grand-emoji">✅</div>
-        <div class="wizard-header"><h2 id="inscrit-titre">Te voilà inscrit</h2></div>
-        <p class="wizard-hint">
-          Tu peux suivre les scores et le chrono depuis ce téléphone,
-          ou le ranger jusqu'à ton tour.
-        </p>
-        <button id="btn-inscrit-suivre" class="btn btn-primary" style="margin-top:20px">👀 Suivre la partie</button>
-        <button id="btn-inscrit-ranger" class="btn btn-secondary" style="margin-top:10px">📵 Je range mon téléphone</button>
-      </div>
-    </div>
-
     <!-- NOUVELLE PARTIE — le code de la soirée n'a pas changé, on reconnaît
          simplement le joueur avant de le renvoyer à ses cartes -->
     <div id="screen-rejouer" class="screen">
@@ -131,15 +102,93 @@
       </div>
     </div>
 
+    <!-- MON TOUR — l'écran de jeu, à l'identique de celui de l'organisateur.
+         Le paquet est déjà là : plus rien ne transite pendant le tour. -->
+    <div id="screen-mon-tour" class="screen">
+      <button id="btn-mon-pause" class="btn-pause" title="Mettre en pause">⏸</button>
+      <div class="game-header">
+        <span id="mon-round-label" class="round-label">Manche 1</span>
+        <span id="mon-team-label" class="team-label">Équipe 1</span>
+      </div>
+      <div id="mon-timer" class="timer">40</div>
+      <div id="mon-card" class="card">
+        <span id="mon-card-word">Mot</span>
+      </div>
+      <div class="cards-remaining">
+        Cartes restantes : <span id="mon-cards-left">0</span>
+      </div>
+      <div class="game-actions">
+        <button id="btn-mon-pass" class="btn btn-skip">Passer ✗</button>
+        <button id="btn-mon-found" class="btn btn-found">Trouvé ✓</button>
+      </div>
+
+      <div id="mon-pause-overlay" class="pause-overlay" style="display:none">
+        <div class="pause-panel">
+          <h2>⏸ Pause</h2>
+          <p class="pause-info">La partie reprend quand tu veux.</p>
+          <button id="btn-mon-reprendre" class="btn btn-primary">▶️ Reprendre</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- MON COMPTAGE — le même écran que chez l'organisateur. C'est celui qui
+         a fait deviner qui arbitre : personne d'autre ne rouvrira ce comptage. -->
+    <div id="screen-mon-comptage" class="screen">
+      <div class="turn-end-content">
+        <h2 id="mon-fin-titre">⏰ Temps écoulé !</h2>
+        <p id="mon-fin-resultat"></p>
+        <p class="wizard-hint">Une erreur de comptage ? Ouvre la liste concernée pour la corriger.</p>
+        <details id="mon-drawer-comptees" class="drawer">
+          <summary id="mon-resume-comptees">✅ Cartes comptées</summary>
+          <ul id="mon-liste-comptees" class="player-list"></ul>
+        </details>
+        <details id="mon-drawer-manquees" class="drawer">
+          <summary id="mon-resume-manquees">↩️ Cartes non comptées</summary>
+          <p class="wizard-hint">Cartes passées, ou affichée au moment du buzzer.</p>
+          <ul id="mon-liste-manquees" class="player-list"></ul>
+        </details>
+        <button id="btn-mon-comptage-valider" class="btn btn-primary">C'est bon ▶️</button>
+      </div>
+    </div>
+
     <!-- SALLE D'ATTENTE — la même vue que celle de l'organisateur, en lecture seule -->
     <div id="screen-attente" class="screen">
       <div class="rejoindre-content">
-        <button id="btn-attente-retour" class="btn-back" type="button">←</button>
+        <!-- Ce que l'invité a envoyé, et le seul geste qui lui reste tant que
+             la saisie est ouverte. Il n'y a plus d'écran de confirmation à part :
+             cet écran est celui où l'on atterrit, et il se met à jour tout seul. -->
+        <div id="ruban-cartes" class="ruban-cartes" style="display:none">
+          <span>✅</span>
+          <span id="ruban-texte" class="ruban-texte"></span>
+          <button id="btn-modifier" class="ruban-action">Modifier</button>
+        </div>
         <div id="attente-roue" class="roue-config" style="display:none">⚙️</div>
         <div class="wizard-header">
           <h2 id="attente-titre">En attente du départ</h2>
           <p id="attente-sous" class="wizard-hint">On attend que tout le monde ait saisi ses cartes.</p>
         </div>
+        <!-- À TOI DE JOUER — le tour a été confié à ce téléphone. Le paquet est
+             déjà arrivé ; c'est ce joueur qui décide quand le chrono part. -->
+        <div id="bloc-a-toi" style="display:none">
+          <div class="bandeau-manche">
+            <span id="atoi-eq1" class="cote"></span>
+            <span class="milieu">manche</span>
+            <span id="atoi-eq2" class="cote"></span>
+          </div>
+          <div class="a-toi-entete">
+            <div class="a-toi-cible">🎯</div>
+            <h2 id="atoi-titre" class="a-toi-titre">À toi !</h2>
+            <p id="atoi-equipe" class="a-toi-equipe"></p>
+          </div>
+          <div class="manche-bloc">
+            <div id="atoi-icone" class="round-icon"></div>
+            <p id="atoi-manche" class="round-name-label"></p>
+            <p id="atoi-regle" class="round-desc"></p>
+          </div>
+          <p id="atoi-reste" class="cartes-restantes"></p>
+          <button id="btn-atoi-lancer" class="btn btn-primary">🚀 Je me lance</button>
+        </div>
+
         <!-- LANCEMENT DE TOUR — le même écran que l'organisateur, sans le
              bouton « Lancer le tour » qui reste à sa main -->
         <div id="bloc-lancement" style="display:none">
@@ -172,27 +221,9 @@
         <div id="bloc-tour" style="display:none">
           <p id="tour-manche" class="score-cap"></p>
           <p id="tour-qui" class="turn-info"></p>
+          <!-- Le dessin est posé par js/sablier.js : le même des deux côtés -->
           <div id="tour-bloc-chrono" class="chrono-bloc">
             <p id="tour-chrono" class="chrono-invite">--</p>
-            <!-- Le sable du haut baisse, celui du bas s'accumule, un filet coule
-                 entre les deux. Seuls les rectangles bougent : la verrerie et
-                 les découpes sont posées une fois pour toutes. -->
-            <svg class="sablier" viewBox="0 0 100 145" aria-hidden="true">
-              <defs>
-                <clipPath id="sablier-haut"><path d="M14,12 H86 L54,70 H46 Z"/></clipPath>
-                <clipPath id="sablier-bas"><path d="M46,70 H54 L86,128 H14 Z"/></clipPath>
-              </defs>
-              <g clip-path="url(#sablier-haut)">
-                <rect id="sable-haut" class="sable" x="0" width="100" y="12" height="58"/>
-              </g>
-              <rect id="sable-filet" class="sable" x="48.6" width="2.8" y="70" height="0"/>
-              <g clip-path="url(#sablier-bas)">
-                <rect id="sable-bas" class="sable" x="0" width="100" y="128" height="0"/>
-              </g>
-              <path class="verre" d="M14,12 H86 L54,70 L86,128 H14 L46,70 Z"/>
-              <rect class="socle" x="8" y="6" width="84" height="6" rx="3"/>
-              <rect class="socle" x="8" y="128" width="84" height="6" rx="3"/>
-            </svg>
           </div>
           <p id="tour-restantes" class="cartes-restantes"></p>
           <p id="tour-mention" class="wizard-hint"></p>

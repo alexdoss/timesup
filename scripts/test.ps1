@@ -60,6 +60,10 @@ $SCENARIOS = @(
   @{ f = '32-cumul-par-joueur-cote-invite.html';   b = 40000; p = 'af' }
   @{ f = '33-suivi-partie-a-themes.html';          b = 130000; p = 'ag' }
   @{ f = '34-inscription-par-qr.html';             b = 160000; p = 'ah' }
+  @{ f = '35-tour-confie-au-joueur.html';          b = 15000; p = 'ai' }
+  # Large : quand le tirage met l'organisateur en premier, son tour se joue ici
+  # et le chrono doit s'epuiser avant qu'un tour puisse etre confie.
+  @{ f = '36-jouer-son-tour.html';                 b = 220000; p = 'aj' }
 )
 
 function Resolve-Chrome {

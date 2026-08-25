@@ -38,6 +38,20 @@ localStorage.removeItem('timesup_rejoint');
     wa.onerror = (m, s, l) => log('ERREUR APP: ' + m + ' @' + s + ':' + l);
     const A = id => da.getElementById(id);
     const ecranApp = () => [...da.querySelectorAll('.screen')].find(s => s.classList.contains('active'))?.id;
+
+    // Ce scenario eprouve le SUIVI. Le tour part vers le telephone du joueur
+    // concerne : si c est celui de l invite, il verrait « a toi » au lieu du
+    // miroir. On attend donc qu il soit spectateur, en reprenant la main autant
+    // de fois qu il le faut — un tour confie arrive par le reseau, sans delai
+    // garanti, et temporiser au jugé rendait ce scenario capricieux.
+    async function attendreInviteSpectateur(I) {
+      for (let i = 0; i < 10; i++) {
+        if (A('attente-du-joueur').style.display !== 'none') A('btn-reprendre-tour').click();
+        await wait(1000);
+        if (I('bloc-lancement').style.display !== 'none') return true;
+      }
+      return false;
+    }
     const inscrits = () => [...da.querySelectorAll('#inscription-joueurs .connecte:not(.vide)')]
       .map(e => e.querySelector('.qui').textContent.replace(/^●\s*/, '').trim());
     await wait(1200);
@@ -145,32 +159,22 @@ localStorage.removeItem('timesup_rejoint');
     I('btn-prenom').click();
     await wait(900);
 
-    // ===== On lui demande s il veut suivre, une fois inscrit =====
-    log('       ecran invite : ' + ecranInv() + ' — "' + L('inscrit-titre') + '"');
+    // ===== Une fois inscrit, il suit la partie. Point. =====
+    // Aucun ecran ne lui demande s il veut suivre : il n y a plus de mode.
+    log('       ecran invite : ' + ecranInv());
     check('on ne lui demande aucune carte', ecranInv() !== 'screen-cartes');
-    check('il est inscrit, et on lui demande la suite', ecranInv() === 'screen-inscrit');
-    check('son prenom est repris', L('inscrit-titre') === 'Te voilà inscrit, Cleo');
-    check('il peut suivre la partie', I('btn-inscrit-suivre').textContent.includes('Suivre'));
-    check('ou ranger son telephone', I('btn-inscrit-ranger').textContent.includes('range'));
-
-    // Ranger le telephone n arrete pas l inscription
-    I('btn-inscrit-ranger').click();
-    await wait(400);
-    check('ranger son telephone mene a un ecran calme', ecranInv() === 'screen-message');
-    check('il y est rassure sur son inscription',
-          L('message-titre').includes('À tout de suite, Cleo'));
-    check('et peut changer d avis', L('btn-message').includes('je suis la partie'));
+    check('il arrive directement sur le suivi', ecranInv() === 'screen-attente');
+    check('aucun ecran ne lui demande s il veut suivre', !I('btn-inscrit-suivre'));
+    check('aucun rappel de cartes : il n en a pas saisi',
+          I('ruban-cartes').style.display === 'none');
 
     await wait(2600);
     log('       inscrits : ' + inscrits().join(', '));
-    check('l organisateur le voit malgre tout inscrit', inscrits().includes('Cleo'));
+    check('l organisateur le voit inscrit', inscrits().includes('Cleo'));
     check('et le compteur ne reclame plus personne',
           A('inscription-compteur').textContent.includes('5 joueurs inscrits'));
 
-    // Il change d avis et suit finalement
-    I('btn-message').click();
-    await wait(2600);
-    check('il retrouve la salle d attente', ecranInv() === 'screen-attente');
+    check('il est bien dans la salle d attente', ecranInv() === 'screen-attente');
     log('       attente : "' + L('attente-titre') + '" — "' + L('attente-sous') + '"');
     check('on n y parle pas de cartes',
           L('attente-sous') === 'On attend que tout le monde se soit inscrit.');
@@ -232,8 +236,7 @@ localStorage.removeItem('timesup_rejoint');
     check('la partie demarre directement', ecranApp() === 'screen-round');
 
     // ===== L invite suit, et se reconnait =====
-    await wait(2800);
-    check('l invite voit le lancement de tour', I('bloc-lancement').style.display !== 'none');
+    check('l invite voit le lancement de tour', await attendreInviteSpectateur(I));
     check('un joueur est nomme', L('lancement-joueur').length > 0);
     check('les equipes sont consultables', I('btn-voir-equipes').style.display !== 'none');
     I('btn-voir-equipes').click();
@@ -292,8 +295,9 @@ localStorage.removeItem('timesup_rejoint');
     await wait(500);
     check('la partie suivante demarre', ecranApp() === 'screen-round');
 
-    await wait(2800);
-    check('l invite suit la nouvelle partie', I('bloc-lancement').style.display !== 'none');
+    // Comme au premier tour : si le paquet part chez Cleo, l organisateur
+    // reprend la main pour qu elle reste spectatrice.
+    check('l invite suit la nouvelle partie', await attendreInviteSpectateur(I));
     check('avec les memes equipes', I('btn-voir-equipes').style.display !== 'none');
 
     log('SCENARIO 34 TERMINE');

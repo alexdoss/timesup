@@ -1403,6 +1403,118 @@ input[readonly] {
   font-weight: 600;
 }
 
+/* Le rappel des cartes envoyées, en tête de l'écran de suivi. Il remplace
+   l'ancien écran « C'est envoyé ! » : une ligne au lieu d'une étape. */
+.ruban-cartes {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  background: rgba(34, 197, 94, 0.12);
+  border: 1px solid rgba(34, 197, 94, 0.35);
+  border-radius: var(--r-md);
+  padding: 10px 12px;
+  margin-bottom: 14px;
+}
+
+.ruban-texte {
+  font-size: 0.84rem;
+  font-weight: 600;
+}
+
+.ruban-action {
+  margin-left: auto;
+  background: none;
+  border: 1px solid var(--border);
+  color: var(--muted-strong);
+  border-radius: 100px;
+  padding: 5px 11px;
+  font-size: 0.74rem;
+  font-weight: 700;
+  font-family: inherit;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+/* ===== MON TOUR — l'écran de lancement, sur le téléphone du joueur ===== */
+/* Le score de la manche tient sur une ligne : il informe sans prendre la place
+   du « à toi », qui est ce que le joueur doit saisir d'un coup d'œil. */
+.bandeau-manche {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 100px;
+  padding: 7px 14px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--muted-strong);
+}
+
+.bandeau-manche .milieu {
+  font-size: 0.6rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+  font-weight: 700;
+}
+
+.a-toi-entete {
+  text-align: center;
+  padding: 22px 0 4px;
+}
+
+/* Cet écran n'a que quatre éléments : autant les laisser respirer. Tassés,
+   ils se lisaient comme un bloc unique au lieu de quatre informations. */
+#bloc-a-toi .manche-bloc {
+  margin-top: 20px;
+}
+
+#atoi-reste {
+  margin: 20px 0 0;
+}
+
+#btn-atoi-lancer {
+  margin-top: 16px;
+  padding: 18px;
+  font-size: 1.05rem;
+}
+
+.a-toi-cible {
+  font-size: 3rem;
+  line-height: 1;
+}
+
+.a-toi-titre {
+  font-size: 1.9rem;
+  font-weight: 900;
+  margin-top: 4px;
+}
+
+.a-toi-equipe {
+  font-size: 0.92rem;
+  font-weight: 700;
+  color: var(--accent, var(--brand));
+}
+
+.manche-bloc {
+  text-align: center;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  padding: 14px 12px;
+  margin-top: 14px;
+}
+
+/* L'organisateur attend que le joueur lance : son bouton a cédé la place */
+.attente-joueur {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--muted-strong);
+  text-align: center;
+  padding: 14px 0 2px;
+}
+
 /* Le même compte, côté invité : sur l'écran de suivi, le paquet qui fond est
    la seule chose qui bouge avec le chrono. */
 .cartes-restantes {

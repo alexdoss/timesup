@@ -73,6 +73,19 @@ export function activerSuivi(code, jeton) {
   publierEtat('configuration');
 }
 
+// Pendant qu'un joueur tient le tour, c'est LUI qui publie — et sa numérotation
+// prend de l'avance sur la nôtre. Sans reprendre son compte au retour, nos
+// propres publications seraient tenues pour périmées et silencieusement
+// ignorées : les invités resteraient figés sur le dernier état de son tour.
+export function reprendreVersion(v) {
+  if (!etat) return;
+  const lu = Number(v) || 0;
+  if (lu > etat.version) {
+    etat.version = lu;
+    ecrireStockage();
+  }
+}
+
 export function couperSuivi() {
   etat = null;
   etapeCourante = 'configuration';

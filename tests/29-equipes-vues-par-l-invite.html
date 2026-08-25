@@ -253,6 +253,10 @@ localStorage.removeItem('timesup_rejoint');
     check('on sait qui fait deviner', L('tour-qui').includes('fait deviner'));
     check('les equipes ne sont plus consultables pendant le tour',
           I('btn-voir-equipes').style.display === 'none');
+    // Le rappel des cartes envoyees appartient a l attente : pose sur le
+    // sablier, il n apprend plus rien et mange de la hauteur.
+    check('le rappel des cartes a disparu de l ecran de jeu',
+          I('ruban-cartes').style.display === 'none');
     check('aucune carte du paquet n est visible',
           !I('bloc-tour').textContent.match(/tire-bouchon|boussole|Cleopatre/));
 

@@ -156,7 +156,7 @@ function reinitialiserSuivi() {
   dernierResultat = null;
   equipesConnues = null;
   monTour = null;
-  ['bloc-resultats', 'bloc-lancement', 'bloc-tour', 'bloc-a-toi', 'btn-voir-equipes']
+  ['bloc-resultats', 'bloc-lancement', 'bloc-tour', 'bloc-comptage', 'bloc-a-toi', 'btn-voir-equipes']
     .forEach(id => { const el = document.getElementById(id); if (el) el.style.display = 'none'; });
   ['attente-joueurs', 'attente-total'].forEach(id => {
     const el = document.getElementById(id);
@@ -593,9 +593,22 @@ function rendreConfiguration(suivi, heureServeur) {
   if (suivi) dernierSuiviRecu = suivi;
   const etat = suivi?.etat;
   const etape = etat?.etape;
-  const enLancement = ETAPES_LANCEMENT.includes(etape) && !!etat?.manche;
-  avantUnTour = enLancement;
-  const enTour = ETAPES_TOUR.includes(etape) && !!etat?.tour;
+  // Le tour m'est confié : mon écran « à toi » remplace le miroir du lancement.
+  // Sans cette condition, chaque lecture affichait le miroir avant que la
+  // vérification du tour ne le masque à nouveau — d'où un clignotement en bas
+  // de l'écran, à chaque cycle.
+  const aMoi = !!monTour;
+  const enAttenteDeTour = ETAPES_LANCEMENT.includes(etape) && !!etat?.manche;
+  const enLancement = enAttenteDeTour && !aMoi;
+  avantUnTour = enAttenteDeTour;
+  // Mon tour est rendu, mais l'organisateur ne l'a pas encore appliqué : l'état
+  // publié dit toujours qu'il est en cours. Le montrer m'annoncerait en train de
+  // faire deviner alors que j'ai fini — le temps d'une lecture, mais on le voit.
+  const monTourFini = monTourRendu && etat?.tour?.joueur === session.prenom;
+  if (!ETAPES_TOUR.includes(etape)) monTourRendu = false;
+  const enTour = ETAPES_TOUR.includes(etape) && !!etat?.tour && !monTourFini;
+  // Le tour est fini, mais pas encore compté : ni sablier, ni résultats.
+  const enComptage = etape === 'comptage' && !!etat?.tour && !monTourFini;
   const enResultat = ETAPES_RESULTAT.includes(etape);
   // Dès la partie finie, on guette la suivante plutôt que l'état publié —
   // mais seulement quand il y a de nouvelles cartes à ressaisir. Sur une partie
@@ -612,13 +625,22 @@ function rendreConfiguration(suivi, heureServeur) {
   // le tour joué, et donnait à croire qu'on pouvait le relancer.
   if (!monTour) document.getElementById('bloc-a-toi').style.display = 'none';
 
-  const enJeu = enLancement || enTour || enResultat;
+  const enJeu = enLancement || enTour || enResultat || enComptage || aMoi;
+  // Le rappel des cartes envoyées n'a de sens que pendant l'attente. Une fois
+  // la partie lancée, il n'apprend plus rien et reste posé sur le sablier :
+  // c'est `rendreAttente` qui l'affiche, et plus personne ne le retirait.
+  // Ceux qui n'ont saisi aucune carte n'en ont jamais eu : ne pas le leur poser.
+  const aSaisiDesCartes = !session.inscription && !session.spectateur && session.fini;
+  document.getElementById('ruban-cartes').style.display =
+    (aSaisiDesCartes && !enJeu) ? '' : 'none';
   document.getElementById('attente-roue').style.display = enJeu ? 'none' : '';
   document.getElementById('attente-titre').parentElement.style.display = enJeu ? 'none' : '';
   document.getElementById('bloc-lancement').style.display = enLancement ? '' : 'none';
   document.getElementById('bloc-tour').style.display = enTour ? '' : 'none';
+  document.getElementById('bloc-comptage').style.display = enComptage ? '' : 'none';
   document.getElementById('bloc-resultats').style.display = enResultat ? '' : 'none';
   if (enLancement) rendreLancement(etat);
+  if (enComptage) rendreComptage(etat);
   if (enResultat) rendreResultats(etat);
   // Le paquet qui fond est, avec le chrono, la seule chose qui bouge pendant
   // le tour : le sablier partagé porte les deux.
@@ -628,8 +650,9 @@ function rendreConfiguration(suivi, heureServeur) {
   const equipes = suivi?.etat?.equipes || [];
   const nommees = equipes.filter(e => (e.joueurs || []).length > 0);
   const bouton = document.getElementById('btn-voir-equipes');
-  // Masqué pendant le tour et sur les résultats : l'écran doit rester lisible
-  bouton.style.display = (nommees.length && !enTour && !enResultat) ? '' : 'none';
+  // Masqué pendant le tour, sur les résultats, et quand c'est à moi de jouer :
+  // l'écran doit rester lisible et ne montrer qu'une chose à la fois.
+  bouton.style.display = (nommees.length && !enTour && !enResultat && !aMoi) ? '' : 'none';
   equipesConnues = nommees.length ? equipes : null;
 
   // L'organisateur peut revenir sur sa répartition. Si la fenêtre est ouverte
@@ -893,6 +916,9 @@ function rendreMonTour(tour) {
 // n'interrompt donc pas la partie de celui qui joue.
 
 let partieEnCours = null;   // { mots, index, trouvees, manquees, restant, minuterie }
+// Rendu, mais pas encore appliqué par l'organisateur : ce qui est publié parle
+// encore de mon tour, et il ne faut pas le rejouer à l'écran.
+let monTourRendu = false;
 
 function lancerMonTour() {
   if (!monTour) return;
@@ -946,7 +972,10 @@ async function publierMonEtat(etape) {
           equipe: mienne >= 0 ? mienne : 0,
           joueur: session.prenom,
           duree: maDuree,
-          restant: Math.max(0, Math.round(partieEnCours.restant))
+          restant: Math.max(0, Math.round(partieEnCours.restant)),
+          // Pourquoi le tour s'est arrêté : les autres doivent lire la bonne
+          // raison, et « temps écoulé » serait faux sur un paquet vidé.
+          raison: partieEnCours.paquetVide ? 'paquet' : 'temps'
         }
       }
     });
@@ -1030,6 +1059,9 @@ function finirMonTour() {
   p.minuterie = null;
   p.manquees = p.mots.slice(p.index);
   p.paquetVide = p.index >= p.mots.length;
+  // Le dire aux autres : sans ça leur sablier continue de couler alors que le
+  // tour est fini, et ils finissent par lire « temps écoulé » à tort.
+  publierMonEtat('comptage');
   montrer('screen-mon-comptage');
   rendreMonComptage();
 }
@@ -1097,8 +1129,30 @@ async function validerMonComptage() {
   bouton.disabled = false;
   partieEnCours = null;
   monTour = null;
+  monTourRendu = true;
   afficherMonTour(false);
   ouvrirAttente();
+}
+
+// Le tour s'est arrêté, celui qui faisait deviner arbitre son comptage. On dit
+// la bonne raison — un paquet vidé n'est pas un temps écoulé — et on montre le
+// score de la manche, en prévenant qu'il ne comprend pas encore ce tour-ci.
+function rendreComptage(etat) {
+  const T = (id, texte) => { document.getElementById(id).textContent = texte; };
+  const m = etat.manche;
+  const surLePaquet = etat.tour.raison === 'paquet';
+
+  T('comptage-manche', m ? `Manche ${m.numero}/${m.sur} · ${m.icone} ${m.nom}` : '');
+  T('comptage-emoji', surLePaquet ? '🃏' : '⏰');
+  T('comptage-titre', surLePaquet ? 'Fin du tour !' : 'Temps écoulé !');
+  T('comptage-qui', `${etat.tour.joueur} compte ses cartes`);
+
+  const [e1, e2] = etat.equipes;
+  T('comptage-eq1', e1.nom);
+  T('comptage-eq2', e2.nom);
+  T('comptage-s1', e1.manche);
+  T('comptage-s2', e2.manche);
+  T('comptage-rappel', `Le tour de ${etat.tour.joueur} n'est pas encore compté`);
 }
 
 // Le même écran que celui de l'organisateur au début d'un tour. On ne reprend
@@ -1296,9 +1350,14 @@ async function reprendre(sauvegarde) {
       return ouvrirAttente();
     }
 
+    // La partie est lancée, et ce joueur en fait partie : son téléphone lui
+    // sert maintenant à la suivre et à jouer son tour. Le bloquer ici — ce que
+    // faisait l'app quand la page ne servait qu'à saisir des cartes — le
+    // mettrait dehors pour un simple rafraîchissement.
     if (!etat.ouverte) {
-      return bloquer('🚪', 'La partie a démarré',
-        'Cette partie est déjà lancée. Tes cartes sont bien parties.', null, null);
+      session.fini = true;
+      sauvegarder();
+      return ouvrirAttente();
     }
 
     if (session.fini) {

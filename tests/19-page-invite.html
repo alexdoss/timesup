@@ -180,10 +180,14 @@ const recharger = () => new Promise(r => { resoudre = r; f.contentWindow.locatio
     check('la partie se lance une fois tout le monde pret', r.statut === 200);
     check('les cartes descendent a l organisateur', r.corps.cartes.length === 3);
 
+    // Un joueur deja inscrit qui recharge NE DOIT PAS etre mis dehors : son
+    // telephone lui sert maintenant a suivre la partie et a jouer son tour.
+    // L app le bloquait, du temps ou cette page ne servait qu a saisir.
     await recharger();
     await wait(900);
-    check('un invite qui revient apprend que la partie a demarre', ecran() === 'screen-message');
-    check('le message est explicite', $('message-titre').textContent.includes('démarré'));
+    log('       ecran apres rechargement, partie lancee : ' + ecran());
+    check('un invite qui revient retrouve la partie', ecran() === 'screen-attente');
+    check('et non un ecran qui le met dehors', ecran() !== 'screen-message');
 
     // ===== Code inconnu =====
     localStorage.removeItem('timesup_rejoint');

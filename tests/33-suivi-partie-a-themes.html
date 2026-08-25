@@ -140,8 +140,8 @@ localStorage.removeItem('timesup_rejoint');
     check('et dit ce qui se passe',
           L('attente-sous') === "L'organisateur prépare la partie. Elle démarre juste après.");
     check('la roue tourne', I('attente-roue').style.display !== 'none');
-    check('aucun rappel de cartes : ce spectateur n en a pas saisi',
-          I('ruban-cartes').style.display === 'none');
+    check('aucun retour en arriere : il n a pas de saisie ou revenir',
+          I('btn-attente-retour').style.display === 'none');
     check('aucune liste de joueurs, personne ne saisit rien',
           I('attente-joueurs').style.display === 'none');
     check('aucun tableau de resultats pour l instant',

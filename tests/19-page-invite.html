@@ -130,10 +130,8 @@ const recharger = () => new Promise(r => { resoudre = r; f.contentWindow.locatio
     // ===== Validation =====
     $('btn-terminer').click();
     await wait(600);
-    // Plus d ecran de confirmation : on atterrit sur le suivi, ou un ruban
-    // rappelle ce qui est parti et laisse encore modifier.
-    check('on atterrit sur le suivi', ecran() === 'screen-attente');
-    check('un ruban annonce le bon total', $('ruban-texte').textContent.includes('3 cartes'));
+    check('l ecran de confirmation s affiche', ecran() === 'screen-envoye');
+    check('il annonce le bon total', $('total-envoye').textContent === '3');
 
     r = await api('etat', { code });
     check('l organisateur voit le joueur pret', r.corps.joueurs[0].fini === true);
@@ -157,8 +155,8 @@ const recharger = () => new Promise(r => { resoudre = r; f.contentWindow.locatio
     await wait(600);
     await recharger();
     await wait(900);
-    check('apres rechargement, la saisie est retrouvee', ecran() === 'screen-attente');
-    check('les cartes sont conservees', $('ruban-texte').textContent.includes('3 cartes'));
+    check('apres rechargement, la saisie est retrouvee', ecran() === 'screen-envoye');
+    check('les cartes sont conservees', $('total-envoye').textContent === '3');
 
     // ===== Retire par l organisateur =====
     r = await api('etat', { code });

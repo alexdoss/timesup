@@ -38,7 +38,6 @@ $mime = @{
 # adresse, pas d'expiration reelle. Ne sert qu'au developpement et aux tests.
 $sessions = @{}
 $suivis = @{}   # etat publie par l'organisateur, lu par les invites en mode lecture
-$tours = @{}    # le tour confie a un joueur : les seuls mots qui transitent
 $ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
 
 function Get-HorodatageMs { [DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds() }
@@ -114,75 +113,11 @@ function Invoke-FausseSession($corps) {
     return @{ statut = 200; corps = [ordered]@{
       suivi = $suivis[$code]; serveur = (Get-HorodatageMs) } }
   }
-  # Le tour confie a un joueur : la seule chose qui transporte des mots.
-  # Traite avant la session, comme dans api/session.js.
-  if ($action -eq 'confierTour') {
-    if (-not $sessions.ContainsKey($code)) {
-      return @{ statut = 404; corps = @{ error = 'Aucune partie ne porte ce code.' } }
-    }
-    if ($corps.jeton -ne $sessions[$code].jeton) {
-      return @{ statut = 403; corps = @{ error = "Action reservee a l'organisateur." } }
-    }
-    $id = [string]$corps.idJoueur
-    if (-not $id -or $null -eq $corps.mots) {
-      return @{ statut = 400; corps = @{ error = 'Tour incomplet.' } }
-    }
-    $tours[$code] = [ordered]@{
-      idJoueur = $id
-      mots     = @($corps.mots)
-      duree    = [int]($corps.duree ?? 40)
-      manche   = $corps.manche
-      confieA  = (Get-HorodatageMs)
-      rendu    = $null
-    }
-    return @{ statut = 200; corps = [ordered]@{ confie = $true; idJoueur = $id } }
-  }
-  if ($action -eq 'lireTour') {
-    if (-not $tours.ContainsKey($code)) { return @{ statut = 200; corps = @{ tour = $null } } }
-    $t = $tours[$code]
-    $organisateur = $sessions.ContainsKey($code) -and $corps.jeton -eq $sessions[$code].jeton
-    $leSien = ([string]$corps.idJoueur) -eq $t.idJoueur
-    if (-not $organisateur -and -not $leSien) {
-      return @{ statut = 200; corps = @{ tour = [ordered]@{
-        idJoueur = $t.idJoueur; confieA = $t.confieA; rendu = ($null -ne $t.rendu) } } }
-    }
-    return @{ statut = 200; corps = @{ tour = $t } }
-  }
-  if ($action -eq 'rendreTour') {
-    if (-not $tours.ContainsKey($code)) {
-      return @{ statut = 404; corps = @{ error = "Ce tour n'est plus en cours." } }
-    }
-    $t = $tours[$code]
-    if (([string]$corps.idJoueur) -ne $t.idJoueur) {
-      return @{ statut = 403; corps = @{ error = "Ce tour n'est pas le tien." } }
-    }
-    $t.rendu = [ordered]@{
-      trouvees = @($corps.trouvees); manquees = @($corps.manquees)
-      renduA = (Get-HorodatageMs) }
-    return @{ statut = 200; corps = @{ rendu = $true } }
-  }
-  if ($action -eq 'reprendreTour') {
-    if (-not $sessions.ContainsKey($code)) {
-      return @{ statut = 404; corps = @{ error = 'Aucune partie ne porte ce code.' } }
-    }
-    if ($corps.jeton -ne $sessions[$code].jeton) {
-      return @{ statut = 403; corps = @{ error = "Action reservee a l'organisateur." } }
-    }
-    $tours.Remove($code)
-    return @{ statut = 200; corps = @{ repris = $true } }
-  }
-
   if ($action -eq 'publier') {
     if (-not $sessions.ContainsKey($code)) {
       return @{ statut = 404; corps = @{ error = 'Aucune partie ne porte ce code.' } }
     }
-    # L organisateur publie, et le joueur a qui le tour a ete confie
-    $autorise = ($corps.jeton -eq $sessions[$code].jeton)
-    if (-not $autorise -and $corps.idJoueur -and $tours.ContainsKey($code)) {
-      $t = $tours[$code]
-      $autorise = ($t.idJoueur -eq [string]$corps.idJoueur) -and ($null -eq $t.rendu)
-    }
-    if (-not $autorise) {
+    if ($corps.jeton -ne $sessions[$code].jeton) {
       return @{ statut = 403; corps = @{ error = "Action reservee a l'organisateur." } }
     }
     if ($null -eq $corps.etat) {
@@ -284,8 +219,7 @@ function Invoke-FausseSession($corps) {
       # Inscription : ni attente a surveiller, ni paquet a rapatrier
       if ($s.inscription) {
         $s.ouverte = $false
-        $detail = @($s.joueurs.Keys | ForEach-Object { [ordered]@{
-          id = $_; prenom = $s.joueurs[$_].prenom; role = $s.joueurs[$_].role; nbCartes = 0 } })
+        $detail = @($s.joueurs.Values | ForEach-Object { [ordered]@{ prenom = $_.prenom; role = $_.role; nbCartes = 0 } })
         return @{ statut = 200; corps = [ordered]@{ cartes = @(); joueurs = $detail } }
       }
       $enAttente = @($s.joueurs.Values | Where-Object { -not $_.fini } | ForEach-Object { $_.prenom })
@@ -295,10 +229,7 @@ function Invoke-FausseSession($corps) {
       $cartes = @(); $s.joueurs.Values | ForEach-Object { $cartes += $_.cartes }
       if ($cartes.Count -eq 0) { return @{ statut = 409; corps = @{ error = "Aucune carte n'a ete saisie." } } }
       $s.ouverte = $false
-      # L identifiant accompagne le prenom : c est lui qui permet de confier un tour
-      $detail = @($s.joueurs.Keys | ForEach-Object { [ordered]@{
-        id = $_; prenom = $s.joueurs[$_].prenom; role = $s.joueurs[$_].role
-        nbCartes = @($s.joueurs[$_].cartes).Count } })
+      $detail = @($s.joueurs.Values | ForEach-Object { [ordered]@{ prenom = $_.prenom; role = $_.role; nbCartes = @($_.cartes).Count } })
       return @{ statut = 200; corps = [ordered]@{ cartes = $cartes; joueurs = $detail } }
     }
 

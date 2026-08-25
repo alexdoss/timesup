@@ -27,7 +27,7 @@ async function sonder(adresse) {
   document.body.appendChild(p);
   await new Promise(r => p.addEventListener('load', r, { once: true }));
   await wait(400);
-  const present = !!p.contentDocument.getElementById('screen-attente');
+  const present = !!p.contentDocument.getElementById('btn-suivre');
   p.remove();
   return present;
 }
@@ -77,20 +77,22 @@ async function sonder(adresse) {
     await wait(1200);
     $('btn-terminer').click();
     await wait(900);
-    // ===== Plus d ecran de confirmation : on atterrit sur le suivi =====
-    // Il n y a plus de mode « je suis » ou « je ne suis pas » : l app montre
-    // l etat de la partie, et celui qui ne veut pas regarder pose son telephone.
-    check('ses cartes sont envoyees', ecran() === 'screen-attente');
-    check('aucun ecran ne demande si on veut suivre', !$('btn-suivre'));
+    check('ses cartes sont envoyees', ecran() === 'screen-envoye');
 
-    // Le rappel des cartes envoyees a pris la place de cet ecran
-    const ruban = $('ruban-cartes');
-    check('un ruban rappelle ce qui est parti', ruban.style.display !== 'none');
-    log('       ruban : "' + $('ruban-texte').textContent + '"');
-    check('il annonce le bon nombre', $('ruban-texte').textContent.includes('3 cartes'));
-    check('et laisse encore modifier', $('btn-modifier').style.display !== 'none');
+    // ===== Le bouton demande par l US =====
+    const suivre = $('btn-suivre');
+    const modifier = $('btn-modifier');
+    check('un bouton propose de suivre la partie', !!suivre);
+    check('il est place au-dessus de « Modifier mes cartes »',
+          suivre.nextElementSibling === modifier);
+    check('c est le bouton principal, l autre passe au second plan',
+          suivre.classList.contains('btn-primary') && modifier.classList.contains('btn-secondary'));
+    log('       texte : "' + suivre.textContent.trim() + '"');
+    check('la phrase qui disait de ranger son telephone a disparu',
+          !$('screen-envoye').textContent.includes('Range ton téléphone'));
 
     // ===== La salle d attente =====
+    suivre.click();
     await wait(700);
     check('la salle d attente s ouvre', ecran() === 'screen-attente');
     // Verifier la classe ne suffit pas : un ecran peut porter « active » et
@@ -100,6 +102,8 @@ async function sonder(adresse) {
     log('       affichage : display=' + style.display + ', hauteur=' + Math.round(vue.getBoundingClientRect().height));
     check('et elle est reellement visible',
           style.display !== 'none' && vue.getBoundingClientRect().height > 50);
+    check('l ecran precedent a bien disparu',
+          w.getComputedStyle($('screen-envoye')).display === 'none');
     check('les trois joueurs sont listes', lignes().length === 3);
     log('       liste : ' + lignes().map(l => l.textContent.replace(/\s+/g, ' ').trim()).join('  |  '));
 
@@ -149,17 +153,16 @@ async function sonder(adresse) {
     check('et les lectures reprennent vraiment leur rythme',
           $('attente-total').textContent.includes('4 joueur(s) sur 4'));
 
-    // ===== Modifier ses cartes tant que la partie n a pas demarre =====
-    // Le geste part du ruban, sans quitter l ecran de suivi au prealable.
-    check('le ruban propose encore de modifier', $('btn-modifier').style.display !== 'none');
-    $('btn-modifier').click();
-    await wait(700);
-    check('on retourne a la saisie', ecran() === 'screen-cartes');
-    $('btn-terminer').click();
-    await wait(1200);
-    check('et renvoyer ramene au suivi', ecran() === 'screen-attente');
+    // ===== Retour en arriere tant que la partie n a pas demarre =====
+    check('un retour est propose', $('btn-attente-retour').style.display !== 'none');
+    $('btn-attente-retour').click();
+    await wait(300);
+    check('le retour ramene a l ecran de confirmation', ecran() === 'screen-envoye');
+    check('on peut toujours modifier ses cartes', !$('btn-modifier').disabled);
 
     // ===== Quand l organisateur lance la partie =====
+    $('btn-suivre').click();
+    await wait(600);
     await api('fermer', { code, jeton });
     await wait(2600);
     log('       titre : "' + $('attente-titre').textContent + '"');
@@ -173,10 +176,8 @@ async function sonder(adresse) {
     // ne choisit qu un theme en rejeu. La phrase doit valoir pour les deux.
     check('le texte dit ce que fait l organisateur',
           $('attente-sous').textContent === "L'organisateur prépare la partie. Elle démarre juste après.");
-    check('« Modifier » disparait : le paquet est fige',
-          $('btn-modifier').style.display === 'none');
-    check('mais le ruban dit que les cartes sont bien dedans',
-          $('ruban-texte').textContent.includes('dans le paquet'));
+    check('le retour disparait : on ne modifie plus rien',
+          $('btn-attente-retour').style.display === 'none');
     check('une roue signale que ca travaille',
           $('attente-roue').style.display !== 'none');
     check('le tableau des joueurs disparait',

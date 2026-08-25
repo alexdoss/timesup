@@ -93,8 +93,8 @@ function paquet() {
     }
     $('btn-terminer').click();
     await wait(1500);
-    // Plus d ecran de confirmation : terminer mene directement au suivi
-    check('ses cartes sont envoyees', ecran() === 'screen-attente');
+    check('ses cartes sont envoyees', ecran() === 'screen-envoye');
+    $('btn-suivre').click();
     await wait(2600);
     check('il suit la partie', ecran() === 'screen-attente');
 

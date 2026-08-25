@@ -173,11 +173,8 @@ f.addEventListener('load', async () => {
 
     // ===== La composition des equipes reste consultable =====
     check('un acces aux equipes est propose', !!$('btn-voir-equipes') && visible('btn-voir-equipes'));
-    // Sous le lancement du tour, sans exiger d etre collé : la mention
-    // « X lance depuis son telephone » vient s intercaler quand le tour est confie.
     check('il est place sous le lancement du tour',
-          ($('btn-start-turn').compareDocumentPosition($('btn-voir-equipes'))
-            & Node.DOCUMENT_POSITION_FOLLOWING) !== 0);
+          $('btn-start-turn').nextElementSibling === $('btn-voir-equipes'));
     check('il est discret', $('btn-voir-equipes').classList.contains('btn-link'));
 
     $('btn-voir-equipes').click();

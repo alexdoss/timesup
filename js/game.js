@@ -20,10 +20,6 @@ export const game = {
   // Même forme que playerStats, mais pour les parties DÉJÀ terminées de la série
   sessionPlayerStats: {},  // { playerName: { found: 0, parManche: { <indice> : n } } }
   playerAssignments: {},   // { playerName: teamIndex }
-  // { playerName: idJoueur } — qui possède un téléphone dans la session, et
-  // lequel. C'est ce qui permet de lui confier son tour. Un joueur absent de
-  // cette table joue depuis l'appareil de l'organisateur, comme avant.
-  playerPhones: {},
   nominativeMode: true,    // true = avec noms de joueurs
   cardSource: 'themes',    // 'themes' | 'custom'
   customCards: [],         // cartes saisies manuellement en mode custom
@@ -464,28 +460,6 @@ export function countCard(word) {
   creditTurn(word);
   removeFromDeck(word);
   return true;
-}
-
-// Le tour a été joué sur le téléphone d'un joueur. On le rejoue ici, carte par
-// carte, pour que l'état de la partie reste tenu à un seul endroit : le paquet,
-// les scores et les statistiques suivent le même chemin que pour un tour local.
-export function appliquerTourDistant(trouvees) {
-  beginTurn();
-  (trouvees || []).forEach(mot => {
-    const position = game.deck.indexOf(mot, game.currentCardIndex);
-    // Carte inconnue ou déjà consommée : on n'invente pas de point.
-    if (position === -1) return;
-    // On l'amène devant avant de la compter. L'ordre du paquet d'ici n'est pas
-    // celui qu'avait le joueur — il a pu passer des cartes, qui repartent au
-    // fond de son exemplaire à lui.
-    game.deck.splice(position, 1);
-    game.deck.splice(game.currentCardIndex, 0, mot);
-    cardFound();
-  });
-  closeTurn();
-  // La correction a déjà eu lieu sur le téléphone du joueur : la reproposer
-  // ici reviendrait à rouvrir un comptage déjà arbitré.
-  game.turnCorrigeable = false;
 }
 
 export function cardPassed() {

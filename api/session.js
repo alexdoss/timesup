@@ -342,7 +342,10 @@ async function fermer(req, res, session, code) {
   if (session.config.inscription) {
     await commandeKV(['HSET', cleSession(code), 'config',
       JSON.stringify({ ...session.config, ouverte: false })]);
-    return res.status(200).json({ cartes: [], joueurs: detailJoueurs(session) });
+    return res.status(200).json({
+      cartes: [],
+      joueurs: joueurs.map(j => ({ prenom: j.prenom, role: j.role, nbCartes: 0 }))
+    });
   }
 
   const enCours = joueurs.filter(j => !j.fini);
@@ -366,16 +369,10 @@ async function fermer(req, res, session, code) {
   const config = { ...session.config, ouverte: false };
   await commandeKV(['HSET', cleSession(code), 'config', JSON.stringify(config)]);
 
-  return res.status(200).json({ cartes, joueurs: detailJoueurs(session) });
-}
-
-// L'identifiant accompagne le prénom : c'est lui qui permettra plus tard de
-// confier un tour au bon téléphone. Sans lui, l'organisateur ne saurait pas
-// qui joindre — un prénom ne désigne aucun appareil.
-function detailJoueurs(session) {
-  return Object.entries(session.joueurs).map(([id, j]) => ({
-    id, prenom: j.prenom, role: j.role, nbCartes: (j.cartes || []).length
-  }));
+  return res.status(200).json({
+    cartes,
+    joueurs: joueurs.map(j => ({ prenom: j.prenom, role: j.role, nbCartes: j.cartes.length }))
+  });
 }
 
 // Rejouer avec les mêmes joueurs : la session est recyclée plutôt que refaite.
@@ -448,15 +445,7 @@ async function publier(req, res, code) {
   if (!config) {
     return res.status(404).json({ error: 'Aucune partie ne porte ce code.' });
   }
-  // L'organisateur publie, et — pendant son tour — le joueur à qui le paquet a
-  // été confié. Sans cette seconde voie, les invités n'apprendraient le départ
-  // du chrono qu'au retour du tour : personne ne verrait le sablier tourner.
-  let autorise = req.body.jeton === config.jeton;
-  if (!autorise && req.body.idJoueur) {
-    const tour = analyser(await commandeKV(['GET', cleTour(code)]));
-    autorise = !!tour && tour.idJoueur === String(req.body.idJoueur) && !tour.rendu;
-  }
-  if (!autorise) {
+  if (req.body.jeton !== config.jeton) {
     return res.status(403).json({ error: "Action réservée à l'organisateur." });
   }
 
@@ -497,110 +486,6 @@ async function suivre(req, res, code) {
   return res.status(200).json({ suivi: charge, serveur: Date.now() });
 }
 
-// ===== Le tour confié à un joueur =====
-// Le seul endroit où des mots du paquet transitent. Ils ne vont pas dans le
-// suivi — que tout le monde lit — mais dans une clé à part, rendue au seul
-// joueur à qui le tour a été confié.
-//
-// Le paquet est PRÊTÉ, pas interrogé : le joueur reçoit d'un coup les mots de
-// son tour et joue en local. Demander la carte suivante au serveur à chaque
-// « Trouvé » coûterait un aller-retour — 270 ms en moyenne, dix secondes dans
-// le pire cas mesuré — et rendrait le jeu injouable. Effet de bord heureux :
-// une coupure réseau en plein tour n'interrompt plus rien.
-
-const DUREE_TOUR_S = 30 * 60;        // un tour dure une minute ; large de reste
-const TAILLE_TOUR_MAX = 16384;       // un paquet entier de mots, borné
-
-function cleTour(code) {
-  return `rush:tour:${code}`;
-}
-
-// L'organisateur confie le tour : à qui, avec quels mots, pour combien de temps.
-async function confierTour(req, res, code) {
-  const config = analyser(await commandeKV(['HGET', cleSession(code), 'config']));
-  if (!config) {
-    return res.status(404).json({ error: 'Aucune partie ne porte ce code.' });
-  }
-  if (req.body.jeton !== config.jeton) {
-    return res.status(403).json({ error: "Action réservée à l'organisateur." });
-  }
-
-  const idJoueur = String(req.body.idJoueur || '');
-  const mots = Array.isArray(req.body.mots) ? req.body.mots.map(m => String(m)) : null;
-  if (!idJoueur || !mots) {
-    return res.status(400).json({ error: 'Tour incomplet.' });
-  }
-
-  const charge = JSON.stringify({
-    idJoueur,
-    mots,
-    duree: Number(req.body.duree) || 40,
-    manche: req.body.manche || null,
-    confieA: Date.now(),
-    rendu: null
-  });
-  if (charge.length > TAILLE_TOUR_MAX) {
-    return res.status(413).json({ error: 'Paquet trop volumineux.' });
-  }
-
-  await commandeKV(['SET', cleTour(code), charge, 'EX', DUREE_TOUR_S]);
-  return res.status(200).json({ confie: true, idJoueur });
-}
-
-// Lecture, par le joueur concerné ou par l'organisateur.
-// Les mots ne sortent que pour l'un des deux : un autre invité apprend qu'un
-// tour est en cours et pour qui, jamais ce qu'il contient.
-async function lireTour(req, res, code) {
-  const tour = analyser(await commandeKV(['GET', cleTour(code)]));
-  if (!tour) return res.status(200).json({ tour: null });
-
-  const config = analyser(await commandeKV(['HGET', cleSession(code), 'config']));
-  const organisateur = !!config && req.body.jeton === config.jeton;
-  const leSien = String(req.body.idJoueur || '') === tour.idJoueur;
-
-  if (!organisateur && !leSien) {
-    return res.status(200).json({
-      tour: { idJoueur: tour.idJoueur, confieA: tour.confieA, rendu: !!tour.rendu }
-    });
-  }
-  return res.status(200).json({ tour });
-}
-
-// Le joueur rend son tour : ce qu'il a compté, ce qu'il n'a pas compté.
-// On écrit dans la même clé plutôt que dans une seconde : l'organisateur
-// interroge déjà celle-là, et le tour est une seule chose.
-async function rendreTour(req, res, code) {
-  const tour = analyser(await commandeKV(['GET', cleTour(code)]));
-  if (!tour) {
-    return res.status(404).json({ error: "Ce tour n'est plus en cours." });
-  }
-  if (String(req.body.idJoueur || '') !== tour.idJoueur) {
-    return res.status(403).json({ error: "Ce tour n'est pas le tien." });
-  }
-
-  const liste = valeur => Array.isArray(valeur) ? valeur.map(m => String(m)) : [];
-  tour.rendu = {
-    trouvees: liste(req.body.trouvees),
-    manquees: liste(req.body.manquees),
-    renduA: Date.now()
-  };
-  await commandeKV(['SET', cleTour(code), JSON.stringify(tour), 'EX', DUREE_TOUR_S]);
-  return res.status(200).json({ rendu: true });
-}
-
-// L'organisateur reprend la main : le tour confié n'a plus cours.
-async function reprendreTour(req, res, code) {
-  const config = analyser(await commandeKV(['HGET', cleSession(code), 'config']));
-  if (!config) {
-    return res.status(404).json({ error: 'Aucune partie ne porte ce code.' });
-  }
-  if (req.body.jeton !== config.jeton) {
-    return res.status(403).json({ error: "Action réservée à l'organisateur." });
-  }
-  await commandeKV(['DEL', cleTour(code)]);
-  return res.status(200).json({ repris: true });
-}
-
 // ===== Point d'entrée =====
 
 export default async function handler(req, res) {
@@ -629,13 +514,6 @@ export default async function handler(req, res) {
     // le rend peu coûteux quand dix invités interrogent en boucle.
     if (action === 'suivre') return await suivre(req, res, code);
     if (action === 'publier') return await publier(req, res, code);
-
-    // Le tour confié se traite ici aussi : il vit dans sa propre clé, et le
-    // joueur qui le tient l'interroge sans avoir à charger toute la session.
-    if (action === 'confierTour') return await confierTour(req, res, code);
-    if (action === 'lireTour') return await lireTour(req, res, code);
-    if (action === 'rendreTour') return await rendreTour(req, res, code);
-    if (action === 'reprendreTour') return await reprendreTour(req, res, code);
 
     const session = await lireSession(code);
     if (!session) {

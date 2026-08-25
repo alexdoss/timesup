@@ -2,20 +2,18 @@
 // Orchestre les modules et gère les événements
 
 import { loadThemes } from './themes.js';
-import { game, ROUNDS, shuffle, resetGame, replayGame, buildDeck, startNewRound, getCurrentCard, cardFound, cardPassed, switchTeam, isRoundOver, isGameOver, nextRound, getCardsRemaining, addPlayer, removePlayer, assignTeamsRoundRobin, getCurrentPlayer, advancePlayer, getActiveRound, syncChosenTeams, canPass, getPlannedTeamSizes, beginTurn, closeTurn, uncountCard, countCard, getRoundScores, getSessionScores, playerExists, recordRound, getRoundHistory, getPlayerBreakdown, appliquerTourDistant } from './game.js';
+import { game, ROUNDS, shuffle, resetGame, replayGame, buildDeck, startNewRound, getCurrentCard, cardFound, cardPassed, switchTeam, isRoundOver, isGameOver, nextRound, getCardsRemaining, addPlayer, removePlayer, assignTeamsRoundRobin, getCurrentPlayer, advancePlayer, getActiveRound, syncChosenTeams, canPass, getPlannedTeamSizes, beginTurn, closeTurn, uncountCard, countCard, getRoundScores, getSessionScores, playerExists, recordRound, getRoundHistory, getPlayerBreakdown } from './game.js';
 import { showScreen, updateTimer, showCard, updateRoundScreen, updateTurnInfo, updateGameHeader, showTurnResult, showRoundEnd, showFinalScreen, renderThemeButtons, renderPlayerList, updateCurrentPlayer, renderPlayerStats, renderRoundsSelector, applyTeamAccent, showResumeOption, renderSoundSetting, renderRules, showPauseOverlay, showPauseCountdown, hidePause, showPuppetConfirm, setRoundsNextEnabled, renderThemeEditor, showThemeEditError, renderCustomThemes, showDialog,
          afficherInvitation, afficherPartageSuivi, afficherInscription, renderInscrits,
          renderSession, renderBoutonMesCartes, renderSaisieLocale,
          showSaisieError, renderRepartition,
          afficherEquipes, masquerEquipes, afficherBoutonEquipes } from './ui.js';
-import { activerSuivi, couperSuivi, publierEtat, reprendreVersion } from './suivi.js';
+import { activerSuivi, couperSuivi, publierEtat } from './suivi.js';
 import { ouvrirSession, ouvrirSuiviSeul, ouvrirInscription, sessionCourante, oublierSession,
          adresseInvitation, adresseLisible,
          inscrire, deposerCartes, retirerJoueur, fermerSession, relancerSession, lireEtat,
-         confierTour, lireTour, reprendreTour, suivreEtat,
          suivre, arreterSuivi } from './session.js';
 import { creerQrSvg } from './qr.js';
-import { creerSablier, svgSablier } from './sablier.js';
 import { getCustomThemes, saveCustomTheme, deleteCustomTheme, generateWithAI, getQuota } from './library.js';
 import { saveGame, loadSavedGame, clearSavedGame, restoreInto } from './persistence.js';
 import { playTick, playBuzzer, unlockAudio, isSoundEnabled, setSoundEnabled } from './sound.js';
@@ -496,7 +494,6 @@ function setupListeners() {
 
   // Start turn
   document.getElementById('btn-start-turn').addEventListener('click', startTurn);
-  document.getElementById('btn-reprendre-tour').addEventListener('click', reprendreLeTourIci);
 
   // Found / Pass
   document.getElementById('btn-found').addEventListener('click', onFound);
@@ -769,12 +766,11 @@ function ouvrirEcranDesEquipes() {
   // a pu revenir ajouter ou retirer un prénom. On garde les équipes déjà
   // attribuées, sans quoi un ajout tardif rebattrait tout son travail.
   if (game.nominativeMode && !joueursViennentDesScans()) {
-    // On reprend la fiche entière de ceux qu'on connaît déjà, pas seulement leur
-    // équipe : elle porte aussi l'identifiant de leur téléphone, sans lequel on
-    // ne saurait plus à qui confier leur tour.
-    const connus = new Map(repartition.map(j => [j.prenom, j]));
-    repartition = game.players.map((prenom, index) =>
-      connus.get(prenom) || { prenom, equipe: index % game.teams.length });
+    const dejaPlaces = new Map(repartition.map(j => [j.prenom, j.equipe]));
+    repartition = game.players.map((prenom, index) => ({
+      prenom,
+      equipe: dejaPlaces.has(prenom) ? dejaPlaces.get(prenom) : index % game.teams.length
+    }));
   }
   document.getElementById('bloc-repartition').style.display =
     game.nominativeMode ? '' : 'none';
@@ -1316,15 +1312,7 @@ function validerRepartition() {
 
   game.players = repartition.map(j => j.prenom);
   game.playerAssignments = {};
-  // Qui tient un AUTRE téléphone que celui-ci, et lequel. Deux exclusions :
-  // les prénoms tapés à la main, qui n'ont pas d'identifiant, et l'organisateur
-  // lui-même — il joue sur cet appareil, lui confier son tour reviendrait à le
-  // faire attendre un téléphone qu'il a déjà en main.
-  game.playerPhones = {};
-  repartition.forEach(j => {
-    game.playerAssignments[j.prenom] = j.equipe;
-    if (j.id && j.role !== 'organisateur') game.playerPhones[j.prenom] = j.id;
-  });
+  repartition.forEach(j => { game.playerAssignments[j.prenom] = j.equipe; });
   game.assignMode = 'chosen';
   // Les équipes sont peuplées maintenant, et non plus seulement au lancement :
   // les invités doivent pouvoir les consulter pendant que la configuration
@@ -1772,171 +1760,6 @@ function showRoundScreen() {
   // Le tout premier écran de la partie n'est pas « entre deux tours »
   publierEtat(game.currentRound === 0 && getRoundScores().every(s => s === 0)
     ? 'attente' : 'entre-tours');
-  confierLeTourSiPossible();
-}
-
-// ===== LE TOUR JOUÉ DEPUIS LE TÉLÉPHONE DU JOUEUR =====
-// Quand celui qui doit faire deviner a un téléphone dans la session, on lui
-// confie le paquet : il jouera dessus. Sinon rien ne change, l'organisateur
-// mène le tour depuis son appareil comme il l'a toujours fait.
-
-let tourConfieA = null;      // idJoueur du tour en cours, ou null
-
-function telephoneDuJoueurCourant() {
-  if (!game.nominativeMode || !sessionCourante()) return null;
-  const joueur = getCurrentPlayer();
-  return joueur ? (game.playerPhones?.[joueur] || null) : null;
-}
-
-async function confierLeTourSiPossible() {
-  arreterLeGuet();
-  tourConfieA = null;
-  const idJoueur = telephoneDuJoueurCourant();
-  afficherAttenteDuJoueur(null);
-  if (!idJoueur) return;
-
-  const round = getActiveRound();
-  try {
-    await confierTour(
-      idJoueur,
-      game.deck.slice(game.currentCardIndex),
-      game.turnTime,
-      { numero: game.currentRound + 1, sur: game.activeRounds.length,
-        nom: round.name, icone: round.icon, regle: round.desc }
-    );
-    tourConfieA = idJoueur;
-    afficherAttenteDuJoueur(getCurrentPlayer());
-    guetterLeRetourDuTour();
-  } catch {
-    // Réseau absent : le tour se jouera ici, comme avant. Rien à dire au joueur.
-  }
-}
-
-// L'organisateur attend que le joueur lance : son bouton cède la place à une
-// mention, et à la porte de sortie s'il ne répond pas.
-function afficherAttenteDuJoueur(prenom) {
-  const bouton = document.getElementById('btn-start-turn');
-  const attente = document.getElementById('attente-du-joueur');
-  bouton.style.display = prenom ? 'none' : '';
-  attente.style.display = prenom ? '' : 'none';
-  if (prenom) {
-    document.getElementById('attente-joueur-nom').textContent =
-      `📱 ${prenom} lance depuis son téléphone`;
-  } else {
-    afficherTourDistant(false);
-  }
-}
-
-// Le tour a démarré ailleurs. L'organisateur n'a plus rien à décider : il
-// devient un spectateur comme les autres, et voit le même sablier qu'eux.
-function afficherTourDistant(actif) {
-  document.getElementById('bloc-tour-distant').style.display = actif ? '' : 'none';
-  document.getElementById('attente-joueur-nom').style.display = actif ? 'none' : '';
-  // Le reste de l'écran de lancement n'a plus lieu d'être pendant le tour
-  ['round-header', 'round-scores'].forEach(id => {
-    const el = document.getElementById(id);
-    if (el) el.style.display = actif ? 'none' : '';
-  });
-  // La composition des équipes suit sa propre règle : elle n'existe qu'en mode
-  // nominatif. La rétablir sans condition la ferait apparaître en mode simple.
-  if (actif) document.getElementById('btn-voir-equipes').style.display = 'none';
-  else afficherBoutonEquipes(game.nominativeMode && game.teams.some(e => e.players.length > 0));
-  if (!actif) sablierDistant.oublier();
-}
-
-// Le joueur ne répond pas : l'organisateur récupère le tour sur son appareil.
-async function reprendreLeTourIci() {
-  arreterLeGuet();
-  try { await reprendreTour(); } catch { /* le tour disparaîtra tout seul */ }
-  tourConfieA = null;
-  afficherAttenteDuJoueur(null);
-}
-
-// L'organisateur attend que le tour lui revienne. C'est sa seule interrogation
-// pendant qu'un autre joue : le sablier des invités, lui, tourne tout seul.
-const RYTHME_GUET_MS = 2000;
-let guetDuTour = null;
-
-function arreterLeGuet() {
-  clearInterval(guetDuTour);
-  guetDuTour = null;
-}
-
-// Le même sablier que celui des invités : pendant qu'un autre joue,
-// l'organisateur ne décide plus rien, il regarde comme eux.
-const sablierDistant = creerSablier({
-  prefixe: 'org',
-  chrono: 'distant-chrono',
-  blocChrono: 'distant-bloc-chrono',
-  manche: 'distant-manche',
-  qui: 'distant-qui',
-  mention: 'distant-mention',
-  restantes: 'distant-restantes'
-});
-document.getElementById('distant-bloc-chrono')
-  .insertAdjacentHTML('beforeend', svgSablier('org'));
-
-// Le libellé du paquet restant, comme sur la page des invités.
-function libelleRestantes(n) {
-  if (typeof n !== 'number') return '';
-  if (n <= 0) return 'Plus de cartes';
-  if (n === 1) return 'Dernière carte !';
-  return `Cartes restantes : ${n}`;
-}
-
-function guetterLeRetourDuTour() {
-  arreterLeGuet();
-  guetDuTour = setInterval(async () => {
-    if (!tourConfieA) return arreterLeGuet();
-    let tour;
-    try { ({ tour } = await lireTour()); } catch { return; }
-
-    // Le tour a disparu du serveur : il a expiré, ou l'organisateur l'a repris
-    // depuis un autre écran. On rend la main à cet appareil.
-    if (!tour) {
-      arreterLeGuet();
-      tourConfieA = null;
-      afficherAttenteDuJoueur(null);
-      return;
-    }
-    if (!tour.rendu) return suivreLeTourDistant();
-
-    arreterLeGuet();
-    tourConfieA = null;
-    afficherTourDistant(false);
-    // Reprendre le compte du joueur avant de publier quoi que ce soit : le
-    // sien a pris de l'avance pendant son tour.
-    try { reprendreVersion((await suivreEtat()).suivi?.v); } catch { /* on publiera au prochain coup */ }
-    appliquerLeTourRendu(tour.rendu);
-  }, RYTHME_GUET_MS);
-}
-
-// Le joueur a lancé : on lit l'état qu'il publie, exactement comme un invité.
-// Une seule publication au départ suffit à faire tourner le sablier.
-async function suivreLeTourDistant() {
-  let reponse;
-  try { reponse = await suivreEtat(); } catch { return; }
-  const suivi = reponse.suivi;
-  // « pause » compte aussi : le joueur a arrêté son chrono, et le sablier doit
-  // se figer ici comme chez lui. Sans ça il continuerait de couler.
-  const etape = suivi?.etat?.etape;
-  const enTour = (etape === 'tour' || etape === 'pause') && !!suivi.etat.tour;
-  afficherTourDistant(enTour);
-  if (enTour) {
-    sablierDistant.ancrer(suivi.etat, suivi.publieA, reponse.serveur, libelleRestantes);
-  }
-}
-
-// Le joueur a rendu son tour : on le rejoue ici, puis la partie enchaîne
-// exactement comme après un tour mené depuis cet appareil.
-function appliquerLeTourRendu(rendu) {
-  appliquerTourDistant(rendu.trouvees);
-  // Même bascule qu'à la fin d'un tour local : le joueur suivant, puis l'équipe
-  if (game.nominativeMode) advancePlayer();
-  switchTeam();
-  saveGame(game);
-  afficherAttenteDuJoueur(null);
-  onNextTurn();
 }
 
 function startTurn() {

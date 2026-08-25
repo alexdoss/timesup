@@ -4,8 +4,6 @@
 // ni le service worker. Un invité qui n'a jamais installé Rush doit voir un
 // champ de saisie en une seconde, même sur un réseau de salle des fêtes.
 
-import { creerSablier, svgSablier } from './sablier.js';
-
 const ROUTE = '/api/session';
 const STOCKAGE = 'timesup_rejoint';
 const DELAI_ENVOI_MS = 700;      // on attend une pause de frappe avant d'envoyer
@@ -151,12 +149,11 @@ function accepterRejeu() {
 function reinitialiserSuivi() {
   saisieClose = false;
   guetterRelance = false;
-  sablier.oublier();
+  ancreTour = null;
   derniereComposition = null;
   dernierResultat = null;
   equipesConnues = null;
-  monTour = null;
-  ['bloc-resultats', 'bloc-lancement', 'bloc-tour', 'bloc-a-toi', 'btn-voir-equipes']
+  ['bloc-resultats', 'bloc-lancement', 'bloc-tour', 'btn-voir-equipes']
     .forEach(id => { const el = document.getElementById(id); if (el) el.style.display = 'none'; });
   ['attente-joueurs', 'attente-total'].forEach(id => {
     const el = document.getElementById(id);
@@ -236,6 +233,18 @@ async function validerCode(code) {
 // Le prénom est donné, il n'y a rien d'autre à saisir. Suivre la partie est un
 // choix : un téléphone rangé n'interroge plus le serveur du tout.
 
+function proposerDeSuivre() {
+  document.getElementById('inscrit-titre').textContent = `Te voilà inscrit, ${session.prenom}`;
+  montrer('screen-inscrit');
+}
+
+function rangerLeTelephone() {
+  arreterAttente();
+  bloquer('📵', `À tout de suite, ${session.prenom}`,
+    'Tu es bien inscrit. Range ton téléphone, la partie commence quand tout le monde est prêt.',
+    '👀 Finalement, je suis la partie', () => ouvrirAttente());
+}
+
 // ===== SPECTATEUR — partie jouée avec des thèmes prédéfinis =====
 // Personne ne saisit de cartes : il n'y a ni prénom à donner, ni identifiant à
 // obtenir. On ouvre donc l'écran de suivi tout de suite, et on lit d'emblée
@@ -250,6 +259,8 @@ function entrerEnSpectateur() {
   document.getElementById('attente-titre').textContent = 'Configuration de la partie en cours';
   document.getElementById('attente-sous').textContent =
     "L'organisateur prépare la partie. Elle démarre juste après.";
+  // Rien derrière : ce spectateur n'a pas de saisie où retourner
+  document.getElementById('btn-attente-retour').style.display = 'none';
   document.getElementById('attente-roue').style.display = '';
   ['attente-joueurs', 'attente-total'].forEach(id => {
     document.getElementById(id).style.display = 'none';
@@ -331,9 +342,7 @@ async function rejoindreAvec(prenom) {
     // Partie à thèmes : rien à saisir. On demande seulement si ce téléphone
     // doit suivre la partie, ou rester dans une poche jusqu'au tour de son
     // propriétaire — s'inscrire et regarder sont deux choses différentes.
-    // Partie à thèmes : rien à saisir, et rien à décider non plus. On suit la
-    // partie, point. Celui qui ne veut pas regarder pose son téléphone.
-    if (session.inscription) return ouvrirAttente();
+    if (session.inscription) return proposerDeSuivre();
     ouvrirSaisie();
   } catch (err) {
     // Quelqu'un a pris cette place entre l'affichage et le tap : on rafraîchit
@@ -501,9 +510,8 @@ async function terminer() {
 
   session.fini = true;
   sauvegarder();
-  // Plus d'écran de confirmation à part : on atterrit sur le suivi, qui porte
-  // le rappel des cartes envoyées et le seul geste encore possible — modifier.
-  ouvrirAttente();
+  document.getElementById('total-envoye').textContent = session.cartes.length;
+  montrer('screen-envoye');
 }
 
 // ===== SALLE D'ATTENTE =====
@@ -521,6 +529,10 @@ function ouvrirAttente() {
   minuterieAttente = setInterval(rafraichirAttente, RYTHME_ATTENTE_MS);
 }
 
+function quitterAttente() {
+  arreterAttente();
+  montrer('screen-envoye');
+}
 
 // Un téléphone rangé dans une poche n'a aucune raison d'interroger le serveur
 document.addEventListener('visibilitychange', () => {
@@ -558,10 +570,6 @@ async function rafraichirAttente() {
     }
     const reponse = await appeler('suivre', { code: session.code });
     rendreConfiguration(reponse.suivi, reponse.serveur);
-    // Un tour ne se confie qu'entre deux tours : inutile d'aller le chercher
-    // pendant qu'un autre joue ou qu'on regarde des résultats. Ça épargne une
-    // requête sur deux à chaque invité, et autant au stockage.
-    if (avantUnTour) await guetterMonTour();
   } catch {
     // Coupure passagère : on garde le dernier affichage plutôt que de le vider
   }
@@ -582,19 +590,10 @@ const ETAPES_TOUR = ['tour', 'pause'];
 const ETAPES_RESULTAT = ['fin-manche', 'fin-partie'];
 
 // L'organisateur poursuit sa configuration, puis la partie s'enchaîne.
-// Vrai quand la partie est entre deux tours : c'est le seul moment où un tour
-// peut m'être confié.
-let avantUnTour = false;
-// Le dernier état lu, avec son numéro de version : celui qui joue son tour
-// publie à partir de là, sans quoi sa publication serait tenue pour périmée.
-let dernierSuiviRecu = null;
-
 function rendreConfiguration(suivi, heureServeur) {
-  if (suivi) dernierSuiviRecu = suivi;
   const etat = suivi?.etat;
   const etape = etat?.etape;
   const enLancement = ETAPES_LANCEMENT.includes(etape) && !!etat?.manche;
-  avantUnTour = enLancement;
   const enTour = ETAPES_TOUR.includes(etape) && !!etat?.tour;
   const enResultat = ETAPES_RESULTAT.includes(etape);
   // Dès la partie finie, on guette la suivante plutôt que l'état publié —
@@ -606,12 +605,6 @@ function rendreConfiguration(suivi, heureServeur) {
   if (etape === 'fin-partie' && aDesCartesARessaisir) guetterRelance = true;
 
   // L'en-tête « configuration en cours » cède la place dès que la partie tourne
-  // Mon écran de lancement ne survit pas à mon tour : dès que le paquet n'est
-  // plus entre mes mains, il cède la place à ce que voient les autres. Sans ce
-  // ménage à chaque lecture, il restait affiché par-dessus le sablier une fois
-  // le tour joué, et donnait à croire qu'on pouvait le relancer.
-  if (!monTour) document.getElementById('bloc-a-toi').style.display = 'none';
-
   const enJeu = enLancement || enTour || enResultat;
   document.getElementById('attente-roue').style.display = enJeu ? 'none' : '';
   document.getElementById('attente-titre').parentElement.style.display = enJeu ? 'none' : '';
@@ -620,10 +613,14 @@ function rendreConfiguration(suivi, heureServeur) {
   document.getElementById('bloc-resultats').style.display = enResultat ? '' : 'none';
   if (enLancement) rendreLancement(etat);
   if (enResultat) rendreResultats(etat);
-  // Le paquet qui fond est, avec le chrono, la seule chose qui bouge pendant
-  // le tour : le sablier partagé porte les deux.
-  if (enTour) sablier.ancrer(etat, suivi.publieA, heureServeur, libelleRestantes);
-  else sablier.oublier();
+  if (enTour) {
+    // Le paquet fond pendant le tour : c'est la seule chose, avec le chrono,
+    // qui bouge sous les yeux des invités.
+    document.getElementById('tour-restantes').textContent = libelleRestantes(etat.restantes);
+    ancrerTour(etat, suivi.publieA, heureServeur);
+  } else {
+    ancreTour = null;
+  }
 
   const equipes = suivi?.etat?.equipes || [];
   const nommees = equipes.filter(e => (e.joueurs || []).length > 0);
@@ -804,17 +801,95 @@ function rendreJoueurs(joueurs, manches, equipes, parties = 0) {
 }
 
 // ===== LE CHRONO DU TOUR =====
-// Tenu par le module partagé : la page de l'organisateur affiche le même.
-const sablier = creerSablier({
-  prefixe: 'inv',
-  chrono: 'tour-chrono',
-  blocChrono: 'tour-bloc-chrono',
-  manche: 'tour-manche',
-  qui: 'tour-qui',
-  mention: 'tour-mention',
-  restantes: 'tour-restantes'
-});
-document.getElementById('tour-bloc-chrono').insertAdjacentHTML('beforeend', svgSablier('inv'));
+// Point d'ancrage : « il restait X secondes, et je l'ai su à l'instant Y de MA
+// propre montre ». Ensuite on ne compte que des écarts locaux, jamais des heures
+// absolues — c'est ce qui rend le décompte juste alors que deux téléphones ne
+// sont jamais réglés à la même heure.
+let ancreTour = null;
+const SECONDES_URGENCE = 5;   // le moment où l'app fait tic-tac chez l'organisateur
+
+function ancrerTour(etat, publieA, heureServeur) {
+  const tour = etat.tour;
+  const gele = etat.etape === 'pause';
+
+  // Ne réancrer que sur une publication nouvelle. L'organisateur ne publie qu'à
+  // chaque carte trouvée et toutes les quinze secondes ; sans cette garde, les
+  // lectures intermédiaires relisaient le même « il reste 40 s » et remettaient
+  // le décompte à son point de départ toutes les deux secondes.
+  if (ancreTour && ancreTour.publieA === publieA) {
+    ancreTour.gele = gele;
+    return;
+  }
+  // Les deux horodatages viennent du serveur : l'écart entre publication et
+  // réponse est mesuré sans qu'aucune montre de téléphone n'intervienne.
+  const enRoute = (heureServeur - publieA) / 1000;
+
+  ancreTour = {
+    restant: gele ? tour.restant : Math.max(0, tour.restant - enRoute),
+    gele,
+    publieA,
+    recuA: performance.now(),
+    duree: tour.duree || 40,
+    manche: etat.manche,
+    equipe: etat.equipes[tour.equipe],
+    joueur: tour.joueur
+  };
+  peindreChrono();
+}
+
+// Le sablier. Repères de la verrerie, en unités du dessin : le bulbe du haut va
+// de 12 au col (70), celui du bas du col à 128.
+const SABLE_HAUT = 12, SABLE_COL = 70, SABLE_BAS = 128;
+const SABLE_TAS = 42;   // hauteur du tas accumulé en bas quand tout est écoulé
+
+function peindreSablier(part, coule) {
+  const p = Math.min(1, Math.max(0, part));
+  // Surface du sable restant, en haut : elle descend vers le col
+  const surface = SABLE_HAUT + (1 - p) * (SABLE_COL - SABLE_HAUT);
+  // Niveau du tas, en bas : il monte depuis le fond
+  const niveau = SABLE_BAS - (1 - p) * SABLE_TAS;
+
+  const poser = (id, y, hauteur) => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.setAttribute('y', y.toFixed(2));
+    el.setAttribute('height', Math.max(0, hauteur).toFixed(2));
+  };
+
+  poser('sable-haut', surface, SABLE_COL - surface);
+  poser('sable-bas', niveau, SABLE_BAS - niveau);
+  // Le filet ne coule que tant que le temps s'écoule vraiment
+  poser('sable-filet', SABLE_COL, coule ? niveau - SABLE_COL : 0);
+}
+
+function peindreChrono() {
+  if (!ancreTour) return;
+  const a = ancreTour;
+  const restant = a.gele
+    ? a.restant
+    : Math.max(0, a.restant - (performance.now() - a.recuA) / 1000);
+
+  const urgent = restant > 0 && restant <= SECONDES_URGENCE;
+  document.getElementById('tour-chrono').textContent = Math.ceil(restant);
+  document.getElementById('tour-bloc-chrono').classList.toggle('urgent', urgent && !a.gele);
+  peindreSablier(restant / a.duree, !a.gele && restant > 0);
+
+  const T = (id, texte) => { document.getElementById(id).textContent = texte; };
+  T('tour-manche', a.manche ? `Manche ${a.manche.numero}/${a.manche.sur} · ${a.manche.nom}` : '');
+  T('tour-qui', a.joueur
+    ? `${a.equipe?.nom} · ${a.joueur} fait deviner`
+    : `Au tour de ${a.equipe?.nom}`);
+  if (a.equipe?.couleur) document.getElementById('tour-qui').style.color = a.equipe.couleur;
+
+  // Entre la fin du temps et le moment où l'organisateur passe à la suite,
+  // il s'écoule quelques secondes : mieux vaut le dire qu'afficher un zéro nu.
+  T('tour-mention', a.gele ? '⏸ Partie en pause' : (restant <= 0 ? '⏰ Temps écoulé !' : ''));
+}
+
+// Le décompte tourne en local, sans rien demander au serveur
+setInterval(() => {
+  if (ancreTour && !ancreTour.gele) peindreChrono();
+}, 200);
 
 // Ce qu'il reste dans le paquet de la manche. Le même libellé que chez
 // l'organisateur, avec un mot pour la fin : c'est là que ça devient un enjeu.
@@ -823,282 +898,6 @@ function libelleRestantes(n) {
   if (n <= 0) return 'Plus de cartes';
   if (n === 1) return 'Dernière carte !';
   return `Cartes restantes : ${n}`;
-}
-
-// ===== MON TOUR =====
-// L'organisateur confie le paquet au téléphone du joueur qui doit faire
-// deviner. Tant qu'il n'est pas à moi, je ne reçois que l'information qu'un
-// tour est en cours — jamais les mots.
-
-let monTour = null;   // le paquet reçu, quand le tour m'est confié
-
-async function guetterMonTour() {
-  if (!session.idJoueur) return;
-  try {
-    const reponse = await appeler('lireTour', {
-      code: session.code, idJoueur: session.idJoueur
-    });
-    const tour = reponse.tour;
-    // `mots` n'arrive qu'au joueur concerné : sa présence suffit à savoir
-    // que c'est mon tour, sans comparer d'identifiants.
-    const pourMoi = !!tour && Array.isArray(tour.mots) && !tour.rendu;
-    if (!pourMoi) {
-      monTour = null;
-      afficherMonTour(false);
-      return;
-    }
-    if (!monTour || monTour.confieA !== tour.confieA) {
-      monTour = tour;
-      rendreMonTour(tour);
-    }
-    afficherMonTour(true);
-  } catch {
-    // Coupure passagère : on garde l'écran en place
-  }
-}
-
-// Mon écran de lancement prend la place de celui que voient les autres.
-function afficherMonTour(actif) {
-  document.getElementById('bloc-a-toi').style.display = actif ? '' : 'none';
-  if (!actif) return;
-  ['bloc-lancement', 'bloc-tour', 'bloc-resultats', 'btn-voir-equipes']
-    .forEach(id => { document.getElementById(id).style.display = 'none'; });
-  document.getElementById('attente-titre').parentElement.style.display = 'none';
-  document.getElementById('attente-roue').style.display = 'none';
-}
-
-function rendreMonTour(tour) {
-  const T = (id, texte) => { document.getElementById(id).textContent = texte; };
-  const m = tour.manche || {};
-  T('atoi-titre', `À toi, ${session.prenom} !`);
-  T('atoi-icone', m.icone || '🎯');
-  T('atoi-manche', m.numero ? `Manche ${m.numero}/${m.sur} — ${m.nom}` : (m.nom || ''));
-  T('atoi-regle', m.regle || '');
-  T('atoi-reste', libelleRestantes(tour.mots.length));
-
-  // Le score de la manche vient du suivi, déjà reçu : rien à redemander.
-  const equipes = equipesConnues || [];
-  const mienne = equipes.find(e => (e.joueurs || []).includes(session.prenom));
-  T('atoi-equipe', mienne ? `pour ${mienne.nom}` : '');
-  if (mienne?.couleur) {
-    document.getElementById('atoi-equipe').style.color = mienne.couleur;
-  }
-  T('atoi-eq1', equipes[0] ? `${equipes[0].nom} ${equipes[0].manche}` : '');
-  T('atoi-eq2', equipes[1] ? `${equipes[1].manche} ${equipes[1].nom}` : '');
-}
-
-// ===== JOUER SON TOUR =====
-// Tout se passe en local : le paquet est arrivé d'un bloc, le chrono tourne
-// ici, et rien n'est demandé au serveur pendant le tour. Une coupure réseau
-// n'interrompt donc pas la partie de celui qui joue.
-
-let partieEnCours = null;   // { mots, index, trouvees, manquees, restant, minuterie }
-
-function lancerMonTour() {
-  if (!monTour) return;
-  arreterAttente();   // plus rien à écouter : c'est moi qui mène
-  partieEnCours = {
-    mots: [...monTour.mots],
-    index: 0,
-    trouvees: [],
-    manquees: [],
-    restant: monTour.duree || 40,
-    enPause: false,
-    minuterie: null
-  };
-
-  const m = monTour.manche || {};
-  document.getElementById('mon-round-label').textContent =
-    m.numero ? `Manche ${m.numero}` : (m.nom || '');
-  const equipes = equipesConnues || [];
-  const mienne = equipes.find(e => (e.joueurs || []).includes(session.prenom));
-  document.getElementById('mon-team-label').textContent = mienne ? mienne.nom : '';
-
-  montrer('screen-mon-tour');
-  peindreMonTour();
-  demarrerMonChrono();
-  publierMonDepart();
-}
-
-// Ce que les autres voient de mon tour. Le chrono ne demande qu'une
-// publication au départ — chacun décompte chez lui à partir de l'heure du
-// serveur. Mais tout ce qui n'est pas le simple écoulement du temps doit être
-// dit : une pause, une reprise, une carte trouvée. Sans quoi leur sablier
-// continuerait de couler pendant que le mien est arrêté.
-let maVersionSuivi = 0;
-let maDuree = 40;
-
-async function publierMonEtat(etape) {
-  const etat = dernierSuiviRecu?.etat;
-  if (!etat || !partieEnCours) return;
-  const mienne = (equipesConnues || []).findIndex(e => (e.joueurs || []).includes(session.prenom));
-  maVersionSuivi += 1;
-  try {
-    await appeler('publier', {
-      code: session.code, idJoueur: session.idJoueur,
-      v: maVersionSuivi,
-      etat: {
-        ...etat,
-        etape,
-        restantes: partieEnCours.mots.length - partieEnCours.index,
-        aVenir: null,
-        tour: {
-          equipe: mienne >= 0 ? mienne : 0,
-          joueur: session.prenom,
-          duree: maDuree,
-          restant: Math.max(0, Math.round(partieEnCours.restant))
-        }
-      }
-    });
-  } catch {
-    // Le tour se joue quand même : les autres verront le résultat à la fin
-  }
-}
-
-function publierMonDepart() {
-  maVersionSuivi = Number(dernierSuiviRecu?.v) || 0;
-  maDuree = partieEnCours.restant;
-  return publierMonEtat('tour');
-}
-
-function peindreMonTour() {
-  const p = partieEnCours;
-  document.getElementById('mon-timer').textContent = p.restant;
-  document.getElementById('mon-card-word').textContent = p.mots[p.index] ?? '';
-  document.getElementById('mon-cards-left').textContent = p.mots.length - p.index;
-}
-
-function demarrerMonChrono() {
-  clearInterval(partieEnCours.minuterie);
-  partieEnCours.minuterie = setInterval(() => {
-    const p = partieEnCours;
-    if (!p || p.enPause) return;
-    p.restant -= 1;
-    if (p.restant <= 0) {
-      p.restant = 0;
-      peindreMonTour();
-      finirMonTour();
-      return;
-    }
-    peindreMonTour();
-  }, 1000);
-}
-
-function monMotCourant() {
-  return partieEnCours.mots[partieEnCours.index];
-}
-
-function monTourTrouve() {
-  const p = partieEnCours;
-  if (!p || p.enPause || p.index >= p.mots.length) return;
-  p.trouvees.push(monMotCourant());
-  p.index += 1;
-  if (p.index >= p.mots.length) return finirMonTour();
-  peindreMonTour();
-  // Le paquet qui fond est la seule autre chose que les spectateurs voient
-  // bouger : sans cette publication, leur compteur resterait figé tout le tour.
-  publierMonEtat('tour');
-}
-
-// Passer remet la carte plus loin : le paquet ne rétrécit pas, contrairement
-// à « Trouvé ». C'est la règle du jeu, appliquée ici en local.
-function monTourPasse() {
-  const p = partieEnCours;
-  if (!p || p.enPause || p.index >= p.mots.length) return;
-  const carte = p.mots.splice(p.index, 1)[0];
-  p.mots.push(carte);
-  peindreMonTour();
-}
-
-function basculerMaPause() {
-  const p = partieEnCours;
-  if (!p) return;
-  p.enPause = !p.enPause;
-  document.getElementById('mon-pause-overlay').style.display = p.enPause ? '' : 'none';
-  document.getElementById('screen-mon-tour').classList.toggle('paused', p.enPause);
-  // Le dire aux autres, sinon leur sablier coule pendant que le mien est arrêté
-  publierMonEtat(p.enPause ? 'pause' : 'tour');
-}
-
-// Fin du tour : ce qui n'a pas été trouvé rejoint les cartes manquées, et on
-// passe au comptage. Rien n'est envoyé avant que le joueur ait validé — c'est
-// lui qui arbitre son tour, et personne ne le rouvrira après.
-function finirMonTour() {
-  const p = partieEnCours;
-  if (!p) return;
-  clearInterval(p.minuterie);
-  p.minuterie = null;
-  p.manquees = p.mots.slice(p.index);
-  p.paquetVide = p.index >= p.mots.length;
-  montrer('screen-mon-comptage');
-  rendreMonComptage();
-}
-
-// ===== MON COMPTAGE =====
-// Le même écran que chez l'organisateur : deux tiroirs, une carte se déplace de
-// l'un à l'autre. Le paquet n'a pas à suivre ici — c'est l'organisateur qui le
-// tient, et il appliquera la liste validée.
-
-function rendreMonComptage() {
-  const p = partieEnCours;
-  if (!p) return;
-  const T = (id, texte) => { document.getElementById(id).textContent = texte; };
-
-  T('mon-fin-titre', p.paquetVide ? '🃏 Plus de cartes !' : '⏰ Temps écoulé !');
-  const n = p.trouvees.length;
-  T('mon-fin-resultat', `${n} carte${n > 1 ? 's' : ''} trouvée${n > 1 ? 's' : ''}`);
-  T('mon-resume-comptees', `✅ Cartes comptées (${p.trouvees.length})`);
-  T('mon-resume-manquees', `↩️ Cartes non comptées (${p.manquees.length})`);
-
-  remplirListeComptage('mon-liste-comptees', p.trouvees, '✕', mot => {
-    p.trouvees.splice(p.trouvees.indexOf(mot), 1);
-    p.manquees.push(mot);
-    rendreMonComptage();
-  });
-  remplirListeComptage('mon-liste-manquees', p.manquees, '✓', mot => {
-    p.manquees.splice(p.manquees.indexOf(mot), 1);
-    p.trouvees.push(mot);
-    rendreMonComptage();
-  });
-}
-
-function remplirListeComptage(id, mots, libelle, surClic) {
-  const liste = document.getElementById(id);
-  liste.innerHTML = '';
-  mots.forEach(mot => {
-    const li = document.createElement('li');
-    const nom = document.createElement('span');
-    nom.className = 'player-name';
-    // textContent : ces mots viennent du paquet, jamais interprétés en HTML
-    nom.textContent = mot;
-    const bouton = document.createElement('button');
-    bouton.type = 'button';
-    bouton.textContent = libelle;
-    bouton.addEventListener('click', () => surClic(mot));
-    li.append(nom, bouton);
-    liste.appendChild(li);
-  });
-}
-
-// Le comptage est arbitré : le tour part vers l'organisateur, qui l'appliquera.
-async function validerMonComptage() {
-  const p = partieEnCours;
-  if (!p) return;
-  const bouton = document.getElementById('btn-mon-comptage-valider');
-  bouton.disabled = true;
-  try {
-    await appeler('rendreTour', {
-      code: session.code, idJoueur: session.idJoueur,
-      trouvees: p.trouvees, manquees: p.manquees
-    });
-  } catch {
-    // Hors ligne : le tour est joué, l'organisateur reprendra la main
-  }
-  bouton.disabled = false;
-  partieEnCours = null;
-  monTour = null;
-  afficherMonTour(false);
-  ouvrirAttente();
 }
 
 // Le même écran que celui de l'organisateur au début d'un tour. On ne reprend
@@ -1185,19 +984,8 @@ function rendreAttente(etat) {
     : (inscriptionSeule
         ? "On attend que tout le monde se soit inscrit."
         : "On attend que tout le monde ait saisi ses cartes.");
+  document.getElementById('btn-attente-retour').style.display = configEnCours ? 'none' : '';
   document.getElementById('attente-roue').style.display = configEnCours ? '' : 'none';
-
-  // Le ruban ne concerne que celui qui a saisi des cartes. Il perd son bouton
-  // dès que le paquet est figé : « Modifier » mentirait.
-  const ruban = document.getElementById('ruban-cartes');
-  const aDesCartes = !inscriptionSeule && session.fini;
-  ruban.style.display = aDesCartes ? '' : 'none';
-  if (aDesCartes) {
-    document.getElementById('ruban-texte').textContent = configEnCours
-      ? `Tes ${session.cartes.length} cartes sont dans le paquet`
-      : `Tes ${session.cartes.length} cartes sont arrivées`;
-    document.getElementById('btn-modifier').style.display = configEnCours ? 'none' : '';
-  }
 
   // Le décompte des cartes n'a plus d'objet une fois la saisie close : il ne
   // bougerait plus, et l'écran doit dire qu'on attend, pas afficher un bilan.
@@ -1261,7 +1049,6 @@ function rendreAttente(etat) {
 // Revenir modifier repasse le joueur en saisie : côté organisateur, le
 // lancement se rebloque aussitôt.
 async function modifier() {
-  arreterAttente();
   session.fini = false;
   sauvegarder();
   await envoyer(false);
@@ -1302,7 +1089,8 @@ async function reprendre(sauvegarde) {
     }
 
     if (session.fini) {
-      ouvrirAttente();
+      document.getElementById('total-envoye').textContent = session.cartes.length;
+      montrer('screen-envoye');
     } else {
       ouvrirSaisie();
       envoyer(false);   // on resynchronise ce qui n'avait peut-être pas été envoyé
@@ -1346,18 +1134,13 @@ function brancherEvenements() {
   });
 
   document.getElementById('btn-terminer').addEventListener('click', terminer);
-
-  // Mon tour, joué depuis ce téléphone
-  document.getElementById('btn-atoi-lancer').addEventListener('click', lancerMonTour);
-  document.getElementById('btn-mon-found').addEventListener('click', monTourTrouve);
-  document.getElementById('btn-mon-pass').addEventListener('click', monTourPasse);
-  document.getElementById('btn-mon-pause').addEventListener('click', basculerMaPause);
-  document.getElementById('btn-mon-reprendre').addEventListener('click', basculerMaPause);
-  document.getElementById('btn-mon-comptage-valider')
-    .addEventListener('click', validerMonComptage);
+  document.getElementById('btn-suivre').addEventListener('click', ouvrirAttente);
+  document.getElementById('btn-inscrit-suivre').addEventListener('click', ouvrirAttente);
+  document.getElementById('btn-inscrit-ranger').addEventListener('click', rangerLeTelephone);
   document.getElementById('btn-rejouer-oui').addEventListener('click', accepterRejeu);
   document.getElementById('btn-rejouer-autre').addEventListener('click', refuserIdentite);
   document.getElementById('btn-rejouer-quitter').addEventListener('click', quitterLaPartie);
+  document.getElementById('btn-attente-retour').addEventListener('click', quitterAttente);
   document.getElementById('btn-voir-equipes').addEventListener('click', afficherEquipes);
   document.getElementById('btn-equipes-fermer').addEventListener('click', masquerEquipes);
   document.getElementById('equipes-overlay').addEventListener('click', e => {

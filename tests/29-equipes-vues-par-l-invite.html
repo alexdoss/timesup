@@ -74,7 +74,7 @@ localStorage.removeItem('timesup_rejoint');
     await wait(1200);
     I('btn-terminer').click();
     await wait(900);
-    // Plus d ecran de confirmation : terminer mene directement au suivi
+    I('btn-suivre').click();
     await wait(800);
     check('l invite suit la salle d attente',
           [...di.querySelectorAll('.screen')].find(s => s.classList.contains('active'))?.id === 'screen-attente');
@@ -198,16 +198,7 @@ localStorage.removeItem('timesup_rejoint');
     await wait(800);
     check('l organisateur est sur le debut de tour', ecranApp() === 'screen-round');
 
-    // Le tour part vers le telephone du joueur concerne. Ce scenario eprouve le
-    // role de spectateur : l organisateur reprend donc la main autant de fois
-    // qu il le faut, jusqu a ce que l invite soit devant le miroir du lancement.
-    let spectatrice = false;
-    for (let i = 0; i < 10 && !spectatrice; i++) {
-      if (A('attente-du-joueur').style.display !== 'none') A('btn-reprendre-tour').click();
-      await wait(1000);
-      spectatrice = I('bloc-lancement').style.display !== 'none';
-    }
-    check('l invite est bien spectatrice du lancement', spectatrice);
+    await wait(2600);
     const L = id => I(id).textContent.trim();
     log('       invite voit : "' + L('lancement-titre') + '" · "' + L('lancement-nom')
         + '" · "' + L('lancement-tour') + '" · "' + L('lancement-joueur') + '"');
@@ -256,10 +247,8 @@ localStorage.removeItem('timesup_rejoint');
     check('aucune carte du paquet n est visible',
           !I('bloc-tour').textContent.match(/tire-bouchon|boussole|Cleopatre/));
 
-    // Le sablier : le sable du haut baisse, celui du bas s accumule.
-    // Les rectangles sont prefixes : le meme dessin sert aussi chez
-    // l organisateur, et deux exemplaires ne peuvent pas partager leurs ids.
-    const sable = nom => Number(I('inv-' + nom).getAttribute('height'));
+    // Le sablier : le sable du haut baisse, celui du bas s accumule
+    const sable = id => Number(I(id).getAttribute('height'));
     const haut1 = sable('sable-haut'), bas1 = sable('sable-bas');
     log('       sablier : haut=' + haut1 + ' bas=' + bas1
         + ' filet=' + sable('sable-filet'));
@@ -466,8 +455,8 @@ localStorage.removeItem('timesup_rejoint');
     // 700 ms avant de partir, il faut laisser passer l aller-retour.
     I('btn-terminer').click();
     await wait(1800);
-    // Plus d ecran de confirmation : terminer mene directement au suivi
-    check('ses cartes sont envoyees', ecranInv() === 'screen-attente');
+    check('ses cartes sont envoyees', ecranInv() === 'screen-envoye');
+    I('btn-suivre').click();
     await wait(2600);
     check('il revient sur la salle d attente', ecranInv() === 'screen-attente');
     check('le tableau des joueurs est de retour',

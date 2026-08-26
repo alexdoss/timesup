@@ -1769,6 +1769,7 @@ function showRoundScreen() {
   updateCurrentPlayer(game.nominativeMode ? getCurrentPlayer() : null);
   afficherBoutonEquipes(game.nominativeMode && game.teams.some(e => e.players.length > 0));
   afficherRetourCorrection();
+  repartirLEcranDeLancement(true);
   showScreen('screen-round');
   // Le tout premier écran de la partie n'est pas « entre deux tours »
   publierEtat(game.currentRound === 0 && getRoundScores().every(s => s === 0)
@@ -1841,6 +1842,9 @@ function afficherTourDistant(actif) {
     const el = document.getElementById(id);
     if (el) el.style.display = actif ? 'none' : '';
   });
+  // Pendant le tour d'un autre, l'écran ne porte plus qu'un sablier : réparti
+  // sur toute la hauteur, il se retrouverait collé en haut.
+  repartirLEcranDeLancement(!actif);
   // La composition des équipes suit sa propre règle : elle n'existe qu'en mode
   // nominatif. La rétablir sans condition la ferait apparaître en mode simple.
   if (actif) document.getElementById('btn-voir-equipes').style.display = 'none';
@@ -1879,6 +1883,13 @@ const sablierDistant = creerSablier({
 });
 document.getElementById('distant-bloc-chrono')
   .insertAdjacentHTML('beforeend', svgSablier('org'));
+
+// L'écran de lancement occupe toute la hauteur ; le sablier d'un tour joué
+// ailleurs, non. C'est le même écran, mais pas le même contenu.
+function repartirLEcranDeLancement(reparti) {
+  const bloc = document.querySelector('#screen-round .round-content');
+  if (bloc) bloc.classList.toggle('reparti', reparti);
+}
 
 // Le libellé du paquet restant, comme sur la page des invités.
 function libelleRestantes(n) {

@@ -532,6 +532,23 @@ body {
   gap: 16px;
 }
 
+/* Écran de lancement de tour : le contenu occupe toute la hauteur au lieu de
+   se tasser au milieu. Sur un téléphone de 844 px, la version centrée laissait
+   180 px de vide en haut et autant en bas pendant que les blocs se touchaient.
+   Conditionné à une classe : le même écran sert de sablier quand un autre joue,
+   et répartir un bloc unique le collerait en haut de l'écran. */
+.round-content.reparti {
+  flex: 1;
+  width: 100%;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 4px 0;
+}
+
+.round-content.reparti .round-icon {
+  font-size: 4rem;
+}
+
 .round-icon {
   font-size: 3.5rem;
 }

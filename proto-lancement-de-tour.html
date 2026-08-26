@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Rush — écran de lancement de tour</title>
+<!-- Le vrai CSS du jeu : les variantes ne font que le surcharger, pour qu'on
+     compare des écrans réels et pas des dessins qui leur ressemblent. -->
+<link rel="stylesheet" href="style.css">
+<style>
+  body { padding: 24px; overflow: auto; user-select: text; }
+  .rangee { display: flex; gap: 28px; flex-wrap: wrap; align-items: flex-start; }
+  .cas { display: flex; flex-direction: column; gap: 10px; }
+  .cas > h3 { font-size: 1rem; }
+  .cas > p { font-size: 0.82rem; color: var(--muted); max-width: 390px; line-height: 1.5; }
+  /* Un téléphone : 390 x 844, la taille mesurée dans les tests */
+  .tel {
+    width: 390px; height: 844px;
+    border: 1px solid var(--border); border-radius: 22px;
+    overflow: hidden; position: relative; flex: none;
+  }
+  .tel .screen { min-height: 100%; height: 100%; animation: none; }
+
+  /* ============ B — AÉRÉ ============ */
+  .b .round-content { gap: 0; justify-content: space-between; height: 100%; padding: 8px 0 4px; }
+  .b .round-icon { font-size: 4rem; }
+
+  /* ============ C — AIRES D'INFO ============ */
+  .c .screen { padding: 52px 18px 28px; }
+  .c .round-content { gap: 14px; justify-content: space-between; height: 100%; width: 100%; }
+  .c .aire {
+    width: 100%;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--r-lg);
+    padding: 18px 16px;
+  }
+  .c #round-header { padding-top: 22px; padding-bottom: 22px; }
+  .c .round-icon { font-size: 4rem; }
+  .c .cartes-restantes { margin-top: 10px; }
+  .c #round-scores { gap: 0; }
+  .c .aire-tour { padding: 20px 16px; }
+  .c .turn-info { margin-top: 0; }
+  .c .player-info { margin-top: 6px; font-size: 1.5rem; }
+  .c #btn-start-turn { width: 100%; }
+</style>
+</head>
+<body>
+
+<h1 style="font-size:1.3rem;margin-bottom:6px">Écran de lancement de tour</h1>
+<p style="color:var(--muted);font-size:0.9rem;margin-bottom:22px;max-width:760px;line-height:1.6">
+  Trois façons d'occuper la hauteur du téléphone. Même contenu partout, même CSS que
+  le jeu : seules changent la répartition verticale et la mise en évidence des blocs.
+  Mesuré sur un écran de 390 × 844 — le bouton reste visible sans faire défiler dans les trois cas.
+</p>
+
+<div class="rangee">
+
+  <!-- ============================= A ============================= -->
+  <div class="cas">
+    <h3>A — Aujourd'hui</h3>
+    <p>Tout est centré au milieu de l'écran : 180 px vides en haut, 178 px en bas.
+       Les blocs se touchent, rien ne dit où l'un finit et où l'autre commence.</p>
+    <div class="tel a">
+      <div class="screen active" id="screen-round">
+        <button class="btn-close">✕</button>
+        <div class="round-content">
+          <div id="round-header">
+            <h2 class="round-title" style="font-size:1.6rem">Manche 2/3</h2>
+            <p class="round-name-label">💬 Un seul mot</p>
+            <div class="round-icon">💬</div>
+            <p class="round-desc">Un seul mot pour faire deviner la carte. Les gestes sont interdits.</p>
+          </div>
+          <div class="bloc-score">
+            <p class="score-cap">Score de la manche</p>
+            <div class="score-board">
+              <div class="score-team"><span>Les Rapides</span><span class="score">7</span></div>
+              <div class="score-team"><span>Les Malins</span><span class="score">5</span></div>
+            </div>
+            <p class="score-rappel">Total de la partie : 19 – 16</p>
+          </div>
+          <p class="cartes-restantes">Cartes restantes : 14</p>
+          <p class="turn-info">🎯 C'est au tour de : Les Rapides</p>
+          <p class="player-info">Flonx</p>
+          <button class="btn btn-primary">Lancer le tour ▶️</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================= B ============================= -->
+  <div class="cas">
+    <h3>B — Aéré</h3>
+    <p>Les mêmes éléments, répartis sur toute la hauteur au lieu d'être tassés au
+       centre. Rien n'est encadré : c'est le vide qui sépare. Le plus léger à faire,
+       et le plus proche de ce qui existe.</p>
+    <div class="tel b">
+      <div class="screen active">
+        <button class="btn-close">✕</button>
+        <div class="round-content">
+          <div id="round-header">
+            <h2 style="font-size:1.6rem">Manche 2/3</h2>
+            <p class="round-name-label">💬 Un seul mot</p>
+            <div class="round-icon">💬</div>
+            <p class="round-desc">Un seul mot pour faire deviner la carte. Les gestes sont interdits.</p>
+          </div>
+          <div class="bloc-score">
+            <p class="score-cap">Score de la manche</p>
+            <div class="score-board">
+              <div class="score-team"><span>Les Rapides</span><span class="score">7</span></div>
+              <div class="score-team"><span>Les Malins</span><span class="score">5</span></div>
+            </div>
+            <p class="score-rappel">Total de la partie : 19 – 16</p>
+          </div>
+          <p class="cartes-restantes">Cartes restantes : 14</p>
+          <div>
+            <p class="turn-info">🎯 C'est au tour de : Les Rapides</p>
+            <p class="player-info">Flonx</p>
+          </div>
+          <button class="btn btn-primary">Lancer le tour ▶️</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================= C ============================= -->
+  <div class="cas">
+    <h3>C — Aires d'info</h3>
+    <p>Trois zones nettes : la manche, le score, à qui de jouer. Chacune sur son
+       propre fond, comme les cartes de score qui existent déjà ailleurs dans
+       l'app. On voit d'un coup d'œil ce qui est quoi.</p>
+    <div class="tel c">
+      <div class="screen active">
+        <button class="btn-close">✕</button>
+        <div class="round-content">
+          <div id="round-header" class="aire">
+            <h2 style="font-size:1.6rem">Manche 2/3</h2>
+            <p class="round-name-label">💬 Un seul mot</p>
+            <div class="round-icon">💬</div>
+            <p class="round-desc">Un seul mot pour faire deviner la carte. Les gestes sont interdits.</p>
+            <p class="cartes-restantes">Cartes restantes : 14</p>
+          </div>
+          <div id="round-scores" class="bloc-score aire">
+            <p class="score-cap">Score de la manche</p>
+            <div class="score-board">
+              <div class="score-team"><span>Les Rapides</span><span class="score">7</span></div>
+              <div class="score-team"><span>Les Malins</span><span class="score">5</span></div>
+            </div>
+            <p class="score-rappel">Total de la partie : 19 – 16</p>
+          </div>
+          <div class="aire aire-tour">
+            <p class="turn-info">🎯 C'est au tour de : Les Rapides</p>
+            <p class="player-info">Flonx</p>
+          </div>
+          <button class="btn btn-primary">Lancer le tour ▶️</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<p style="color:var(--muted);font-size:0.85rem;margin-top:26px;max-width:760px;line-height:1.6">
+  À noter : les invités voient le même écran, en miroir, sans le bouton de lancement.
+  Ce qui sera retenu ici sera appliqué des deux côtés.
+</p>
+
+</body>
+</html>

@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head><meta charset="utf-8"><title>Test Rush — jouer son tour depuis son téléphone</title></head>
+<body>
+<pre id="log">demarrage...</pre>
+<div id="hote" style="display:flex;gap:8px"></div>
+<script>
+const out = [];
+function log(s) { out.push(s); document.getElementById('log').textContent = out.join('\n'); }
+function check(name, cond) { log((cond ? 'PASS' : 'FAIL') + ' -- ' + name); }
+const wait = ms => new Promise(r => setTimeout(r, ms));
+
+async function api(action, donnees = {}) {
+  const r = await fetch('/api/session', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ action, ...donnees })
+  });
+  return { statut: r.status, corps: await r.json().catch(() => ({})) };
+}
+
+function cadre(src, largeur) {
+  const f = document.createElement('iframe');
+  f.src = src;
+  f.style.cssText = `width:${largeur}px;height:1000px;border:1px solid #ccc`;
+  document.getElementById('hote').appendChild(f);
+  return new Promise(r => f.addEventListener('load', () => r(f), { once: true }));
+}
+
+localStorage.removeItem('timesup_partie_en_cours');
+localStorage.removeItem('timesup_suivi');
+localStorage.removeItem('timesup_rejoint');
+
+(async () => {
+  try {
+    const app = await cadre('/', 400);
+    const da = app.contentDocument, wa = app.contentWindow;
+    wa.onerror = (m, s, l) => log('ERREUR APP: ' + m + ' @' + s + ':' + l);
+    const A = id => da.getElementById(id);
+    const ecranApp = () => [...da.querySelectorAll('.screen')].find(s => s.classList.contains('active'))?.id;
+    const etat = () => JSON.parse(wa.localStorage.getItem('timesup_partie_en_cours') || 'null')?.state;
+    await wait(1200);
+
+    // ===== Partie a themes, nominative, inscription par QR =====
+    A('btn-start').click();
+    da.querySelector('[data-source="themes"]').click();
+    da.querySelectorAll('#theme-selector .btn-theme')[0].click();
+    A('btn-next-step').click();
+    da.querySelector('[data-mode="nominatif"]').click();
+    await wait(900);
+    check('l app propose de faire scanner', ecranApp() === 'screen-inscription');
+    const code = A('inscription-code').textContent.trim();
+    log('       session : ' + code);
+
+    // L organisateur se nomme, trois invites s inscrivent par le reseau
+    A('inscription-moi-prenom').value = 'Admin';
+    A('btn-inscription-moi-ok').click();
+    await wait(700);
+    const ids = {};
+    for (const p of ['Marc', 'Sacha', 'Nour']) {
+      ids[p] = (await api('rejoindre', { code, prenom: p })).corps.idJoueur;
+    }
+    await wait(2600);
+    check('quatre joueurs sont inscrits', A('btn-inscription-suivant').disabled === false);
+
+    A('btn-inscription-suivant').click();
+    await wait(900);
+    check('on passe aux equipes', ecranApp() === 'screen-repartition');
+    A('btn-repartition-jouer').click();
+    await wait(400);
+    A('btn-next-rounds').click();
+    A('btn-play').click();
+    await wait(900);
+    check('la partie demarre', ecranApp() === 'screen-round');
+
+    // ===== L organisateur, lui, joue sur cet appareil =====
+    // Il s est inscrit comme joueur, mais il tient deja le telephone qui mene
+    // la partie : lui confier son tour le ferait attendre son propre appareil.
+    const etatSession = (await api('etat', { code })).corps;
+    const idAdmin = etatSession.joueurs.find(j => j.role === 'organisateur').id;
+    const phones = etat().playerPhones || {};
+    log('       telephones connus : ' + JSON.stringify(phones));
+    check('l organisateur n a pas de telephone distant',
+          !Object.values(phones).includes(idAdmin));
+    check('les trois autres en ont un', Object.keys(phones).length === 3);
+
+    // Si c est a l organisateur de jouer, il garde son bouton : on avance d un
+    // tour pour retrouver le cas qui nous interesse.
+    if (A('btn-start-turn').style.display !== 'none'
+        && A('attente-du-joueur').style.display === 'none') {
+      log('       c est au tour de l organisateur : il joue ici, comme avant');
+      check('son bouton de lancement est bien la',
+            A('btn-start-turn').style.display !== 'none');
+      // Trois cartes seulement, puis on laisse le chrono s epuiser : vider le
+      // paquet cloturerait la manche et il n y aurait plus de tour a confier.
+      A('btn-start-turn').click();
+      for (let k = 0; k < 3; k++) A('btn-found').click();
+      let n = 0;
+      while (ecranApp() === 'screen-game' && n++ < 60) await wait(1000);
+      A('btn-next-turn').click();
+      await wait(900);
+    }
+
+    // ===== Le tour est confie au telephone du joueur =====
+    const quiJoue = A('current-player').textContent.trim();
+    log('       a faire deviner : "' + quiJoue + '"');
+    const tour = (await api('lireTour', { code })).corps.tour;
+    check('un tour a ete confie', !!tour);
+    check('il l a ete a un joueur inscrit',
+          Object.values(ids).includes(tour.idJoueur) || tour.idJoueur.length > 0);
+
+    // L organisateur n a plus son bouton : c est le joueur qui lance
+    check('l organisateur n a plus le bouton de lancement',
+          A('btn-start-turn').style.display === 'none');
+    check('son ecran dit qui lance',
+          A('attente-joueur-nom').textContent.includes('depuis son téléphone'));
+    check('et lui offre de reprendre la main',
+          A('attente-du-joueur').style.display !== 'none');
+
+    // Le paquet est bien parti, en entier. Attention : `deck` porte aussi les
+    // cartes deja jouees — si l organisateur a ouvert la partie, elles y sont.
+    // Ce qui compte est ce qu il RESTE a jouer.
+    const paquet = etat().deck;
+    const restantAvant = etat().deck.length - etat().currentCardIndex;
+    const scoreAvant = etat().teams.reduce((t, e) => t + e.score, 0);
+    const pourLeJoueur = (await api('lireTour', { code, idJoueur: tour.idJoueur })).corps.tour;
+    log('       cartes confiees : ' + pourLeJoueur.mots.length + ' sur ' + restantAvant + ' restantes');
+    check('tout ce qui reste a jouer a ete confie',
+          pourLeJoueur.mots.length === restantAvant);
+    check('avec la duree du tour', pourLeJoueur.duree === etat().turnTime);
+    check('et la manche en cours', pourLeJoueur.manche.numero === 1);
+
+    // Un autre invite n en sait pas plus que necessaire
+    const autre = Object.entries(ids).find(([, id]) => id !== tour.idJoueur)[1];
+    const vuDesAutres = (await api('lireTour', { code, idJoueur: autre })).corps.tour;
+    check('les autres joueurs ne recoivent aucun mot', vuDesAutres.mots === undefined);
+
+    // ===== Le joueur ouvre sa page et voit que c est a lui =====
+    const prenomQuiJoue = Object.keys(ids).find(p => ids[p] === tour.idJoueur) || 'Admin';
+    log('       le tour est pour : ' + prenomQuiJoue);
+    if (prenomQuiJoue === 'Admin') {
+      log('       (l organisateur ouvre le tour : le reste du scenario le suppose invite)');
+    }
+
+    const inv = await cadre('/rejoindre.html?c=' + code, 400);
+    const di = inv.contentDocument, wi = inv.contentWindow;
+    wi.onerror = (m, s, l) => log('ERREUR INVITE: ' + m + ' @' + s + ':' + l);
+    const I = id => di.getElementById(id);
+    const L = id => I(id).textContent.trim();
+    const ecranInv = () => [...di.querySelectorAll('.screen')].find(s => s.classList.contains('active'))?.id;
+    await wait(700);
+
+    // On se fait passer pour le joueur a qui le tour est confie
+    wi.localStorage.setItem('timesup_rejoint', JSON.stringify({
+      code, idJoueur: tour.idJoueur, prenom: prenomQuiJoue,
+      cartes: [], cartesParJoueur: 5, mode: 'nominatif', fini: true, inscription: true
+    }));
+    const inv2 = await cadre('/rejoindre.html', 400);
+    inv.remove();
+    const dj = inv2.contentDocument, wj = inv2.contentWindow;
+    wj.onerror = (m, s, l) => log('ERREUR JOUEUR: ' + m + ' @' + s + ':' + l);
+    const J = id => dj.getElementById(id);
+    const LJ = id => J(id).textContent.trim();
+    const ecranJ = () => [...dj.querySelectorAll('.screen')].find(s => s.classList.contains('active'))?.id;
+    await wait(3200);
+
+    log('       ecran du joueur : ' + ecranJ() + ' — "' + LJ('atoi-titre') + '"');
+    check('le joueur arrive sur le suivi', ecranJ() === 'screen-attente');
+    check('son ecran annonce que c est a lui',
+          J('bloc-a-toi').style.display !== 'none');
+    check('avec son prenom', LJ('atoi-titre') === `À toi, ${prenomQuiJoue} !`);
+    check('la manche est rappelee', LJ('atoi-manche').includes('Manche 1'));
+    check('et le nombre de cartes', LJ('atoi-reste').includes('Cartes restantes'));
+    check('il ne voit pas l ecran de lancement des autres',
+          J('bloc-lancement').style.display === 'none');
+    check('aucun mot du paquet n est encore affiche',
+          !paquet.some(mot => dj.body.textContent.includes(mot)));
+
+    // ===== Il lance, et joue =====
+    J('btn-atoi-lancer').click();
+    await wait(400);
+    check('il passe sur l ecran de jeu', ecranJ() === 'screen-mon-tour');
+    const premier = LJ('mon-card-word');
+    log('       premiere carte : ' + premier);
+    check('une carte est affichee', paquet.includes(premier));
+    check('le chrono est parti', parseInt(LJ('mon-timer'), 10) > 0);
+    check('le decompte du paquet est juste',
+          parseInt(LJ('mon-cards-left'), 10) === restantAvant);
+
+    // Passer replace la carte plus loin, sans la compter
+    J('btn-mon-pass').click();
+    check('passer change de carte', LJ('mon-card-word') !== premier);
+    check('sans reduire le paquet',
+          parseInt(LJ('mon-cards-left'), 10) === restantAvant);
+
+    // Trois cartes trouvees
+    const trouvees = [];
+    for (let i = 0; i < 3; i++) { trouvees.push(LJ('mon-card-word')); J('btn-mon-found').click(); }
+    log('       trouvees : ' + trouvees.join(', '));
+    // Trois cartes trouvees pendant le tour ; la correction, plus bas, en
+    // retirera une — c est a ce moment-la que le compte tombera a deux.
+    check('le paquet fond a chaque carte trouvee',
+          parseInt(LJ('mon-cards-left'), 10) === restantAvant - 3);
+
+    // ===== La pause est a sa main, et elle arrete TOUS les sabliers =====
+    // Sans publication, celui des spectateurs continuerait de couler pendant
+    // que le sien est arrete : ils verraient le temps s ecouler pour rien.
+    J('btn-mon-pause').click();
+    check('il peut mettre en pause', J('mon-pause-overlay').style.display !== 'none');
+    await wait(1200);
+    const enPause = (await api('suivre', { code })).corps.suivi;
+    log('       publie pendant la pause : etape ' + enPause.etat.etape
+        + ', restant ' + enPause.etat.tour.restant);
+    check('la pause est publiee', enPause.etat.etape === 'pause');
+    await wait(3000);
+    const gele = (await api('suivre', { code })).corps.suivi;
+    check('le temps restant ne bouge plus',
+          gele.etat.tour.restant === enPause.etat.tour.restant);
+    check('l organisateur voit toujours le sablier, fige',
+          A('bloc-tour-distant').style.display !== 'none');
+    log('       chrono organisateur pendant la pause : ' + A('distant-chrono').textContent);
+    check('et sa mention dit la pause',
+          A('distant-mention').textContent.includes('pause'));
+
+    J('btn-mon-reprendre').click();
+    check('et reprendre', J('mon-pause-overlay').style.display === 'none');
+    await wait(1200);
+    const reprise = (await api('suivre', { code })).corps.suivi;
+    check('la reprise est publiee', reprise.etat.etape === 'tour');
+    check('le chrono repart de la ou il s etait arrete',
+          Math.abs(reprise.etat.tour.restant - gele.etat.tour.restant) <= 1);
+
+    // ===== L organisateur devient spectateur, comme les autres =====
+    await wait(2800);
+    log('       organisateur : "' + A('distant-qui').textContent
+        + '" · ' + A('distant-chrono').textContent + 's · ' + A('distant-restantes').textContent);
+    check('son ecran bascule sur le suivi du tour',
+          A('bloc-tour-distant').style.display !== 'none');
+    check('le sablier y est dessine',
+          Number(A('org-sable-haut').getAttribute('height')) > 0);
+    check('le chrono tourne', parseInt(A('distant-chrono').textContent, 10) > 0);
+    check('il sait qui fait deviner',
+          A('distant-qui').textContent.includes(prenomQuiJoue));
+    check('et combien de cartes il reste',
+          A('distant-restantes').textContent.includes('Cartes restantes'));
+    check('l ecran de lancement a cede la place',
+          A('round-scores').style.display === 'none'
+          && A('round-header').style.display === 'none');
+    check('aucun mot du paquet chez l organisateur non plus',
+          !paquet.some(mot => A('bloc-tour-distant').textContent.includes(mot)));
+
+    // ===== Les autres voient le sablier, sans les mots =====
+    const publie = (await api('suivre', { code })).corps.suivi;
+    log('       publie : etape ' + publie.etat.etape + ', tour de ' + publie.etat.tour?.joueur);
+    check('le depart du chrono a ete publie', publie.etat.etape === 'tour');
+    check('il nomme celui qui fait deviner', publie.etat.tour.joueur === prenomQuiJoue);
+    check('avec la duree du tour', publie.etat.tour.duree > 0);
+    check('et aucun mot du paquet',
+          !paquet.some(mot => JSON.stringify(publie).includes(mot)));
+
+    // ===== Le chrono s epuise : il arbitre son comptage =====
+    let garde = 0;
+    while (ecranJ() === 'screen-mon-tour' && garde++ < 60) await wait(1000);
+    check('le tour se termine sur son comptage', ecranJ() === 'screen-mon-comptage');
+    log('       "' + LJ('mon-fin-titre') + '" — ' + LJ('mon-fin-resultat'));
+    check('le titre dit que le temps est ecoule',
+          LJ('mon-fin-titre').includes('Temps écoulé'));
+    check('son score du tour est annonce', LJ('mon-fin-resultat').includes('3 carte'));
+    check('les cartes comptees sont listees',
+          LJ('mon-resume-comptees').includes('(3)'));
+    check('et les non comptees aussi',
+          dj.querySelectorAll('#mon-liste-manquees li').length > 0);
+
+    // Avec le jeton de l organisateur : sans lui, le serveur ne rend qu une vue
+    // reduite, ou `rendu` n est qu un booleen. C est voulu, et c est teste au 35.
+    const jeton = JSON.parse(wa.localStorage.getItem('timesup_suivi')).jeton;
+    const pasEncore = (await api('lireTour', { code, jeton })).corps.tour;
+    check('rien n est parti tant qu il n a pas valide', !pasEncore.rendu);
+
+    // ===== Il retire une carte comptee par erreur =====
+    const aRetirer = dj.querySelector('#mon-liste-comptees li .player-name').textContent;
+    dj.querySelector('#mon-liste-comptees li button').click();
+    log('       retiree du comptage : ' + aRetirer);
+    check('la carte quitte les comptees', LJ('mon-resume-comptees').includes('(2)'));
+    check('elle rejoint les non comptees',
+          [...dj.querySelectorAll('#mon-liste-manquees .player-name')]
+            .some(e => e.textContent === aRetirer));
+    check('et le score du tour recule', LJ('mon-fin-resultat').includes('2 carte'));
+
+    // ===== Il valide : le tour part vers l organisateur =====
+    const attendues = trouvees.filter(m => m !== aRetirer);
+    J('btn-mon-comptage-valider').click();
+    await wait(1500);
+    check('il retourne au suivi', ecranJ() === 'screen-attente');
+
+    // L organisateur peut appliquer le tour avant qu on le lise : dans ce cas
+    // la cle a deja ete remplacee par le tour suivant. On lit donc tout de
+    // suite, et on se rabat sur l etat de la partie si c est deja fait.
+    let rendu = (await api('lireTour', { code, jeton })).corps.tour;
+    for (let i = 0; i < 6 && !(rendu?.rendu); i++) {
+      await wait(300);
+      rendu = (await api('lireTour', { code, jeton })).corps.tour;
+    }
+    log('       rendu : ' + JSON.stringify(rendu?.rendu?.trouvees));
+    if (rendu?.rendu) {
+      check('le tour a ete rendu', true);
+      check('avec la liste CORRIGEE, pas celle du chrono',
+            JSON.stringify(rendu.rendu.trouvees) === JSON.stringify(attendues));
+    } else {
+      log('       (deja applique par l organisateur : verifie sur les scores)');
+      check('le tour a ete rendu et applique',
+            etat().teams.reduce((t, eq) => t + eq.score, 0) === scoreAvant + 2);
+    }
+
+    // ===== L organisateur applique, et la partie enchaine =====
+    await wait(3000);
+    const e = etat();
+    log('       scores : ' + e.teams.map(t => `${t.name} ${t.score}`).join(' · '));
+    check('le score de l equipe qui jouait est credite',
+          e.teams.reduce((t, eq) => t + eq.score, 0) === scoreAvant + 2);
+    check('les cartes trouvees ont quitte le paquet',
+          e.deck.length - e.currentCardIndex === restantAvant - 2);
+    check('le joueur a bien ses deux cartes a son compteur',
+          e.playerStats[prenomQuiJoue]?.found === 2);
+    check('la partie a repris la main sur cet appareil',
+          ecranApp() === 'screen-round' || ecranApp() === 'screen-round-end');
+    check('et le tour suivant peut etre lance',
+          A('btn-start-turn').style.display !== 'none'
+          || A('attente-du-joueur').style.display !== 'none');
+
+    // ===== La suite est bien republiee =====
+    // Le joueur a publie une quinzaine de fois pendant son tour : la version du
+    // serveur a pris de l avance. Si l organisateur ne la reprend pas, ses
+    // propres publications sont ignorees et tous les ecrans restent figes sur
+    // le dernier etat du tour joue.
+    const apresLeTour = (await api('suivre', { code })).corps.suivi;
+    log('       apres le tour : etape ' + apresLeTour.etat.etape + ', v' + apresLeTour.v);
+    check('l etat republie n est plus celui du tour joue',
+          apresLeTour.etat.etape !== 'tour');
+    check('les scores publies suivent la partie',
+          apresLeTour.etat.equipes.reduce((t, eq) => t + eq.partie, 0) === scoreAvant + 2);
+
+    // Et le joueur, de son cote, n a plus son ecran « a toi »
+    check('l ecran « a toi » a cede la place chez le joueur',
+          J('bloc-a-toi').style.display === 'none');
+    check('il ne peut pas relancer un tour deja joue',
+          ecranJ() !== 'screen-mon-tour');
+
+    log('SCENARIO 36 TERMINE');
+  } catch (e) { log('EXCEPTION: ' + e.message + '\n' + e.stack); }
+})();
+</script>
+</body>
+</html>

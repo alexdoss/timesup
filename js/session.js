@@ -128,6 +128,33 @@ export async function relancerSession(cartesParJoueur) {
   return reponse;
 }
 
+// ===== Le tour confié à un joueur =====
+// Les mots du tour partent vers un seul téléphone, jamais vers le suivi que
+// tout le monde lit. Le paquet est prêté d'un coup : le joueur enchaîne les
+// cartes sans rien redemander au serveur.
+
+export function confierTour(idJoueur, mots, duree, manche) {
+  return appeler('confierTour', {
+    code: courante.code, jeton: courante.jeton, idJoueur, mots, duree, manche
+  });
+}
+
+// Interrogé par l'organisateur pour savoir si le tour lui a été rendu.
+export function lireTour() {
+  return appeler('lireTour', { code: courante.code, jeton: courante.jeton });
+}
+
+// L'état publié, lu par l'organisateur pendant qu'un autre joue : il redevient
+// spectateur, et lit la même chose que les invités.
+export function suivreEtat() {
+  return appeler('suivre', { code: courante.code });
+}
+
+// L'organisateur reprend la main : le tour confié n'a plus cours.
+export function reprendreTour() {
+  return appeler('reprendreTour', { code: courante.code, jeton: courante.jeton });
+}
+
 // Ferme la session et récupère enfin les cartes : c'est le seul appel qui les rapatrie.
 export function fermerSession() {
   return appeler('fermer', { code: courante.code, jeton: courante.jeton });

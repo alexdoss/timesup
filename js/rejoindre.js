@@ -642,11 +642,14 @@ function rendreConfiguration(suivi, heureServeur) {
   // comptage envoyé et sa prise en compte par l'organisateur. L'en-tête gardait
   // les mots de la salle d'attente — « Configuration de la partie en cours » —
   // qui sont faux depuis longtemps à ce moment-là.
+  // Montrer directement le lancement du tour suivant serait plus agréable, mais
+  // il n'existe pas encore : la dernière publication est celle du tour qui vient
+  // de finir, sans le prochain joueur ni les scores à jour. On patiente donc une
+  // lecture ou deux, en le disant simplement.
   if (!enJeu && etape && etape !== 'configuration') {
     document.getElementById('attente-titre').textContent =
-      monTourFini ? 'Comptage envoyé' : 'La partie continue';
-    document.getElementById('attente-sous').textContent =
-      monTourFini ? "L'organisateur enregistre tes cartes." : 'Le tour suivant arrive.';
+      monTourFini ? 'Tour enregistré' : 'La partie continue';
+    document.getElementById('attente-sous').textContent = 'Le tour suivant arrive.';
   }
   document.getElementById('bloc-lancement').style.display = enLancement ? '' : 'none';
   document.getElementById('bloc-tour').style.display = enTour ? '' : 'none';

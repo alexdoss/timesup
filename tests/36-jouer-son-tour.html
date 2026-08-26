@@ -364,8 +364,12 @@ localStorage.removeItem('timesup_rejoint');
     log('       en attente : "' + LJ('attente-titre') + '" — ' + LJ('attente-sous'));
     check('on ne lui annonce pas une configuration en cours', !configuration);
     check('mais l attente du moment',
-          LJ('attente-titre').includes('Comptage envoyé')
+          LJ('attente-titre').includes('Tour enregistré')
           || LJ('attente-titre').includes('La partie continue'));
+    // Le mot « organisateur » n a rien a faire la : de son point de vue, son
+    // tour est joue et le suivant arrive. Comment ca marche derriere ne le regarde pas.
+    check('sans expliquer la mecanique',
+          !LJ('attente-sous').includes('organisateur'));
 
     // L organisateur peut appliquer le tour avant qu on le lise : dans ce cas
     // la cle a deja ete remplacee par le tour suivant. On lit donc tout de

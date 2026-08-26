@@ -605,7 +605,10 @@ function rendreConfiguration(suivi, heureServeur) {
   // publié dit toujours qu'il est en cours. Le montrer m'annoncerait en train de
   // faire deviner alors que j'ai fini — le temps d'une lecture, mais on le voit.
   const monTourFini = monTourRendu && etat?.tour?.joueur === session.prenom;
-  if (!ETAPES_TOUR.includes(etape)) monTourRendu = false;
+  // Le comptage fait partie de mon tour : oublier ici que je l'ai rendu me
+  // ramènerait, deux secondes plus tard, le miroir « je compte mes cartes »
+  // pour un comptage déjà envoyé. On n'oublie qu'une fois la partie repartie.
+  if (!ETAPES_TOUR.includes(etape) && etape !== 'comptage') monTourRendu = false;
   const enTour = ETAPES_TOUR.includes(etape) && !!etat?.tour && !monTourFini;
   // Le tour est fini, mais pas encore compté : ni sablier, ni résultats.
   const enComptage = etape === 'comptage' && !!etat?.tour && !monTourFini;
@@ -635,6 +638,16 @@ function rendreConfiguration(suivi, heureServeur) {
     (aSaisiDesCartes && !enJeu) ? '' : 'none';
   document.getElementById('attente-roue').style.display = enJeu ? 'none' : '';
   document.getElementById('attente-titre').parentElement.style.display = enJeu ? 'none' : '';
+  // Rien à montrer alors que la partie tourne : c'est l'instant entre mon
+  // comptage envoyé et sa prise en compte par l'organisateur. L'en-tête gardait
+  // les mots de la salle d'attente — « Configuration de la partie en cours » —
+  // qui sont faux depuis longtemps à ce moment-là.
+  if (!enJeu && etape && etape !== 'configuration') {
+    document.getElementById('attente-titre').textContent =
+      monTourFini ? 'Comptage envoyé' : 'La partie continue';
+    document.getElementById('attente-sous').textContent =
+      monTourFini ? "L'organisateur enregistre tes cartes." : 'Le tour suivant arrive.';
+  }
   document.getElementById('bloc-lancement').style.display = enLancement ? '' : 'none';
   document.getElementById('bloc-tour').style.display = enTour ? '' : 'none';
   document.getElementById('bloc-comptage').style.display = enComptage ? '' : 'none';

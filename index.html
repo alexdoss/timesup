@@ -636,11 +636,10 @@
         <p id="current-player" class="player-info"></p>
         <button id="btn-start-turn" class="btn btn-primary">Lancer le tour ▶️</button>
         <!-- Le tour a été confié au téléphone du joueur : c'est lui qui lance.
-             La porte de sortie reste ici, s'il ne répond pas. -->
-        <div id="attente-du-joueur" style="display:none">
-          <p id="attente-joueur-nom" class="attente-joueur"></p>
-          <button id="btn-reprendre-tour" class="btn-link">Reprendre ce tour sur ce téléphone</button>
-        </div>
+             Le rappel de qui l'on attend prend la place du bouton de lancement ;
+             la porte de sortie, elle, est reléguée en bas de l'écran (voir plus
+             bas) : elle ne sert que si le joueur ne répond pas. -->
+        <p id="attente-joueur-nom" class="attente-joueur" style="display:none"></p>
 
         <!-- Le tour a démarré ailleurs : l'organisateur voit exactement ce que
              voient les invités — le sablier, et rien de plus. -->
@@ -662,6 +661,12 @@
           <h2 id="dc-titre">Fin du tour !</h2>
           <p id="dc-qui" class="wizard-hint"></p>
           <div class="points-attente"><i></i><i></i><i></i></div>
+        </div>
+        <!-- La porte de sortie de l'organisateur : elle vit sous tout le reste,
+             sablier compris. On la cherche quand un joueur ne répond pas, on ne
+             tombe pas dessus par accident. -->
+        <div id="attente-du-joueur" style="display:none">
+          <button id="btn-reprendre-tour" class="btn-link">Reprendre ce tour sur ce téléphone</button>
         </div>
         <button id="btn-voir-equipes" class="btn-link">👥 Les équipes</button>
       </div>

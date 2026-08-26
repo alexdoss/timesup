@@ -1819,11 +1819,14 @@ async function confierLeTourSiPossible() {
 function afficherAttenteDuJoueur(prenom) {
   const bouton = document.getElementById('btn-start-turn');
   const attente = document.getElementById('attente-du-joueur');
+  // La mention et la porte de sortie ne sont plus dans le même bloc : l'une
+  // prend la place du bouton de lancement, l'autre vit en bas de l'écran.
+  const mention = document.getElementById('attente-joueur-nom');
   bouton.style.display = prenom ? 'none' : '';
   attente.style.display = prenom ? '' : 'none';
+  mention.style.display = prenom ? '' : 'none';
   if (prenom) {
-    document.getElementById('attente-joueur-nom').textContent =
-      `📱 ${prenom} lance depuis son téléphone`;
+    mention.textContent = `📱 ${prenom} lance depuis son téléphone`;
   } else {
     afficherTourDistant(false);
   }
@@ -1836,9 +1839,17 @@ function afficherTourDistant(actif) {
     document.getElementById('bloc-tour-distant').style.display = 'none';
     document.getElementById('bloc-comptage-distant').style.display = 'none';
   }
-  document.getElementById('attente-joueur-nom').style.display = actif ? 'none' : '';
-  // Le reste de l'écran de lancement n'a plus lieu d'être pendant le tour
-  ['round-header', 'round-scores', 'round-restantes'].forEach(id => {
+  // La mention ne se rallume que si l'on attend encore quelqu'un : elle n'est
+  // plus protégée par un bloc parent, un affichage systématique la ferait
+  // réapparaître avec un texte périmé.
+  const attendUnJoueur = document.getElementById('attente-du-joueur').style.display !== 'none';
+  document.getElementById('attente-joueur-nom').style.display =
+    (!actif && attendUnJoueur) ? '' : 'none';
+  // Le reste de l'écran de lancement n'a plus lieu d'être pendant le tour.
+  // « C'est au tour de » et le prénom du joueur en font partie : le bloc du
+  // tour distant dit déjà qui fait deviner, deux lignes plus bas.
+  ['round-header', 'round-scores', 'round-restantes',
+   'current-team-turn', 'current-player'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.style.display = actif ? 'none' : '';
   });

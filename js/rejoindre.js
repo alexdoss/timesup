@@ -666,9 +666,11 @@ function rendreConfiguration(suivi, heureServeur) {
   const equipes = suivi?.etat?.equipes || [];
   const nommees = equipes.filter(e => (e.joueurs || []).length > 0);
   const bouton = document.getElementById('btn-voir-equipes');
-  // Masqué pendant le tour, sur les résultats, et quand c'est à moi de jouer :
-  // l'écran doit rester lisible et ne montrer qu'une chose à la fois.
-  bouton.style.display = (nommees.length && !enTour && !enResultat && !aMoi) ? '' : 'none';
+  // Masqué pendant le tour, pendant le comptage qui le clôt, sur les résultats,
+  // et quand c'est à moi de jouer : l'écran doit rester lisible et ne montrer
+  // qu'une chose à la fois.
+  bouton.style.display =
+    (nommees.length && !enTour && !enComptage && !enResultat && !aMoi) ? '' : 'none';
   equipesConnues = nommees.length ? equipes : null;
 
   // L'organisateur peut revenir sur sa répartition. Si la fenêtre est ouverte

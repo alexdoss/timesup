@@ -323,6 +323,33 @@ localStorage.removeItem('timesup_rejoint');
           A('bloc-tour-distant').style.display === 'none');
     check('mais l ecran de fin de tour', A('bloc-comptage-distant').style.display !== 'none');
     check('qui dit qui compte', A('dc-qui').textContent.includes(prenomQuiJoue));
+    check('et aucun acces aux equipes pendant qu on compte',
+          A('btn-voir-equipes').style.display === 'none');
+
+    // ===== Un autre invite regarde le comptage =====
+    // L ecran ne doit montrer qu une chose a la fois : pendant le comptage, la
+    // composition des equipes n a rien a y faire.
+    // La page de test partage l origine des cadres : ecrire ici suffit a donner
+    // son identite au temoin. On remet ensuite celle du joueur, que son propre
+    // cadre continue d utiliser.
+    const prenomTemoin = Object.keys(ids).find(p => ids[p] === autre);
+    const identiteJoueur = localStorage.getItem('timesup_rejoint');
+    localStorage.setItem('timesup_rejoint', JSON.stringify({
+      code, idJoueur: autre, prenom: prenomTemoin,
+      cartes: [], cartesParJoueur: 5, mode: 'nominatif', fini: true, inscription: true
+    }));
+    const temoin = await cadre('/rejoindre.html', 300);
+    const dt = temoin.contentDocument;
+    await wait(3200);
+    log('       temoin ' + prenomTemoin + ' : comptage '
+        + dt.getElementById('bloc-comptage').style.display
+        + ', equipes ' + dt.getElementById('btn-voir-equipes').style.display);
+    check('le temoin voit bien l ecran de comptage',
+          dt.getElementById('bloc-comptage').style.display !== 'none');
+    check('sans le bouton des equipes',
+          dt.getElementById('btn-voir-equipes').style.display === 'none');
+    temoin.remove();
+    if (identiteJoueur) localStorage.setItem('timesup_rejoint', identiteJoueur);
 
     // ===== Il retire une carte comptee par erreur =====
     const aRetirer = dj.querySelector('#mon-liste-comptees li .player-name').textContent;

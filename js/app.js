@@ -1830,7 +1830,10 @@ function afficherAttenteDuJoueur(prenom) {
 // Le tour a démarré ailleurs. L'organisateur n'a plus rien à décider : il
 // devient un spectateur comme les autres, et voit le même sablier qu'eux.
 function afficherTourDistant(actif) {
-  document.getElementById('bloc-tour-distant').style.display = actif ? '' : 'none';
+  if (!actif) {
+    document.getElementById('bloc-tour-distant').style.display = 'none';
+    document.getElementById('bloc-comptage-distant').style.display = 'none';
+  }
   document.getElementById('attente-joueur-nom').style.display = actif ? 'none' : '';
   // Le reste de l'écran de lancement n'a plus lieu d'être pendant le tour
   ['round-header', 'round-scores'].forEach(id => {
@@ -1916,14 +1919,33 @@ function guetterLeRetourDuTour() {
 async function suivreLeTourDistant() {
   let reponse;
   try { reponse = await suivreEtat(); } catch { return; }
+  // Le tour a pu revenir pendant cette lecture. Sans ce contrôle, une réponse
+  // partie avant la reprise revenait après coup et réaffichait le tour distant
+  // par-dessus l'écran de lancement : l'organisateur restait devant l'écran
+  // précédent, sans son bouton.
+  if (!tourConfieA) return;
   const suivi = reponse.suivi;
   // « pause » compte aussi : le joueur a arrêté son chrono, et le sablier doit
   // se figer ici comme chez lui. Sans ça il continuerait de couler.
   const etape = suivi?.etat?.etape;
   const enTour = (etape === 'tour' || etape === 'pause') && !!suivi.etat.tour;
-  afficherTourDistant(enTour);
+  // Le tour est fini, le joueur compte : le sablier n'a plus rien à décompter.
+  const enComptage = etape === 'comptage' && !!suivi.etat.tour;
+  afficherTourDistant(enTour || enComptage);
+  document.getElementById('bloc-tour-distant').style.display = enTour ? '' : 'none';
+  document.getElementById('bloc-comptage-distant').style.display = enComptage ? '' : 'none';
   if (enTour) {
     sablierDistant.ancrer(suivi.etat, suivi.publieA, reponse.serveur, libelleRestantes);
+  }
+  if (enComptage) {
+    sablierDistant.oublier();
+    const T = (id, texte) => { document.getElementById(id).textContent = texte; };
+    const m = suivi.etat.manche;
+    const surLePaquet = suivi.etat.tour.raison === 'paquet';
+    T('dc-manche', m ? `Manche ${m.numero}/${m.sur} · ${m.icone} ${m.nom}` : '');
+    T('dc-emoji', surLePaquet ? '🃏' : '⏰');
+    T('dc-titre', surLePaquet ? 'Fin du tour !' : 'Temps écoulé !');
+    T('dc-qui', `${suivi.etat.tour.joueur} compte ses cartes`);
   }
 }
 

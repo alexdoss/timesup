@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Rush — ce que voient les spectateurs pendant le comptage</title>
+<style>
+:root {
+  --primary: #6D28D9; --primary-hover: #7C3AED; --primary-soft: rgba(109,40,217,.16);
+  --background: #0F172A; --surface: #1E293B; --surface-2: #273449;
+  --border: #334155; --text: #F8FAFC; --muted: #94A3B8; --muted-strong: #CBD5E1;
+  --muted-2: #64748B; --success: #22C55E; --secondary: #F59E0B; --error: #EF4444;
+  --t1: #d6336c; --t2: #33c26a;
+  --r-sm: 8px; --r-md: 12px; --r-lg: 16px;
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  background: #060B18; color: var(--text); padding: 22px 16px 60px; line-height: 1.5;
+}
+.wrap { max-width: 1080px; margin: 0 auto; }
+h1 { font-size: 1.4rem; margin-bottom: 4px; }
+.intro { color: var(--muted); font-size: .93rem; margin-bottom: 10px; }
+.intro b { color: var(--muted-strong); }
+.fil { font-size: .86rem; color: var(--muted-strong); background: var(--surface);
+  border: 1px solid var(--border); border-radius: var(--r-md); padding: 11px 14px;
+  margin-bottom: 16px; }
+.fil b { color: var(--text); }
+.fil .fleche { color: var(--muted-2); margin: 0 6px; }
+.fil .ici { color: var(--secondary); font-weight: 700; }
+
+.tabs { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 18px; }
+.tab { background: var(--surface); color: var(--muted-strong); border: 1px solid var(--border);
+  border-radius: var(--r-md); padding: 10px 16px; font-size: .88rem; font-weight: 700;
+  cursor: pointer; font-family: inherit; }
+.tab.on { background: var(--primary); border-color: var(--primary-hover); color: #fff; }
+.tab .num { display: block; font-size: .64rem; text-transform: uppercase;
+  letter-spacing: .05em; opacity: .7; font-weight: 600; }
+
+.stage { display: flex; gap: 26px; align-items: flex-start; flex-wrap: wrap; }
+.colonne { display: flex; flex-direction: column; gap: 8px; }
+.etiquette { font-size: .72rem; text-transform: uppercase; letter-spacing: .05em;
+  color: var(--muted); font-weight: 700; }
+.phone { width: 300px; height: 540px; flex-shrink: 0; background: var(--background);
+  border: 1px solid var(--border); border-radius: 28px; overflow: hidden;
+  box-shadow: 0 14px 44px rgba(0,0,0,.55); display: flex; flex-direction: column; }
+.barre { display: flex; align-items: center; gap: 8px; padding: 12px 16px 10px;
+  border-bottom: 1px solid var(--border); font-size: .72rem; color: var(--muted); }
+.barre .marque { font-weight: 800; color: var(--text); }
+.barre .qui { margin-left: auto; }
+.corps { padding: 18px 16px; flex: 1; display: flex; flex-direction: column; text-align: center; }
+
+.cap { font-size: .7rem; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); }
+.grand-emoji { font-size: 3rem; line-height: 1.1; margin: 10px 0 2px; }
+h2.titre { font-size: 1.3rem; font-weight: 800; margin: 4px 0 4px; }
+.sous { font-size: .88rem; color: var(--muted-strong); }
+.reste { font-size: .8rem; color: var(--muted); font-weight: 600; margin-top: 8px; }
+.points { display: flex; align-items: center; justify-content: center; gap: 6px;
+  margin-top: 14px; }
+.points i { width: 7px; height: 7px; border-radius: 50%; background: var(--muted-2);
+  display: block; animation: bat 1.2s infinite; }
+.points i:nth-child(2) { animation-delay: .2s; }
+.points i:nth-child(3) { animation-delay: .4s; }
+@keyframes bat { 0%,100% { opacity: .25 } 50% { opacity: 1 } }
+@media (prefers-reduced-motion: reduce) { .points i { animation: none; opacity: .6 } }
+
+.bloc-score { background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--r-lg); padding: 12px; margin-top: 16px; }
+.scores { display: flex; justify-content: center; gap: 28px; margin-top: 6px; }
+.eq { text-align: center; }
+.eq .nom { font-size: .64rem; font-weight: 800; text-transform: uppercase; display: block; }
+.eq.e1 .nom { color: var(--t1); } .eq.e2 .nom { color: var(--t2); }
+.eq .gros { font-size: 1.9rem; font-weight: 800; }
+.rappel { font-size: .76rem; color: var(--muted); margin-top: 6px; }
+
+/* le sablier, pour l onglet « aujourd hui » */
+.chrono-bloc { display: flex; flex-direction: column; align-items: center; margin: 6px 0; }
+.chrono { font-size: 2.6rem; font-weight: 800; color: var(--secondary); line-height: 1; }
+.sablier { width: 92px; height: 132px; }
+.sable { fill: var(--secondary); }
+.verre { fill: none; stroke: var(--border); stroke-width: 3; }
+.socle { fill: var(--muted-2); }
+.mention { font-size: .82rem; color: var(--muted); margin-top: 8px; }
+
+.notes { flex: 1; min-width: 250px; background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--r-md); padding: 16px; font-size: .89rem; }
+.notes h3 { font-size: .73rem; text-transform: uppercase; letter-spacing: .05em;
+  color: var(--muted); margin-bottom: 10px; }
+.notes p { margin-bottom: 10px; } .notes p:last-child { margin-bottom: 0; }
+.plus::before { content: '＋ '; color: var(--success); font-weight: 700; }
+.minus::before { content: '− '; color: var(--secondary); font-weight: 700; }
+.question { background: rgba(245,158,11,.14); border-left: 3px solid var(--secondary);
+  border-radius: 0 var(--r-md) var(--r-md) 0; padding: 11px 13px; margin-top: 12px;
+  font-size: .86rem; color: var(--muted-strong); }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <h1>Le moment où le tour s'arrête</h1>
+  <p class="intro">Entre la dernière carte et le tour suivant, il se passe quelques secondes :
+    celui qui a fait deviner <b>arbitre son comptage</b>. Que voient les autres pendant ce temps ?</p>
+  <div class="fil">
+    le tour tourne <span class="fleche">→</span>
+    <span class="ici">plus de cartes, ou temps écoulé</span> <span class="fleche">→</span>
+    <span class="ici">il compte</span> <span class="fleche">→</span>
+    il valide <span class="fleche">→</span> lancement du tour suivant
+  </div>
+
+  <div class="tabs" id="tabs"></div>
+
+  <div class="stage">
+    <div class="colonne">
+      <span class="etiquette" id="etiquette">Le téléphone d'un spectateur</span>
+      <div class="phone">
+        <div class="barre"><span class="marque">Rush</span><span>tu suis la partie</span>
+          <span class="qui">K4T9</span></div>
+        <div class="corps" id="corps"></div>
+      </div>
+    </div>
+    <div class="notes" id="notes"></div>
+  </div>
+</div>
+
+<script>
+const sablier = `
+  <svg class="sablier" viewBox="0 0 100 145" aria-hidden="true">
+    <defs>
+      <clipPath id="ch"><path d="M14,12 H86 L54,70 H46 Z"/></clipPath>
+      <clipPath id="cb"><path d="M46,70 H54 L86,128 H14 Z"/></clipPath>
+    </defs>
+    <g clip-path="url(#ch)"><rect class="sable" x="0" width="100" y="70" height="0"/></g>
+    <g clip-path="url(#cb)"><rect class="sable" x="0" width="100" y="86" height="42"/></g>
+    <path class="verre" d="M14,12 H86 L54,70 L86,128 H14 L46,70 Z"/>
+    <rect class="socle" x="8" y="6" width="84" height="6" rx="3"/>
+    <rect class="socle" x="8" y="128" width="84" height="6" rx="3"/>
+  </svg>`;
+
+const scoreManche = `
+  <div class="bloc-score">
+    <p class="cap">Score de la manche</p>
+    <div class="scores">
+      <div class="eq e1"><span class="nom">Les Bleus</span><span class="gros">4</span></div>
+      <div class="eq e2"><span class="nom">Équipe 2</span><span class="gros">3</span></div>
+    </div>
+    <p class="rappel">Le tour de Marc n'est pas encore compté</p>
+  </div>`;
+
+const ECRANS = {
+  aujourdhui: {
+    num: 'aujourd\'hui', onglet: 'Ce qui se passe', etiquette: 'Le téléphone d\'un spectateur — aujourd\'hui',
+    corps: `
+      <p class="cap">Manche 2/3 · 🎭 Mime</p>
+      <p class="sous" style="color:var(--t1);font-weight:700">Les Bleus · Marc fait deviner</p>
+      <div class="chrono-bloc"><p class="chrono">0</p>${sablier}</div>
+      <p class="reste">Plus de cartes</p>
+      <p class="mention">⏰ Temps écoulé !</p>`,
+    notes: `<p class="minus">Marc a vidé le paquet au bout de douze secondes. Chez les autres,
+      le sablier a continué de couler jusqu'à zéro — pour rien.</p>
+      <p class="minus">Puis « Temps écoulé » s'affiche, ce qui est faux : le temps n'était pas
+        écoulé, il n'y avait plus de cartes.</p>
+      <p class="minus">Et l'écran reste ainsi tant que Marc n'a pas validé son comptage,
+        sans que rien ne dise ce qu'on attend.</p>`
+  },
+
+  sobre: {
+    num: 'option 1', onglet: 'Sobre', etiquette: 'Le téléphone d\'un spectateur',
+    corps: `
+      <p class="cap">Manche 2/3 · 🎭 Mime</p>
+      <div style="flex:1"></div>
+      <div class="grand-emoji">🃏</div>
+      <h2 class="titre">Fin du tour !</h2>
+      <p class="sous">Marc compte ses cartes</p>
+      <div class="points"><i></i><i></i><i></i></div>
+      <div style="flex:1"></div>`,
+    notes: `<p class="plus">Le sablier disparaît dès que le tour s'arrête : plus de décompte
+      qui tourne dans le vide.</p>
+      <p class="plus">Le titre dit ce qui s'est passé — « 🃏 Fin du tour ! » quand le paquet
+        est vide, « ⏰ Temps écoulé ! » quand c'est le chrono. La bonne raison, pas une
+        approximation.</p>
+      <p class="plus">Les trois points battants disent qu'on attend quelqu'un, sans
+        promettre de délai.</p>
+      <p class="minus">L'écran se vide beaucoup. Pendant dix secondes, il n'y a rien à lire.</p>`
+  },
+
+  score: {
+    num: 'option 2', onglet: 'Avec le score', etiquette: 'Le téléphone d\'un spectateur',
+    corps: `
+      <p class="cap">Manche 2/3 · 🎭 Mime</p>
+      <div class="grand-emoji">🃏</div>
+      <h2 class="titre">Fin du tour !</h2>
+      <p class="sous">Marc compte ses cartes</p>
+      <div class="points"><i></i><i></i><i></i></div>
+      ${scoreManche}
+      <div style="flex:1"></div>`,
+    notes: `<p class="plus">Le score de la manche occupe le vide, et c'est ce qu'on regarde
+      naturellement entre deux tours.</p>
+      <p class="plus">La mention sous les chiffres dit clairement qu'ils vont bouger :
+        sans elle, on croirait le tour déjà compté.</p>
+      <p class="minus">Ces chiffres vont changer dans quelques secondes. Les montrer, c'est
+        accepter qu'on les voie sauter — ce que l'option 1 évite en ne montrant rien.</p>
+      <div class="question"><b>Ma recommandation.</b> Le vide de l'option 1 dure trop
+        longtemps pour ne rien porter, et le score est l'information la plus attendue à
+        cet instant.</div>`
+  },
+
+  compact: {
+    num: 'option 3', onglet: 'Sans changer d\'écran', etiquette: 'Le téléphone d\'un spectateur',
+    corps: `
+      <p class="cap">Manche 2/3 · 🎭 Mime</p>
+      <p class="sous" style="color:var(--t1);font-weight:700">Les Bleus · Marc fait deviner</p>
+      <div class="grand-emoji" style="font-size:2.2rem">🃏</div>
+      <h2 class="titre" style="font-size:1.05rem">Fin du tour — Marc compte</h2>
+      <p class="reste">Plus de cartes dans la manche</p>
+      ${scoreManche}
+      <div style="flex:1"></div>`,
+    notes: `<p class="plus">Le sablier cède la place à une simple ligne : la mise en page ne
+      bouge presque pas, et l'œil ne se réoriente pas.</p>
+      <p class="plus">Le moins de travail des trois : c'est le bloc du tour, avec le sablier
+        remplacé par une icône.</p>
+      <p class="minus">Le moment est peu marqué. « Fin du tour » sur une ligne se remarque
+        moins qu'un titre, alors que c'est précisément le moment où la manche bascule.</p>`
+  }
+};
+
+let courant = 'aujourdhui';
+const tabs = document.getElementById('tabs');
+Object.entries(ECRANS).forEach(([cle, e]) => {
+  const b = document.createElement('button');
+  b.className = 'tab';
+  b.dataset.ecran = cle;
+  b.innerHTML = `<span class="num">${e.num}</span>${e.onglet}`;
+  tabs.appendChild(b);
+});
+
+function rendre() {
+  const e = ECRANS[courant];
+  document.getElementById('corps').innerHTML = e.corps;
+  document.getElementById('etiquette').textContent = e.etiquette;
+  document.getElementById('notes').innerHTML = "<h3>Ce qu'il faut savoir</h3>" + e.notes;
+  document.querySelectorAll('.tab').forEach(t => t.classList.toggle('on', t.dataset.ecran === courant));
+}
+
+tabs.addEventListener('click', ev => {
+  const t = ev.target.closest('.tab');
+  if (!t) return;
+  courant = t.dataset.ecran;
+  rendre();
+});
+
+rendre();
+</script>
+</body>
+</html>

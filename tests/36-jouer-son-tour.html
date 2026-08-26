@@ -173,8 +173,37 @@ localStorage.removeItem('timesup_rejoint');
     check('et le nombre de cartes', LJ('atoi-reste').includes('Cartes restantes'));
     check('il ne voit pas l ecran de lancement des autres',
           J('bloc-lancement').style.display === 'none');
+
+    // ===== Et il ne clignote pas =====
+    // Chaque lecture affichait le miroir du lancement avant de le masquer :
+    // en bas de l ecran, un bloc apparaissait et disparaissait sans arret.
+    // On observe plusieurs cycles de lecture d affilee.
+    let clignote = false;
+    for (let k = 0; k < 12; k++) {
+      await wait(500);
+      if (J('bloc-lancement').style.display !== 'none') clignote = true;
+      if (J('bloc-a-toi').style.display === 'none') clignote = true;
+    }
+    check('son ecran ne clignote pas entre deux lectures', !clignote);
+    check('et les equipes ne s invitent pas non plus',
+          J('btn-voir-equipes').style.display === 'none');
     check('aucun mot du paquet n est encore affiche',
           !paquet.some(mot => dj.body.textContent.includes(mot)));
+
+    // ===== Un rafraichissement ne le met pas dehors =====
+    // Son telephone est sa manette : le bloquer sur « la partie a demarre »
+    // parce que la session est close le sortirait de la partie pour de bon.
+    // On ouvre une fenetre de plus, on regarde, et on la referme.
+    const recharge = await cadre('/rejoindre.html', 300);
+    const dr = recharge.contentDocument;
+    await wait(3200);
+    const ecranR = () => [...dr.querySelectorAll('.screen')].find(s => s.classList.contains('active'))?.id;
+    log('       apres rafraichissement : ' + ecranR());
+    check('il retrouve la partie', ecranR() === 'screen-attente');
+    check('et non un ecran qui le met dehors', ecranR() !== 'screen-message');
+    check('son tour l attend toujours',
+          dr.getElementById('bloc-a-toi').style.display !== 'none');
+    recharge.remove();
 
     // ===== Il lance, et joue =====
     J('btn-atoi-lancer').click();
@@ -277,6 +306,24 @@ localStorage.removeItem('timesup_rejoint');
     const pasEncore = (await api('lireTour', { code, jeton })).corps.tour;
     check('rien n est parti tant qu il n a pas valide', !pasEncore.rendu);
 
+    // ===== Pendant qu il compte, les autres ne voient plus de sablier =====
+    // Sans cette etape, leur decompte continuait de couler pour rien, puis
+    // affichait « temps ecoule » — faux quand c est le paquet qui est vide.
+    const pendantComptage = (await api('suivre', { code })).corps.suivi;
+    log('       publie pendant le comptage : etape ' + pendantComptage.etat.etape
+        + ', raison ' + pendantComptage.etat.tour?.raison);
+    check('le comptage est publie', pendantComptage.etat.etape === 'comptage');
+    check('avec la raison de l arret', !!pendantComptage.etat.tour.raison);
+    check('et le nom de celui qui compte',
+          pendantComptage.etat.tour.joueur === prenomQuiJoue);
+
+    await wait(2800);
+    log('       organisateur : "' + A('dc-titre').textContent + '" — ' + A('dc-qui').textContent);
+    check('l organisateur ne voit plus le sablier',
+          A('bloc-tour-distant').style.display === 'none');
+    check('mais l ecran de fin de tour', A('bloc-comptage-distant').style.display !== 'none');
+    check('qui dit qui compte', A('dc-qui').textContent.includes(prenomQuiJoue));
+
     // ===== Il retire une carte comptee par erreur =====
     const aRetirer = dj.querySelector('#mon-liste-comptees li .player-name').textContent;
     dj.querySelector('#mon-liste-comptees li button').click();
@@ -292,6 +339,37 @@ localStorage.removeItem('timesup_rejoint');
     J('btn-mon-comptage-valider').click();
     await wait(1500);
     check('il retourne au suivi', ecranJ() === 'screen-attente');
+
+    // ===== Son tour fini ne lui est pas rejoue =====
+    // L etat publie dit encore « X fait deviner » tant que l organisateur ne
+    // l a pas applique. L afficher annoncerait le joueur en train de faire
+    // deviner alors qu il vient de finir — le temps d une lecture, mais on le voit.
+    let rejoue = false;
+    let recompte = false;
+    let configuration = false;
+    for (let k = 0; k < 6; k++) {
+      await wait(400);
+      if (J('bloc-tour').style.display !== 'none') rejoue = true;
+      if (J('bloc-comptage').style.display !== 'none') recompte = true;
+      if (LJ('attente-titre').includes('Configuration')) configuration = true;
+    }
+    check('son propre tour ne lui est pas rejoue apres validation', !rejoue);
+    // Le comptage fait partie du tour : tant que l organisateur ne l a pas
+    // applique, l etat publie dit encore « comptage ». Le miroir lui renverrait
+    // « X compte ses cartes » alors qu il vient justement de les compter.
+    check('on ne lui redemande pas de compter ce qu il vient d envoyer', !recompte);
+    // L attente entre le comptage envoye et sa prise en compte est courte, mais
+    // elle s affichait avec les mots de la salle d attente — une configuration
+    // terminee depuis plusieurs manches.
+    log('       en attente : "' + LJ('attente-titre') + '" — ' + LJ('attente-sous'));
+    check('on ne lui annonce pas une configuration en cours', !configuration);
+    check('mais l attente du moment',
+          LJ('attente-titre').includes('Tour enregistré')
+          || LJ('attente-titre').includes('La partie continue'));
+    // Le mot « organisateur » n a rien a faire la : de son point de vue, son
+    // tour est joue et le suivant arrive. Comment ca marche derriere ne le regarde pas.
+    check('sans expliquer la mecanique',
+          !LJ('attente-sous').includes('organisateur'));
 
     // L organisateur peut appliquer le tour avant qu on le lise : dans ce cas
     // la cle a deja ete remplacee par le tour suivant. On lit donc tout de
@@ -324,6 +402,21 @@ localStorage.removeItem('timesup_rejoint');
           e.playerStats[prenomQuiJoue]?.found === 2);
     check('la partie a repris la main sur cet appareil',
           ecranApp() === 'screen-round' || ecranApp() === 'screen-round-end');
+    // Une lecture partie avant la reprise ne doit pas revenir reafficher le
+    // tour distant par-dessus : l organisateur resterait devant l ecran
+    // precedent, sans son bouton de lancement.
+    if (ecranApp() === 'screen-round') {
+      let revenu = false;
+      for (let k = 0; k < 8; k++) {
+        await wait(500);
+        if (A('bloc-tour-distant').style.display !== 'none') revenu = true;
+        if (A('bloc-comptage-distant').style.display !== 'none') revenu = true;
+      }
+      check('l ecran du tour distant ne revient pas apres coup', !revenu);
+      check('et l ecran de lancement est bien complet',
+            A('round-header').style.display !== 'none'
+            && A('round-scores').style.display !== 'none');
+    }
     check('et le tour suivant peut etre lance',
           A('btn-start-turn').style.display !== 'none'
           || A('attente-du-joueur').style.display !== 'none');

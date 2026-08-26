@@ -1435,6 +1435,36 @@ input[readonly] {
   white-space: nowrap;
 }
 
+/* Trois points qui battent : on attend quelqu'un, sans promettre de délai. */
+.points-attente {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  margin-top: 12px;
+}
+
+.points-attente i {
+  display: block;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--muted-2);
+  animation: battement 1.2s infinite;
+}
+
+.points-attente i:nth-child(2) { animation-delay: 0.2s; }
+.points-attente i:nth-child(3) { animation-delay: 0.4s; }
+
+@keyframes battement {
+  0%, 100% { opacity: 0.25; }
+  50% { opacity: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .points-attente i { animation: none; opacity: 0.6; }
+}
+
 /* ===== MON TOUR — l'écran de lancement, sur le téléphone du joueur ===== */
 /* Le score de la manche tient sur une ligne : il informe sans prendre la place
    du « à toi », qui est ce que le joueur doit saisir d'un coup d'œil. */

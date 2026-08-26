@@ -607,15 +607,21 @@
               title="Corriger le tour précédent" style="display:none">←</button>
       <button class="btn-close" onclick="confirmQuit()">✕</button>
       <div class="round-content">
-        <div id="round-header">
+        <!-- Trois aires, chacune sur son fond : la manche, le score, à qui de
+             jouer. Elles n'apparaissent comme telles que sur l'écran de
+             lancement — c'est la classe « reparti » qui les dessine. -->
+        <div id="round-header" class="aire">
           <h2 id="round-title">Manche 1/3</h2>
           <p id="round-name-label" class="round-name-label">🗣️ Description libre</p>
           <div id="round-icon" class="round-icon">🗣️</div>
           <p id="round-description" class="round-desc"></p>
+          <!-- Ce qu'il reste dans le paquet : c'est ce qui dit si la manche
+               touche à sa fin, et donc l'enjeu du tour qui s'ouvre -->
+          <p id="round-restantes" class="cartes-restantes"></p>
         </div>
         <!-- Le grand chiffre est celui de la manche en cours ; le total de la
              partie tient dans le rappel juste en dessous. -->
-        <div id="round-scores" class="bloc-score">
+        <div id="round-scores" class="bloc-score aire">
           <p class="score-cap">Score de la manche</p>
           <div class="score-board">
             <div class="score-team">
@@ -629,11 +635,12 @@
           </div>
           <p id="round-total" class="score-rappel"></p>
         </div>
-        <!-- Ce qu'il reste dans le paquet : c'est ce qui dit si la manche
-             touche à sa fin, et donc l'enjeu du tour qui s'ouvre -->
-        <p id="round-restantes" class="cartes-restantes"></p>
-        <p id="current-team-turn" class="turn-info"></p>
-        <p id="current-player" class="player-info"></p>
+        <!-- Qui s'apprête à jouer. Les deux lignes vivent dans la même aire :
+             les masquer séparément laisserait un cadre vide à l'écran. -->
+        <div id="bloc-tour-a-venir" class="aire">
+          <p id="current-team-turn" class="turn-info"></p>
+          <p id="current-player" class="player-info"></p>
+        </div>
         <button id="btn-start-turn" class="btn btn-primary">Lancer le tour ▶️</button>
         <!-- Le tour a été confié au téléphone du joueur : c'est lui qui lance.
              Le rappel de qui l'on attend prend la place du bouton de lancement ;

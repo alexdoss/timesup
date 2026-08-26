@@ -532,21 +532,52 @@ body {
   gap: 16px;
 }
 
-/* Écran de lancement de tour : le contenu occupe toute la hauteur au lieu de
-   se tasser au milieu. Sur un téléphone de 844 px, la version centrée laissait
-   180 px de vide en haut et autant en bas pendant que les blocs se touchaient.
+/* Écran de lancement de tour : trois aires posées sur la hauteur du téléphone —
+   la manche, le score, à qui de jouer. Sur un écran de 844 px, la version
+   centrée laissait 180 px de vide en haut et autant en bas pendant que les
+   blocs se touchaient sans qu'on sache où l'un finissait.
    Conditionné à une classe : le même écran sert de sablier quand un autre joue,
-   et répartir un bloc unique le collerait en haut de l'écran. */
+   et des cadres vides s'y afficheraient. */
 .round-content.reparti {
   flex: 1;
   width: 100%;
   justify-content: space-between;
-  gap: 12px;
-  padding: 4px 0;
+  gap: 14px;
+  padding: 26px 0 4px;   /* de quoi passer sous la croix de fermeture */
+}
+
+.round-content.reparti .aire {
+  width: 100%;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  padding: 18px 16px;
+}
+
+.round-content.reparti #round-header {
+  padding-top: 22px;
+  padding-bottom: 22px;
 }
 
 .round-content.reparti .round-icon {
   font-size: 4rem;
+}
+
+.round-content.reparti .cartes-restantes {
+  margin-top: 10px;
+}
+
+.round-content.reparti .turn-info {
+  margin-top: 0;
+}
+
+.round-content.reparti .player-info {
+  margin-top: 6px;
+  font-size: 1.5rem;
+}
+
+.round-content.reparti #btn-start-turn {
+  width: 100%;
 }
 
 .round-icon {

@@ -1848,8 +1848,7 @@ function afficherTourDistant(actif) {
   // Le reste de l'écran de lancement n'a plus lieu d'être pendant le tour.
   // « C'est au tour de » et le prénom du joueur en font partie : le bloc du
   // tour distant dit déjà qui fait deviner, deux lignes plus bas.
-  ['round-header', 'round-scores', 'round-restantes',
-   'current-team-turn', 'current-player'].forEach(id => {
+  ['round-header', 'round-scores', 'bloc-tour-a-venir'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.style.display = actif ? 'none' : '';
   });

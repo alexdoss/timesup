@@ -1763,7 +1763,8 @@ function beginRound() {
 function showRoundScreen() {
   const round = getActiveRound();
   applyTeamAccent(game.teams[game.currentTeam].color);
-  updateRoundScreen(round, game.teams, getRoundLabel(), getRoundScores());
+  updateRoundScreen(round, game.teams, getRoundLabel(), getRoundScores(),
+                    libelleRestantes(getCardsRemaining()));
   updateTurnInfo(game.teams[game.currentTeam].name);
   updateCurrentPlayer(game.nominativeMode ? getCurrentPlayer() : null);
   afficherBoutonEquipes(game.nominativeMode && game.teams.some(e => e.players.length > 0));
@@ -1836,7 +1837,7 @@ function afficherTourDistant(actif) {
   }
   document.getElementById('attente-joueur-nom').style.display = actif ? 'none' : '';
   // Le reste de l'écran de lancement n'a plus lieu d'être pendant le tour
-  ['round-header', 'round-scores'].forEach(id => {
+  ['round-header', 'round-scores', 'round-restantes'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.style.display = actif ? 'none' : '';
   });

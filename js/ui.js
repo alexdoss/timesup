@@ -44,7 +44,9 @@ export function showCard(word, remaining) {
 
 // Le grand chiffre montre la manche en cours — celle qui se joue — et le total
 // de la partie passe dans le rappel. Au premier tour d'une manche il affiche 0 : voulu.
-export function updateRoundScreen(round, teams, roundLabel, roundScores = [0, 0]) {
+// restantes : le libellé du paquet, déjà mis en mots par app.js — ui.js ne
+// connaît pas la règle qui fait dire « Dernière carte ! » plutôt qu'un chiffre.
+export function updateRoundScreen(round, teams, roundLabel, roundScores = [0, 0], restantes = '') {
   document.getElementById('round-title').textContent = roundLabel;
   const roundName = document.getElementById('round-name-label');
   if (roundName) roundName.textContent = `${round.icon} ${round.name}`;
@@ -56,6 +58,7 @@ export function updateRoundScreen(round, teams, roundLabel, roundScores = [0, 0]
   document.getElementById('round-team2-score').textContent = roundScores[1];
   document.getElementById('round-total').textContent =
     `Total de la partie : ${teams[0].score} – ${teams[1].score}`;
+  document.getElementById('round-restantes').textContent = restantes;
 }
 
 export function updateTurnInfo(teamName) {

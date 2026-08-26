@@ -58,6 +58,12 @@ f.addEventListener('load', async () => {
     const brut1 = w.localStorage.getItem('timesup_partie_en_cours');
     check('sauvegarde ecrite des le debut de manche', !!brut1);
 
+    // Ce qu il reste dans le paquet dit l enjeu du tour qu on s apprete a jouer
+    log('       paquet annonce : "' + $('round-restantes').textContent + '"');
+    const paquetTotal = JSON.parse(brut1).state.masterDeck.length;
+    check('le paquet restant est annonce avant de lancer',
+          $('round-restantes').textContent === `Cartes restantes : ${paquetTotal}`);
+
     click('btn-start-turn');         check('ecran de jeu', screen() === 'screen-game');
     const mot1 = $('card-word').textContent;
     click('btn-found');

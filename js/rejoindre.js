@@ -629,13 +629,11 @@ function rendreConfiguration(suivi, heureServeur) {
   if (!monTour) document.getElementById('bloc-a-toi').style.display = 'none';
 
   const enJeu = enLancement || enTour || enResultat || enComptage || aMoi;
-  // Le rappel des cartes envoyées n'a de sens que pendant l'attente. Une fois
-  // la partie lancée, il n'apprend plus rien et reste posé sur le sablier :
-  // c'est `rendreAttente` qui l'affiche, et plus personne ne le retirait.
-  // Ceux qui n'ont saisi aucune carte n'en ont jamais eu : ne pas le leur poser.
-  const aSaisiDesCartes = !session.inscription && !session.spectateur && session.fini;
-  document.getElementById('ruban-cartes').style.display =
-    (aSaisiDesCartes && !enJeu) ? '' : 'none';
+  // Le rappel des cartes envoyées ne vaut que pendant l'attente, tant qu'il
+  // porte le seul geste encore possible : « Modifier ». Ici la saisie est close
+  // par définition — l'organisateur prépare la partie, ou elle a commencé — et
+  // le ruban n'apprend plus rien à personne.
+  document.getElementById('ruban-cartes').style.display = 'none';
   document.getElementById('attente-roue').style.display = enJeu ? 'none' : '';
   document.getElementById('attente-titre').parentElement.style.display = enJeu ? 'none' : '';
   // Rien à montrer alors que la partie tourne : c'est l'instant entre mon
@@ -1259,16 +1257,17 @@ function rendreAttente(etat) {
         : "On attend que tout le monde ait saisi ses cartes.");
   document.getElementById('attente-roue').style.display = configEnCours ? '' : 'none';
 
-  // Le ruban ne concerne que celui qui a saisi des cartes. Il perd son bouton
-  // dès que le paquet est figé : « Modifier » mentirait.
+  // Le ruban ne concerne que celui qui a saisi des cartes, et seulement tant
+  // que la saisie est ouverte : il porte alors le seul geste encore possible,
+  // « Modifier ». Une fois le paquet figé, il n'apprend plus rien et occupe
+  // l'écran par-dessus ce que l'organisateur est en train de préparer.
   const ruban = document.getElementById('ruban-cartes');
-  const aDesCartes = !inscriptionSeule && session.fini;
+  const aDesCartes = !inscriptionSeule && session.fini && !configEnCours;
   ruban.style.display = aDesCartes ? '' : 'none';
   if (aDesCartes) {
-    document.getElementById('ruban-texte').textContent = configEnCours
-      ? `Tes ${session.cartes.length} cartes sont dans le paquet`
-      : `Tes ${session.cartes.length} cartes sont arrivées`;
-    document.getElementById('btn-modifier').style.display = configEnCours ? 'none' : '';
+    document.getElementById('ruban-texte').textContent =
+      `Tes ${session.cartes.length} cartes sont arrivées`;
+    document.getElementById('btn-modifier').style.display = '';
   }
 
   // Le décompte des cartes n'a plus d'objet une fois la saisie close : il ne

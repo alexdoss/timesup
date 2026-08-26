@@ -173,10 +173,11 @@ async function sonder(adresse) {
     // ne choisit qu un theme en rejeu. La phrase doit valoir pour les deux.
     check('le texte dit ce que fait l organisateur',
           $('attente-sous').textContent === "L'organisateur prépare la partie. Elle démarre juste après.");
-    check('« Modifier » disparait : le paquet est fige',
-          $('btn-modifier').style.display === 'none');
-    check('mais le ruban dit que les cartes sont bien dedans',
-          $('ruban-texte').textContent.includes('dans le paquet'));
+    // Le ruban portait « Modifier » ; le paquet fige, il n a plus de geste a
+    // offrir et n apprend plus rien. Il s efface au lieu de rester pose sur ce
+    // que l organisateur prepare.
+    check('le rappel des cartes disparait avec la saisie',
+          $('ruban-cartes').style.display === 'none');
     check('une roue signale que ca travaille',
           $('attente-roue').style.display !== 'none');
     check('le tableau des joueurs disparait',

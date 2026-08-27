@@ -165,15 +165,41 @@ $changed = @(Invoke-Git status --porcelain) | Where-Object { $_ } | ForEach-Obje
 $ahead = @()
 try { $ahead = @(Invoke-Git log '@{u}..HEAD' --oneline) | Where-Object { $_ } } catch { $ahead = @() }
 
+# Les fichiers touchés par ces commits comptent autant que ceux du répertoire
+# de travail. Sans eux, publier après avoir committé poussait le nouveau code
+# sous l'ancien numero de cache : les telephones deja installes gardaient la
+# version precedente pour toujours, et les douze controles passaient au vert.
+# C'est arrive deux fois le 27 aout 2026.
+$dejaCommites = @()
+try {
+  $dejaCommites = @(Invoke-Git diff --name-only '@{u}...HEAD') | Where-Object { $_ } |
+    ForEach-Object { $_ -replace '\\', '/' }
+} catch { $dejaCommites = @() }
+
 # --- Le cache du service worker doit-il être bumpé ? ---
 $swFile = Join-Path $repo 'sw.js'
 $swText = Get-Content $swFile -Raw
 $assets = [regex]::Matches($swText, "'(/[^']*)'") | ForEach-Object { $_.Groups[1].Value }
 
+$aPublier = @($changed) + @($dejaCommites) | Select-Object -Unique
 $needsBump = $false
-foreach ($f in $changed) {
+foreach ($f in $aPublier) {
   if ($assets -contains "/$f") { $needsBump = $true; break }
   if ($f -eq 'index.html' -and $assets -contains '/') { $needsBump = $true; break }
+}
+
+# Le bump est deja fait a la main : ne pas le refaire par-dessus.
+if ($needsBump -and $dejaCommites -contains 'sw.js' -and $changed.Count -eq 0) {
+  $enLigne = $null
+  try {
+    $reponse = Invoke-WebRequest "$Site/sw.js?verif=$(Get-Random)" -UseBasicParsing -TimeoutSec 10
+    $enLigne = ([regex]::Match($reponse.Content, "const CACHE_NAME = 'rush-v(\d+)';")).Groups[1].Value
+  } catch { $enLigne = $null }
+  $local = ([regex]::Match($swText, "const CACHE_NAME = 'rush-v(\d+)';")).Groups[1].Value
+  if ($enLigne -and [int]$local -gt [int]$enLigne) {
+    Write-Output "Cache deja bumpe dans les commits en attente : rush-v$enLigne -> rush-v$local"
+    $needsBump = $false
+  }
 }
 
 $m = [regex]::Match($swText, "const CACHE_NAME = 'rush-v(\d+)';")

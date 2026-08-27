@@ -120,7 +120,21 @@ localStorage.removeItem('timesup_suivi');
     check('un tour est bien confie cote serveur', !!tour && !tour.rendu);
 
     // ===== Et la porte de sortie fonctionne toujours =====
+    // Reprendre un tour coupe celui de quelqu un d autre : le geste est confirme
     R('btn-reprendre-tour').click();
+    await wait(300);
+    check('une confirmation est demandee avant de reprendre un tour',
+          R('dialog-overlay').style.display !== 'none');
+    log('       demande : "' + R('dialog-title').textContent + '"');
+    R('dialog-cancel').click();
+    await wait(300);
+    check('refuser laisse le tour au joueur',
+          R('btn-start-turn').style.display === 'none'
+          && R('attente-du-joueur').style.display !== 'none');
+
+    R('btn-reprendre-tour').click();
+    await wait(300);
+    R('dialog-confirm').click();
     await wait(900);
     check('l organisateur peut reprendre le tour sur son appareil',
           R('btn-start-turn').style.display !== 'none');

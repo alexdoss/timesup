@@ -1917,7 +1917,8 @@ async function confierLeTourSiPossible() {
       // un tour plein : le téléphone doit partir avec la bonne durée.
       game.reportTemps > 0 ? game.reportTemps : game.turnTime,
       { numero: game.currentRound + 1, sur: game.activeRounds.length,
-        nom: round.name, icone: round.icon, regle: round.desc }
+        nom: round.name, icone: round.icon, regle: round.desc },
+      game.reportTemps > 0
     );
     tourConfieA = idJoueur;
     afficherAttenteDuJoueur(getCurrentPlayer());
@@ -1938,6 +1939,11 @@ function afficherAttenteDuJoueur(prenom) {
   bouton.style.display = prenom ? 'none' : '';
   attente.style.display = prenom ? '' : 'none';
   mention.style.display = prenom ? '' : 'none';
+  // Le temps repris est annoncé une fois, à l'ouverture de l'écran. Dès que le
+  // tour part sur un téléphone, ce n'est plus cet écran la référence : le
+  // joueur lance quand il veut, son chrono descend, et le nombre écrit ici
+  // devient faux sans que rien ne le corrige. On l'efface.
+  document.getElementById('report-temps').style.display = prenom ? 'none' : '';
   if (prenom) {
     mention.textContent = `📱 ${prenom} lance depuis son téléphone`;
   } else {
@@ -1976,11 +1982,94 @@ function afficherTourDistant(actif) {
 }
 
 // Le joueur ne répond pas : l'organisateur récupère le tour sur son appareil.
+//
+// Deux précautions. D'abord on demande confirmation : le geste coupe le tour de
+// quelqu'un d'autre au milieu d'une partie, il ne doit pas partir sur un doigt
+// posé de travers. Ensuite, si le tour avait déjà démarré là-bas, on reprend le
+// temps qu'il restait au joueur — repartir d'un tour plein lui offrirait des
+// secondes qu'il n'avait plus.
 async function reprendreLeTourIci() {
+  const qui = getCurrentPlayer();
+  const enCours = sablierDistant.actif();
+  const restant = enCours ? sablierDistant.restant() : 0;
+
+  const confirme = await showDialog({
+    title: 'Reprendre ce tour ici ?',
+    message: enCours
+      ? `Le tour de ${qui} s'arrêtera sur son téléphone. Il reprendra ici, avec les ${restant} s qu'il lui restait.`
+      : `${qui} ne pourra plus lancer depuis son téléphone : le tour se jouera sur cet appareil.`,
+    confirmLabel: 'Reprendre le tour',
+    cancelLabel: 'Le laisser jouer',
+    danger: true
+  });
+  if (!confirme) return;
+
   arreterLeGuet();
-  try { await reprendreTour(); } catch { /* le tour disparaîtra tout seul */ }
+  // Marquer le tour comme repris plutôt que l'effacer : c'est ce qui permet au
+  // téléphone du joueur de rendre les cartes qu'il avait trouvées. Elles ne
+  // vivent que chez lui, et il ne les envoie qu'en apprenant qu'il est dessaisi.
+  try { await reprendreTour(); } catch { /* le tour expirera tout seul */ }
   tourConfieA = null;
+
+  const rendu = enCours ? await attendreLeComptageDuJoueur(qui) : null;
+  try { await reprendreTour(true); } catch { /* la clé expirera d'elle-même */ }
+
+  // Ses cartes comptent : on les applique comme un tour rendu normalement.
+  // Le temps qu'il indique fait foi sur celui qu'on avait estimé — il tenait
+  // le chrono, nous le reconstituions.
+  if (rendu) appliquerTourDistant(rendu.trouvees);
+  const secondes = rendu ? rendu.restant : restant;
+
+  // Le même mécanisme que le report entre deux manches : le prochain tour lancé
+  // ici partira de ces secondes-là, et l'écran de lancement l'annonce.
+  if (secondes > 0) reporterLeTempsRestant(secondes);
+  afficherTourDistant(false);
   afficherAttenteDuJoueur(null);
+  saveGame(game);
+  // On redessine l'écran de lancement sans repasser par showRoundScreen : celui-ci
+  // reconfierait le tour au téléphone qu'on vient justement de dessaisir.
+  updateRoundScreen(getActiveRound(), game.teams, getRoundLabel(), getRoundScores(),
+                    libelleRestantes(getCardsRemaining()), libelleReport());
+
+  if (rendu && rendu.trouvees.length) {
+    await showDialog({
+      title: `${rendu.trouvees.length} carte(s) récupérée(s)`,
+      message: `Ce que ${qui} avait trouvé est compté. Le tour reprend ici avec ${secondes} s.`,
+      confirmLabel: 'Compris'
+    });
+  } else if (enCours && !rendu) {
+    await showDialog({
+      title: 'Son téléphone n\'a pas répondu',
+      message: `Impossible de récupérer ce que ${qui} avait trouvé : ces cartes ne sont pas comptées. Le tour reprend ici avec ${secondes} s.`,
+      confirmLabel: 'Compris'
+    });
+  }
+}
+
+// Entre la reprise et le lancement, on laisse au téléphone du joueur le temps
+// de rendre son décompte. Il vérifie toutes les deux secondes et demie qu'il
+// tient encore le tour : quelques secondes suffisent donc, sauf s'il est éteint
+// ou hors réseau — le cas même qui pousse à reprendre un tour.
+const ATTENTE_COMPTAGE_MS = 7000;
+
+async function attendreLeComptageDuJoueur(qui) {
+  const mention = document.getElementById('attente-joueur-nom');
+  mention.textContent = `⏳ On récupère le décompte de ${qui}…`;
+  const bouton = document.getElementById('btn-reprendre-tour');
+  bouton.disabled = true;
+
+  const limite = Date.now() + ATTENTE_COMPTAGE_MS;
+  try {
+    while (Date.now() < limite) {
+      let tour;
+      try { ({ tour } = await lireTour()); } catch { tour = null; }
+      if (tour?.rendu) return tour.rendu;
+      await new Promise(r => setTimeout(r, 600));
+    }
+  } finally {
+    bouton.disabled = false;
+  }
+  return null;
 }
 
 // L'organisateur attend que le tour lui revienne. C'est sa seule interrogation
@@ -2022,6 +2111,9 @@ function libelleReport() {
   // « Écourté » sonnerait comme une punition : c'est l'inverse, l'équipe a
   // gagné ce temps en vidant le paquet. Formulation neutre, qui vaut aussi
   // bien pour une équipe que pour un joueur nommé.
+  // Le « s » de secondes est ce qui distingue cette ligne de « Cartes
+  // restantes », deux lignes au-dessus : les deux parlent de ce qui reste,
+  // l'une en secondes, l'autre en cartes.
   return s > 0 ? `⏱️ Temps restant : ${s} s` : '';
 }
 

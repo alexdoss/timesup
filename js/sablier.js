@@ -127,6 +127,16 @@ export function creerSablier({ prefixe, chrono, blocChrono, manche, qui, mention
       peindre();
     },
     oublier() { ancre = null; },
-    actif() { return !!ancre; }
+    actif() { return !!ancre; },
+    // Les secondes qu'il reste vraiment au tour en cours, calculées comme le
+    // dessin l'affiche. Sert à l'organisateur qui reprend un tour lancé
+    // ailleurs : il doit repartir du temps du joueur, pas d'un tour neuf.
+    restant() {
+      if (!ancre) return 0;
+      const s = ancre.gele
+        ? ancre.restant
+        : ancre.restant - (performance.now() - ancre.recuA) / 1000;
+      return Math.max(0, Math.round(s));
+    }
   };
 }

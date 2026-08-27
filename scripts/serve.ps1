@@ -131,6 +131,8 @@ function Invoke-FausseSession($corps) {
       idJoueur = $id
       mots     = @($corps.mots)
       duree    = [int]($corps.duree ?? 40)
+      # Ce tour reprend les secondes gagnees a la manche precedente
+      reporte  = ($corps.reporte -eq $true)
       manche   = $corps.manche
       confieA  = (Get-HorodatageMs)
       rendu    = $null
@@ -171,8 +173,18 @@ function Invoke-FausseSession($corps) {
     if ($corps.jeton -ne $sessions[$code].jeton) {
       return @{ statut = 403; corps = @{ error = "Action reservee a l'organisateur." } }
     }
-    $tours.Remove($code)
-    return @{ statut = 200; corps = @{ repris = $true } }
+    # Le tour est MARQUE repris, pas efface : les cartes deja trouvees ne vivent
+    # que sur le telephone du joueur, et n en partent qu avec son comptage. Il
+    # lit cette marque, s arrete, et rend ce qu il avait.
+    # `oublier` efface pour de bon, quand l organisateur a fini d attendre.
+    $rendu = $null
+    if ($tours.ContainsKey($code)) { $rendu = $tours[$code].rendu }
+    if (-not $tours.ContainsKey($code) -or $corps.oublier -eq $true) {
+      $tours.Remove($code)
+    } else {
+      $tours[$code].repris = (Get-HorodatageMs)
+    }
+    return @{ statut = 200; corps = [ordered]@{ repris = $true; rendu = $rendu } }
   }
 
   if ($action -eq 'publier') {

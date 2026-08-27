@@ -46,7 +46,12 @@ localStorage.removeItem('timesup_rejoint');
     // garanti, et temporiser au jugé rendait ce scenario capricieux.
     async function attendreInviteSpectateur(I) {
       for (let i = 0; i < 10; i++) {
-        if (A('attente-du-joueur').style.display !== 'none') A('btn-reprendre-tour').click();
+        if (A('attente-du-joueur').style.display !== 'none') {
+          A('btn-reprendre-tour').click();
+          // Reprendre coupe le tour de quelqu un : l app demande confirmation
+          await wait(200);
+          if (A('dialog-overlay').style.display !== 'none') A('dialog-confirm').click();
+        }
         await wait(1000);
         if (I('bloc-lancement').style.display !== 'none') return true;
       }

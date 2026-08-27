@@ -81,6 +81,19 @@ type de partie → thèmes | session de cartes → comment on joue
   Y arriver publie l'étape `configuration`, qui remet les spectateurs sur l'écran d'attente.
 - Le nombre de cartes par joueur vient du réglage « Cartes saisies par joueur » de l'étape *Déroulement* (`game.numCards`, minimum 3, défaut 5) — il n'existe qu'à cet endroit.
 - Le même `masterDeck` est rebattu à chaque manche (`startNewRound`), le score est cumulatif.
+- **Report du temps entre les manches** : l'équipe qui vide le paquet avant la fin du
+  chrono garde la main. Même équipe, même joueur, et la manche suivante s'ouvre sur les
+  secondes qui restaient (`reporterLeTempsRestant` → `game.reportTemps`, consommé par
+  `beginTurn`). Aller vite doit rapporter quelque chose. Rien à reporter sur la dernière
+  manche. Vaut aussi pour un tour joué sur le téléphone d'un joueur : il renvoie ses
+  secondes avec son comptage (`rendu.restant`), et le paquet suivant lui est confié pour
+  cette durée-là (`confierTour(..., reporte)`), ce qui permet à son écran de l'annoncer.
+- **Doublons du paquet** (cartes perso) : au « Suivant » qui fige le paquet, l'app compte
+  les occurrences (`compterLesDoublons`, dans `app.js` — le paquet est déjà en mémoire) et
+  propose : ne garder qu'un exemplaire, remplacer les surnuméraires par des mots des thèmes
+  officiels, ou avancer. La boîte ne cite **jamais** les mots : l'organisateur joue aussi.
+  Le titre annonce les cartes **en trop**, pas « les doublons » — sur un mot écrit trois
+  fois, deux exemplaires sont en trop mais ne forment pas un doublon.
 - Trois échelles de score coexistent : la **manche** (`getRoundScores`), la **partie** (`team.score`)
   et la **soirée** (`getSessionScores`, cumul des parties enchaînées par « Rejouer »). L'écran de
   lancement de tour affiche manche + partie, la fin de manche et la fin de partie détaillent chaque
@@ -90,6 +103,29 @@ type de partie → thèmes | session de cartes → comment on joue
   série au lieu du score de la seule partie (`seriePerRound` / `serieTotal`, alimentés par
   `sessionPlayerStats` que `replayGame()` remplit avant que `resetGame()` n'efface `playerStats`).
   Le résumé du tiroir et l'infobulle de la colonne « Tot. » disent laquelle des deux est affichée.
+
+## Le tour joué depuis le téléphone du joueur
+
+En mode nominatif avec une session ouverte, le tour part chez celui qui doit faire deviner
+(`game.playerPhones` → `confierTour`). Le paquet est **prêté d'un coup**, pas interrogé
+carte par carte : le joueur enchaîne en local, et une coupure réseau en plein tour
+n'interrompt rien. Une seule publication au départ suffit à faire tourner le sablier de
+tout le monde — chacun rejoue le décompte à partir de l'horodatage du **serveur**, jamais
+de son horloge. Seuls la pause, la reprise et les cartes trouvées demandent une publication.
+
+- Le paquet ne transite **jamais** par le suivi que tout le monde lit : il vit dans sa
+  propre clé (`rush:tour:<code>`), rendue au seul joueur concerné. Les autres apprennent
+  qu'un tour est en cours et pour qui, jamais ce qu'il contient.
+- L'organisateur garde une **porte de sortie** : reprendre le tour sur son appareil quand
+  le joueur ne répond pas. Le geste demande confirmation — il coupe la partie de quelqu'un.
+- **Reprendre ne supprime pas le tour, il le marque** (`repris`). C'est la seule voie par
+  laquelle les cartes déjà trouvées peuvent revenir : elles ne vivent que sur le téléphone
+  du joueur et n'en partent qu'avec son comptage. Il lit la marque (il vérifie toutes les
+  2,5 s pendant son tour), s'arrête, rend ce qu'il avait ; l'organisateur l'attend **7 s au
+  plus**, l'applique, puis efface la clé (`reprendreTour(oublier)`). Passé ce délai il part
+  sans — c'est le cas d'un téléphone éteint, celui-là même qui pousse à reprendre un tour.
+- Le temps repris est **celui que rend le joueur**, pas l'estimation du sablier : c'est lui
+  qui tenait le chrono.
 
 ## Conventions
 

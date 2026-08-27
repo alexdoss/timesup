@@ -535,6 +535,10 @@ async function confierTour(req, res, code) {
     idJoueur,
     mots,
     duree: Number(req.body.duree) || 40,
+    // Ce tour reprend les secondes gagnées à la manche précédente : le téléphone
+    // le dit au joueur, qui verrait sinon son chrono partir bien plus bas que
+    // d'habitude sans savoir pourquoi.
+    reporte: req.body.reporte === true,
     manche: req.body.manche || null,
     confieA: Date.now(),
     rendu: null
@@ -601,8 +605,23 @@ async function reprendreTour(req, res, code) {
   if (req.body.jeton !== config.jeton) {
     return res.status(403).json({ error: "Action réservée à l'organisateur." });
   }
-  await commandeKV(['DEL', cleTour(code)]);
-  return res.status(200).json({ repris: true });
+
+  // Le tour est MARQUÉ repris, pas effacé. L'effacer couperait la seule voie par
+  // laquelle les cartes déjà trouvées peuvent revenir : elles ne vivent que sur
+  // le téléphone du joueur, et n'en partent qu'avec son comptage. Il lit cette
+  // marque, s'arrête, et rend ce qu'il avait — l'organisateur le récupère.
+  //
+  // `oublier` efface pour de bon : l'organisateur s'en sert quand il a fini
+  // d'attendre, pour que le téléphone du joueur ne reste pas sur un tour mort.
+  const tour = analyser(await commandeKV(['GET', cleTour(code)]));
+  if (!tour || req.body.oublier === true) {
+    await commandeKV(['DEL', cleTour(code)]);
+    return res.status(200).json({ repris: true, rendu: tour?.rendu || null });
+  }
+
+  tour.repris = Date.now();
+  await commandeKV(['SET', cleTour(code), JSON.stringify(tour), 'EX', DUREE_TOUR_S]);
+  return res.status(200).json({ repris: true, rendu: tour.rendu || null });
 }
 
 // ===== Point d'entrée =====

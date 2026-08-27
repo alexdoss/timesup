@@ -914,6 +914,11 @@ function rendreMonTour(tour) {
   T('atoi-manche', m.numero ? `Manche ${m.numero}/${m.sur} — ${m.nom}` : (m.nom || ''));
   T('atoi-regle', m.regle || '');
   T('atoi-reste', libelleRestantes(tour.mots.length));
+  // Son équipe a vidé le paquet à la manche précédente : ce tour reprend les
+  // secondes gagnées. Sans ce mot, il lance et voit un chrono bien plus bas
+  // que d'habitude sans comprendre pourquoi. Même libellé que sur l'écran de
+  // l'organisateur, au mot près : les deux appareils sont côte à côte.
+  T('atoi-duree', tour.reporte ? `⏱️ Temps restant : ${tour.duree} s` : '');
 
   // Le score de la manche vient du suivi, déjà reçu : rien à redemander.
   const equipes = equipesConnues || [];
@@ -959,7 +964,68 @@ function lancerMonTour() {
   montrer('screen-mon-tour');
   peindreMonTour();
   demarrerMonChrono();
+  surveillerQueLeTourEstToujoursAMoi();
   publierMonDepart();
+}
+
+// ===== LE TOUR PEUT M'ÊTRE RETIRÉ EN COURS DE ROUTE =====
+// L'organisateur dispose d'une porte de sortie : si le joueur ne répond pas, il
+// reprend le tour sur son appareil. Le serveur cesse alors de reconnaître ce
+// téléphone — mais lui n'en sait rien, et continuerait à faire deviner dans son
+// coin. Deux personnes sur le même tour, chacune sûre de le tenir.
+//
+// Rien ne peut être poussé jusqu'ici : c'est donc à ce téléphone de vérifier.
+// Toutes les cinq secondes suffisent — le geste est rare, et la question coûte
+// une seule lecture de clé.
+const RYTHME_VERIFICATION_MS = 2500;
+let verificationDuTour = null;
+
+function surveillerQueLeTourEstToujoursAMoi() {
+  clearInterval(verificationDuTour);
+  verificationDuTour = setInterval(async () => {
+    if (!partieEnCours) return arreterLaVerification();
+    let tour;
+    try { ({ tour } = await appeler('lireTour', { code: session.code, idJoueur: session.idJoueur })); }
+    catch { return; }   // coupure passagère : on ne coupe surtout pas le tour pour ça
+    if (!tour || tour.idJoueur !== session.idJoueur || tour.repris) monTourMEstRetire();
+  }, RYTHME_VERIFICATION_MS);
+}
+
+function arreterLaVerification() {
+  clearInterval(verificationDuTour);
+  verificationDuTour = null;
+}
+
+// L'organisateur a repris le tour. Ce qui a été trouvé jusqu'ici doit compter :
+// ces cartes ne vivent que sur ce téléphone, et l'organisateur les attend. On
+// les envoie avant toute chose, puis on rend la main.
+async function monTourMEstRetire() {
+  if (!partieEnCours) return;
+  const p = partieEnCours;
+  arreterLaVerification();
+  clearInterval(p.minuterie);
+  partieEnCours = null;
+  monTour = null;
+  monTourRendu = false;
+  afficherMonTour(false);
+
+  const compte = p.trouvees.length;
+  try {
+    await appeler('rendreTour', {
+      code: session.code, idJoueur: session.idJoueur,
+      trouvees: p.trouvees,
+      manquees: p.manquees.concat(p.mots.slice(p.index)),
+      restant: Math.max(0, Math.round(p.restant))
+    });
+  } catch {
+    // Rien ne part : l'organisateur repartira sans ces cartes, et le dira.
+  }
+
+  bloquer('📱', 'Tour repris',
+    compte > 0
+      ? `L'organisateur a repris ce tour sur son téléphone. Tes ${compte} carte(s) trouvée(s) lui ont été transmises, elles comptent.`
+      : "L'organisateur a repris ce tour sur son téléphone, avec le temps qu'il te restait.",
+    'Suivre la partie', ouvrirAttente);
 }
 
 // Ce que les autres voient de mon tour. Le chrono ne demande qu'une
@@ -995,7 +1061,11 @@ async function publierMonEtat(etape) {
         }
       }
     });
-  } catch {
+  } catch (err) {
+    // 403 : le serveur ne reconnaît plus ce tour comme le nôtre. L'organisateur
+    // l'a repris sur son appareil. Continuer à jouer ferait deviner deux
+    // personnes en même temps, chacune persuadée de tenir le tour.
+    if (err.statut === 403) return monTourMEstRetire();
     // Le tour se joue quand même : les autres verront le résultat à la fin
   }
 }
@@ -1134,6 +1204,8 @@ async function validerMonComptage() {
   if (!p) return;
   const bouton = document.getElementById('btn-mon-comptage-valider');
   bouton.disabled = true;
+  // Le comptage part : ce tour ne peut plus nous être retiré, plus rien à guetter.
+  arreterLaVerification();
   try {
     await appeler('rendreTour', {
       code: session.code, idJoueur: session.idJoueur,

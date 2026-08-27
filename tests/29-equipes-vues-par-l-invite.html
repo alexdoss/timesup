@@ -203,7 +203,12 @@ localStorage.removeItem('timesup_rejoint');
     // qu il le faut, jusqu a ce que l invite soit devant le miroir du lancement.
     let spectatrice = false;
     for (let i = 0; i < 10 && !spectatrice; i++) {
-      if (A('attente-du-joueur').style.display !== 'none') A('btn-reprendre-tour').click();
+      if (A('attente-du-joueur').style.display !== 'none') {
+        A('btn-reprendre-tour').click();
+        // Reprendre coupe le tour de quelqu un : l app demande confirmation
+        await wait(200);
+        if (A('dialog-overlay').style.display !== 'none') A('dialog-confirm').click();
+      }
       await wait(1000);
       spectatrice = I('bloc-lancement').style.display !== 'none';
     }

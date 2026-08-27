@@ -143,9 +143,12 @@ export async function relancerSession(cartesParJoueur) {
 // tout le monde lit. Le paquet est prêté d'un coup : le joueur enchaîne les
 // cartes sans rien redemander au serveur.
 
-export function confierTour(idJoueur, mots, duree, manche) {
+// reporte : ce tour reprend les secondes gagnées à la manche précédente. Le
+// téléphone ne peut pas le deviner — il ne connaît que la durée qu'on lui donne,
+// pas le réglage de la partie — et c'est ce qui lui permet de prévenir le joueur.
+export function confierTour(idJoueur, mots, duree, manche, reporte = false) {
   return appeler('confierTour', {
-    code: courante.code, jeton: courante.jeton, idJoueur, mots, duree, manche
+    code: courante.code, jeton: courante.jeton, idJoueur, mots, duree, manche, reporte
   });
 }
 
@@ -160,9 +163,12 @@ export function suivreEtat() {
   return appeler('suivre', { code: courante.code });
 }
 
-// L'organisateur reprend la main : le tour confié n'a plus cours.
-export function reprendreTour() {
-  return appeler('reprendreTour', { code: courante.code, jeton: courante.jeton });
+// L'organisateur reprend la main. Le tour est d'abord marqué « repris » : le
+// téléphone du joueur le lit, s'arrête, et rend ce qu'il avait compté.
+// `oublier` l'efface pour de bon, une fois ce décompte récupéré — ou une fois
+// qu'on a renoncé à l'attendre.
+export function reprendreTour(oublier = false) {
+  return appeler('reprendreTour', { code: courante.code, jeton: courante.jeton, oublier });
 }
 
 // Ferme la session et récupère enfin les cartes : c'est le seul appel qui les rapatrie.

@@ -107,6 +107,19 @@ localStorage.removeItem('timesup_rejoint');
     J('btn-atoi-lancer').click();
     await wait(400);
     check('il joue sur son telephone', ecranJ() === 'screen-mon-tour');
+
+    // ===== Pendant qu il joue, l organisateur ne lit plus l annonce du temps =====
+    // Elle est ecrite une fois, a l ouverture de l ecran : la laisser pendant le
+    // tour afficherait un nombre fige a cote du chrono du joueur, qui descend.
+    // Deux temps differents pour la meme chose, sur deux telephones cote a cote.
+    await wait(3000);
+    log('       cote organisateur pendant le tour : bloc a venir '
+        + A('bloc-tour-a-venir').style.display
+        + ' · sablier ' + A('bloc-tour-distant').style.display);
+    check('l organisateur voit le sablier du tour en cours',
+          A('bloc-tour-distant').style.display !== 'none');
+    check('et plus l annonce figee du temps repris',
+          A('bloc-tour-a-venir').style.display === 'none');
     // Quelques secondes s ecoulent : sans elles le report vaudrait la duree
     // pleine et le test ne prouverait rien.
     await wait(5000);
@@ -154,9 +167,15 @@ localStorage.removeItem('timesup_rejoint');
     if (ecranApp() === 'screen-round-end') { A('btn-next-round').click(); await wait(1200); }
     check('la manche suivante est ouverte', etat().currentRound === 1);
     check('par le meme joueur', A('current-player').textContent.includes(prenomQuiJoue));
-    log('       mention : "' + A('report-temps').textContent + '"');
-    check('l ecran de l organisateur annonce le temps repris',
-          A('report-temps').textContent.includes(String(etat().reportTemps)));
+    // Le temps repris n est annonce que tant que l organisateur tient le tour.
+    // Des qu il part sur un telephone, ce nombre est ecrit une fois pour toutes
+    // pendant que le chrono du joueur descend : deux temps pour la meme chose,
+    // sur deux appareils cote a cote.
+    await wait(1500);
+    log('       mention chez l organisateur : "' + A('report-temps').textContent
+        + '" · affichee : ' + (A('report-temps').style.display !== 'none'));
+    check('le temps repris n est plus annonce quand le tour part sur un telephone',
+          A('report-temps').style.display === 'none');
 
     // ===== Et le paquet neuf repart chez le meme joueur, pour ce temps-la =====
     await wait(1500);
@@ -170,6 +189,129 @@ localStorage.removeItem('timesup_rejoint');
     check('avec le paquet de la manche suivante', suivant.manche.numero === 2);
     check('et la duree reprise, pas un tour plein',
           suivant.duree === etat().reportTemps && suivant.duree < dureeReglee);
+
+    // ===== Les deux telephones doivent afficher le meme temps =====
+    // Le joueur decompte chez lui ; l organisateur rejoue le decompte a partir
+    // de l heure du serveur. Deux chemins, un seul temps : s ils divergent, les
+    // deux appareils posés cote a cote se contredisent au milieu d une soiree.
+    await wait(3200);
+    check('le telephone du joueur lui repropose son tour',
+          J('bloc-a-toi').style.display !== 'none');
+
+    // C est LUI qui doit connaitre son temps : c est lui qui joue, et son chrono
+    // partira bien plus bas que d habitude. Le mot « restant » est deja pris par
+    // les cartes, juste au-dessus — on dit une duree, pas un reste.
+    log('       sur son telephone : "' + J('atoi-reste').textContent
+        + '" / "' + J('atoi-duree').textContent + '"');
+    check('son ecran annonce le temps du tour reporte',
+          J('atoi-duree').textContent.includes(String(suivant.duree)));
+    // Le « s » de secondes est ce qui separe cette ligne de « Cartes restantes »
+    // affichee juste au-dessus : sans lui, deux nombres nus se ressemblent.
+    check('en secondes, pas en cartes', J('atoi-duree').textContent.includes(' s'));
+    check('le meme libelle que chez l organisateur, au mot pres',
+          J('atoi-duree').textContent.replace(/\d+/, 'N')
+          === A('report-temps').textContent.replace(/\d+/, 'N'));
+
+    J('btn-atoi-lancer').click();
+    await wait(2500);
+    check('il joue le tour reporte', ecranJ() === 'screen-mon-tour');
+
+    let ecartMax = 0;
+    let releves = [];
+    for (let k = 0; k < 8; k++) {
+      await wait(1000);
+      const chezLui = parseInt(J('mon-timer').textContent, 10);
+      const chezAdmin = parseInt(A('distant-chrono').textContent, 10);
+      if (Number.isFinite(chezLui) && Number.isFinite(chezAdmin)) {
+        releves.push(chezLui + '/' + chezAdmin);
+        ecartMax = Math.max(ecartMax, Math.abs(chezLui - chezAdmin));
+      }
+    }
+    log('       joueur/admin : ' + releves.join('  '));
+    log('       ecart maximum : ' + ecartMax + ' s');
+    // Une seconde d ecart est normale : l un arrondit vers le haut, l autre
+    // decompte par pas entiers. Au-dela, les deux ecrans ne parlent plus du
+    // meme tour.
+    check('le sablier de l organisateur suit le chrono du joueur', ecartMax <= 1);
+
+    // ===== L organisateur reprend le tour en cours de route =====
+    // Le joueur ne repond plus, son telephone se bloque : l organisateur
+    // recupere le tour. Il doit repartir du temps qui restait au joueur —
+    // un tour neuf lui offrirait des secondes qu il n avait plus.
+    // Il a trouve des cartes avant d etre interrompu : elles doivent compter.
+    J('btn-mon-found').click();
+    J('btn-mon-found').click();
+    await wait(600);
+    const scoreAvantReprise = etat().teams.reduce((t, e) => t + e.score, 0);
+    const avantReprise = parseInt(A('distant-chrono').textContent, 10);
+    log('       score avant la reprise : ' + scoreAvantReprise
+        + ' · 2 cartes trouvees sur son telephone · chrono ' + avantReprise + ' s');
+
+    A('btn-reprendre-tour').click();
+    await wait(300);
+    check('une confirmation est demandee', A('dialog-overlay').style.display !== 'none');
+    log('       demande : "' + A('dialog-title').textContent
+        + '" — ' + A('dialog-message').textContent);
+    const annonce = parseInt((A('dialog-message').textContent.match(/(\d+)\s*s/) || [])[1], 10);
+    check('elle annonce le temps qui sera repris',
+          Number.isFinite(annonce) && Math.abs(annonce - avantReprise) <= 2);
+    check('et nomme le joueur qu on interrompt',
+          A('dialog-message').textContent.includes(prenomQuiJoue));
+
+    A('dialog-confirm').click();
+    // L app va chercher le decompte du joueur avant de rendre la main
+    await wait(9000);
+    if (A('dialog-overlay').style.display !== 'none') {
+      log('       bilan de la reprise : "' + A('dialog-title').textContent
+          + '" — ' + A('dialog-message').textContent);
+      check('l app dit ce qu elle a recupere',
+            A('dialog-title').textContent.includes('récupérée'));
+      A('dialog-confirm').click();
+      await wait(400);
+    }
+    check('l organisateur retrouve son bouton de lancement',
+          A('btn-start-turn').style.display !== 'none');
+
+    // Le coeur de l affaire : ses cartes comptent.
+    const scoreApres = etat().teams.reduce((t, e) => t + e.score, 0);
+    log('       score apres la reprise : ' + scoreApres);
+    check('les cartes trouvees avant la reprise sont comptees',
+          scoreApres === scoreAvantReprise + 2);
+
+    const reprise = etat().reportTemps;
+    log('       temps mis de cote pour la reprise : ' + reprise + ' s');
+    // C est le temps que le JOUEUR a rendu qui fait foi, pas l estimation lue
+    // sur le sablier : il tenait le chrono, et quelques secondes s ecoulent
+    // pendant qu on va chercher son decompte.
+    check('le temps conserve est celui du joueur, a quelques secondes pres',
+          reprise > 0 && Math.abs(reprise - avantReprise) <= 5);
+    check('et le tour ne repart pas d un tour plein', reprise < dureeReglee);
+
+    // ===== Et le telephone du joueur cesse de jouer dans son coin =====
+    // Rien ne peut lui etre pousse : c est lui qui verifie, toutes les cinq
+    // secondes. Sans ca, deux personnes font deviner le meme tour en meme
+    // temps, chacune persuadee de le tenir.
+    let repris = false;
+    for (let k = 0; k < 10 && !repris; k++) {
+      await wait(1000);
+      repris = ecranJ() === 'screen-message';
+    }
+    log('       ecran du joueur : ' + ecranJ()
+        + ' — "' + dj.getElementById('message-titre').textContent + '"');
+    check('le telephone du joueur apprend que le tour lui a ete retire', repris);
+    check('son chrono s est arrete', ecranJ() !== 'screen-mon-tour');
+    check('on lui dit ce qui s est passe',
+          dj.getElementById('message-texte').textContent.includes('repris ce tour'));
+    // Ses cartes ont ete transmises avant qu il rende la main : on le lui dit,
+    // sinon il croit avoir joue pour rien.
+    check('et que ses cartes ont bien ete transmises',
+          dj.getElementById('message-texte').textContent.includes('comptent'));
+
+    A('btn-start-turn').click();
+    await wait(300);
+    log('       chrono sur l appareil de l organisateur : ' + etat().timeLeft + ' s');
+    check('le tour reprend exactement la ou le joueur en etait',
+          etat().timeLeft === reprise);
 
     log('SCENARIO 41 TERMINE');
   } catch (e) { log('EXCEPTION: ' + e.message + '\n' + e.stack); }

@@ -101,12 +101,28 @@ const MOTS = ['Tire-bouchon', 'Boussole', 'Cléopâtre', 'Trampoline'];
 
     const repris = await api('reprendreTour', { code, jeton });
     check('l organisateur reprend la main', repris.statut === 200);
-    const efface = await api('lireTour', { code, idJoueur: marc.idJoueur });
-    check('le tour confie a disparu', efface.corps.tour === null);
-    const rendreApres = await api('rendreTour', {
-      code, idJoueur: marc.idJoueur, trouvees: [], manquees: []
-    });
-    check('et le joueur ne peut plus le rendre', rendreApres.statut === 404);
+
+    // Reprendre MARQUE le tour, il ne l efface pas. C est la seule voie par
+    // laquelle les cartes deja trouvees peuvent revenir : elles ne vivent que
+    // sur le telephone du joueur, et n en partent qu avec son comptage.
+    const marque = (await api('lireTour', { code, idJoueur: marc.idJoueur })).corps.tour;
+    log('       apres reprise : ' + JSON.stringify({ repris: !!marque?.repris, rendu: !!marque?.rendu }));
+    check('le tour est marque repris, pas efface', !!marque && !!marque.repris);
+    check('le joueur peut encore rendre ce qu il avait compte',
+          (await api('rendreTour', {
+            code, idJoueur: marc.idJoueur, trouvees: ['Boussole'], manquees: [], restant: 12
+          })).statut === 200);
+    const recupere = (await api('lireTour', { code, jeton })).corps.tour;
+    check('l organisateur y retrouve ses cartes',
+          JSON.stringify(recupere.rendu.trouvees) === JSON.stringify(['Boussole']));
+    check('et le temps qui lui restait', recupere.rendu.restant === 12);
+
+    // Une fois recupere, l organisateur efface pour de bon : sans quoi le
+    // telephone du joueur resterait devant un tour mort.
+    const oubli = await api('reprendreTour', { code, jeton, oublier: true });
+    check('l organisateur peut ensuite l effacer', oubli.statut === 200);
+    check('le tour a alors disparu',
+          (await api('lireTour', { code, idJoueur: marc.idJoueur })).corps.tour === null);
 
     // ===== Le suivi, lui, ne porte toujours aucun mot =====
     await api('confierTour', { code, jeton, idJoueur: marc.idJoueur, mots: MOTS });

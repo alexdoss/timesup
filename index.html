@@ -799,6 +799,17 @@
     </div>
   </div>
 
+  <!-- BOÎTE À PLUSIEURS ISSUES — quand il y en a plus de deux, et qu'aucune
+       n'est un simple « annuler ». Toutes les actions restent visibles : les
+       replier coûterait un geste et cacherait celles qui ont une date limite. -->
+  <div id="choix-overlay" class="dialog-overlay" style="display:none">
+    <div class="dialog-panel" role="alertdialog" aria-modal="true" aria-labelledby="choix-titre">
+      <h3 id="choix-titre"></h3>
+      <p id="choix-message"></p>
+      <div id="choix-actions" class="dialog-actions"></div>
+    </div>
+  </div>
+
   <!-- BOÎTE DE DIALOGUE — remplace alert() et confirm() du navigateur -->
   <div id="dialog-overlay" class="dialog-overlay" style="display:none">
     <div class="dialog-panel" role="alertdialog" aria-modal="true" aria-labelledby="dialog-title">

@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head><meta charset="utf-8"><title>Test Rush — remplacer les doublons par des mots au hasard</title></head>
+<body>
+<pre id="log">demarrage...</pre>
+<div id="hote"></div>
+<script>
+const out = [];
+function log(s) { out.push(s); document.getElementById('log').textContent = out.join('\n'); }
+function check(name, cond) { log((cond ? 'PASS' : 'FAIL') + ' -- ' + name); }
+const wait = ms => new Promise(r => setTimeout(r, ms));
+
+async function api(action, donnees = {}) {
+  const r = await fetch('/api/session', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ action, ...donnees })
+  });
+  return { statut: r.status, corps: await r.json().catch(() => ({})) };
+}
+
+localStorage.removeItem('timesup_partie_en_cours');
+
+const f = document.createElement('iframe');
+f.src = '/';
+f.style.cssText = 'width:420px;height:1000px;border:1px solid #ccc';
+document.getElementById('hote').appendChild(f);
+
+let demarre = false;
+f.addEventListener('load', async () => {
+  if (demarre) return;
+  demarre = true;
+
+  const d = f.contentDocument, w = f.contentWindow;
+  w.onerror = (m, s, l) => log('ERREUR APP: ' + m + ' @' + s + ':' + l);
+  const $ = id => d.getElementById(id);
+  const ecran = () => [...d.querySelectorAll('.screen')].find(s => s.classList.contains('active'))?.id;
+  const etat = () => JSON.parse(w.localStorage.getItem('timesup_partie_en_cours') || 'null')?.state;
+  const cliquer = texte => {
+    const b = [...d.querySelectorAll('#choix-actions button')].find(x => x.textContent.includes(texte));
+    if (!b) throw new Error('bouton introuvable : ' + texte);
+    b.click();
+  };
+
+  async function invite(code, prenom, cartes) {
+    const r = await api('rejoindre', { code, prenom });
+    await api('deposer', { code, idJoueur: r.corps.idJoueur, cartes, fini: true });
+  }
+
+  // Les memes saisies qu au scenario 37 : 15 cartes, 11 mots, 4 en trop
+  const ANA  = ['plage', 'valise', 'montagne', 'ski', 'hiver'];
+  const BOB  = ['PLAGE', 'valise', 'soleil', 'pull', 'gants'];
+  const CLEO = ['plage', 'soleil', 'chalet', 'luge', 'neige'];
+  const saisis = [...ANA, ...BOB, ...CLEO].map(m => m.toLowerCase());
+
+  try {
+    await wait(1200);
+
+    $('btn-start').click();
+    d.querySelector('[data-source="custom"]').click();
+    $('btn-ouvrir-session').click();
+    await wait(900);
+    const code = $('session-code').textContent.trim();
+    log('       session : ' + code);
+
+    await invite(code, 'Ana', ANA);
+    await invite(code, 'Bob', BOB);
+    await invite(code, 'Cleo', CLEO);
+    await wait(2600);
+
+    $('btn-session-lancer').click();
+    await wait(600);
+    if ($('dialog-overlay').style.display !== 'none') { $('dialog-confirm').click(); await wait(600); }
+    await wait(600);
+    check('la boite des doublons s ouvre', $('choix-overlay').style.display !== 'none');
+
+    // ===== Le tirage au hasard =====
+    // Le paquet garde sa taille : les exemplaires en trop cedent la place a des
+    // mots des themes officiels, deja charges — rien ne depend du reseau.
+    cliquer('Remplacer par des mots au hasard');
+    await wait(1200);
+    check('la configuration reprend', ecran() === 'screen-jeu-mode');
+
+    d.querySelector('[data-mode="simple"]').click();
+    await wait(300);
+    $('btn-repartition-jouer').click();
+    await wait(300);
+    $('btn-next-rounds').click();
+    $('btn-play').click();
+    await wait(900);
+    if ($('dialog-overlay').style.display !== 'none') { $('dialog-cancel').click(); await wait(700); }
+
+    const paquet = etat().masterDeck;
+    log('       paquet : ' + JSON.stringify(paquet.slice().sort()));
+    check('le paquet garde sa taille', paquet.length === 15);
+
+    const cles = paquet.map(m => m.trim().toLowerCase());
+    check('et ne contient plus aucun doublon', new Set(cles).size === cles.length);
+
+    const nouveaux = cles.filter(m => !saisis.includes(m));
+    log('       mots ajoutes : ' + JSON.stringify(nouveaux));
+    check('quatre mots ont ete tires pour combler', nouveaux.length === 4);
+    check('les mots saisis une seule fois sont tous restes',
+          ['montagne', 'ski', 'hiver', 'pull', 'gants', 'chalet', 'luge', 'neige']
+            .every(m => cles.includes(m)));
+    check('un exemplaire de chaque doublon est reste',
+          ['plage', 'valise', 'soleil'].every(m => cles.includes(m)));
+
+    // Les mots tires viennent des themes officiels, pas de nulle part. On les
+    // lit tous : le tirage pioche dans l ensemble, sans preference de theme.
+    const fichiers = ['personnalites', 'monde-fantastique', 'animaux-insectes',
+                      'histoire', 'films-series'];
+    const vivier = [];
+    for (const nom of fichiers) {
+      const t = await (await fetch(`/themes/${nom}.json`)).json();
+      vivier.push(...t.words.map(m => m.toLowerCase()));
+    }
+    const inconnus = nouveaux.filter(m => !vivier.includes(m));
+    log('       introuvables dans les themes : ' + JSON.stringify(inconnus));
+    check('chaque mot tire sort des themes officiels', inconnus.length === 0);
+
+    log('SCENARIO 38 TERMINE');
+  } catch (e) { log('EXCEPTION: ' + e.message + '\n' + e.stack); }
+});
+</script>
+</body>
+</html>

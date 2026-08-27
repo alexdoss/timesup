@@ -64,6 +64,8 @@ $SCENARIOS = @(
   # Large : quand le tirage met l'organisateur en premier, son tour se joue ici
   # et le chrono doit s'epuiser avant qu'un tour puisse etre confie.
   @{ f = '36-jouer-son-tour.html';                 b = 220000; p = 'aj' }
+  @{ f = '37-doublons-du-paquet.html';             b = 40000;  p = 'ak' }
+  @{ f = '38-doublons-mots-au-hasard.html';        b = 40000;  p = 'al' }
 )
 
 function Resolve-Chrome {

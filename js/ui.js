@@ -734,6 +734,38 @@ export function showDialog({ title, message, confirmLabel = 'OK', cancelLabel = 
   });
 }
 
+// Plusieurs issues, aucune n'étant un « annuler » : on ne peut donc pas sortir
+// de la boîte sans choisir. Ni Échap, ni clic à côté — refermer sans réponse
+// laisserait l'appelant sans savoir quoi faire du paquet.
+// choix : [{ libelle, valeur, principal }] — renvoie la valeur choisie.
+export function showChoices({ title, message, choices }) {
+  const overlay = document.getElementById('choix-overlay');
+  const actions = document.getElementById('choix-actions');
+  if (!overlay || !actions) return Promise.resolve(choices[0]?.valeur ?? null);
+
+  document.getElementById('choix-titre').textContent = title;
+  document.getElementById('choix-message').textContent = message || '';
+  actions.innerHTML = '';
+  overlay.style.display = '';
+
+  return new Promise(resolve => {
+    const fermer = valeur => {
+      overlay.style.display = 'none';
+      actions.innerHTML = '';
+      resolve(valeur);
+    };
+    choices.forEach(choix => {
+      const bouton = document.createElement('button');
+      bouton.type = 'button';
+      bouton.className = choix.principal ? 'btn btn-primary' : 'btn btn-secondary';
+      bouton.textContent = choix.libelle;
+      bouton.addEventListener('click', () => fermer(choix.valeur));
+      actions.appendChild(bouton);
+    });
+    actions.querySelector('button')?.focus();
+  });
+}
+
 export function renderSoundSetting(enabled) {
   document.querySelectorAll('[data-sound]').forEach(pill => {
     pill.classList.toggle('active', (pill.dataset.sound === 'on') === enabled);

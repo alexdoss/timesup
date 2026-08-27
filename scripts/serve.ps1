@@ -279,6 +279,34 @@ function Invoke-FausseSession($corps) {
       return @{ statut = 200; corps = @{ ok = $true } }
     }
 
+    # Combien de fois chaque mot a ete ecrit, sans jamais dire lesquels.
+    # Compte AVANT la fermeture : fermer est sans retour, et l organisateur
+    # doit pouvoir rouvrir la saisie s il n aime pas ce qu il voit.
+    'doublons' {
+      if ($corps.jeton -ne $s.jeton) { return @{ statut = 403; corps = @{ error = "Action reservee a l'organisateur." } } }
+      $parMot = @{}
+      foreach ($j in $s.joueurs.Values) {
+        foreach ($carte in @($j.cartes)) {
+          $cle = ([string]$carte).Trim().ToLower()
+          if ($cle) { $parMot[$cle] = [int]$parMot[$cle] + 1 }
+        }
+      }
+      $parNombre = @{}
+      $saisies = 0
+      foreach ($fois in $parMot.Values) {
+        $saisies += $fois
+        if ($fois -gt 1) { $parNombre[$fois] = [int]$parNombre[$fois] + 1 }
+      }
+      $occurrences = @($parNombre.Keys | Sort-Object | ForEach-Object {
+        [ordered]@{ fois = [int]$_; mots = [int]$parNombre[$_] } })
+      return @{ statut = 200; corps = [ordered]@{
+        occurrences = $occurrences
+        saisies     = $saisies
+        uniques     = $parMot.Count
+        enTrop      = $saisies - $parMot.Count
+      } }
+    }
+
     'fermer' {
       if ($corps.jeton -ne $s.jeton) { return @{ statut = 403; corps = @{ error = "Action reservee a l'organisateur." } } }
       # Inscription : ni attente a surveiller, ni paquet a rapatrier

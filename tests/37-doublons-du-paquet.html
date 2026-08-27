@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head><meta charset="utf-8"><title>Test Rush — les doublons du paquet</title></head>
+<body>
+<pre id="log">demarrage...</pre>
+<div id="hote"></div>
+<script>
+const out = [];
+function log(s) { out.push(s); document.getElementById('log').textContent = out.join('\n'); }
+function check(name, cond) { log((cond ? 'PASS' : 'FAIL') + ' -- ' + name); }
+const wait = ms => new Promise(r => setTimeout(r, ms));
+
+async function api(action, donnees = {}) {
+  const r = await fetch('/api/session', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ action, ...donnees })
+  });
+  return { statut: r.status, corps: await r.json().catch(() => ({})) };
+}
+
+localStorage.removeItem('timesup_partie_en_cours');
+
+const f = document.createElement('iframe');
+f.src = '/';
+f.style.cssText = 'width:420px;height:1000px;border:1px solid #ccc';
+document.getElementById('hote').appendChild(f);
+
+let demarre = false;
+f.addEventListener('load', async () => {
+  if (demarre) return;
+  demarre = true;
+
+  const d = f.contentDocument, w = f.contentWindow;
+  w.onerror = (m, s, l) => log('ERREUR APP: ' + m + ' @' + s + ':' + l);
+  const $ = id => d.getElementById(id);
+  const ecran = () => [...d.querySelectorAll('.screen')].find(s => s.classList.contains('active'))?.id;
+  const etat = () => JSON.parse(w.localStorage.getItem('timesup_partie_en_cours') || 'null')?.state;
+  const boite = () => $('choix-overlay').style.display !== 'none';
+  const actions = () => [...d.querySelectorAll('#choix-actions button')].map(b => b.textContent);
+  const cliquer = texte => {
+    const b = [...d.querySelectorAll('#choix-actions button')].find(x => x.textContent.includes(texte));
+    if (!b) throw new Error('bouton introuvable : ' + texte);
+    b.click();
+  };
+
+  async function invite(code, prenom, cartes) {
+    const r = await api('rejoindre', { code, prenom });
+    await api('deposer', { code, idJoueur: r.corps.idJoueur, cartes, fini: true });
+    return r.corps.idJoueur;
+  }
+
+  // Ouvre une session de saisie partagee et y met des joueurs
+  async function ouvrirSession(cartesParJoueur) {
+    $('btn-start').click();
+    d.querySelector('[data-source="custom"]').click();
+    // On descend jusqu au nombre voulu en lisant le reglage, plutot qu en
+    // supposant sa valeur de depart : un joueur n est « pret » que s il a
+    // depose autant de cartes que la session en attend.
+    for (let i = 0; i < 12; i++) {
+      if (Number($('session-cartes-valeur').textContent) <= cartesParJoueur) break;
+      $('btn-cartes-moins').click();
+    }
+    log('       cartes par joueur : ' + $('session-cartes-valeur').textContent);
+    $('btn-ouvrir-session').click();
+    await wait(900);
+    return $('session-code').textContent.trim();
+  }
+
+  try {
+    await wait(1200);
+
+    // ===== Le serveur compte, sans jamais livrer les mots =====
+    // Session menee a la main : le jeton de celle qu ouvre l app ne quitte
+    // jamais sa memoire, et c est tres bien ainsi.
+    // 3 joueurs x 5 cartes = 15 saisies. « plage » revient 3 fois (dont une en
+    // majuscules : c est le meme mot), « valise » et « soleil » 2 fois chacun.
+    // -> 15 cartes, 11 mots differents, 4 en trop.
+    const ANA  = ['plage', 'valise', 'montagne', 'ski', 'hiver'];
+    const BOB  = ['PLAGE', 'valise', 'soleil', 'pull', 'gants'];
+    const CLEO = ['plage', 'soleil', 'chalet', 'luge', 'neige'];
+
+    const seule = await api('creer', { cartesParJoueur: 5 });
+    const codeSeul = seule.corps.code, jeton = seule.corps.jeton;
+    await invite(codeSeul, 'Ana',  ANA);
+    await invite(codeSeul, 'Bob',  BOB);
+    await invite(codeSeul, 'Cleo', CLEO);
+
+    const compte = (await api('doublons', { code: codeSeul, jeton })).corps;
+    log('       compte : ' + JSON.stringify(compte));
+    check('le serveur compte les cartes saisies', compte.saisies === 15);
+    check('et les mots differents', compte.uniques === 11);
+    check('il en deduit les cartes en trop', compte.enTrop === 4);
+    check('les mots ecrits 2 fois sont groupes',
+          compte.occurrences.find(o => o.fois === 2)?.mots === 2);
+    check('ceux ecrits 3 fois aussi',
+          compte.occurrences.find(o => o.fois === 3)?.mots === 1);
+    check('la casse ne cree pas deux mots',
+          !compte.occurrences.some(o => o.fois === 1));
+    check('aucun mot n est renvoye',
+          !JSON.stringify(compte).toLowerCase().includes('plage'));
+
+    const sansJeton = await api('doublons', { code: codeSeul });
+    check('un invite ne peut pas compter a la place de l organisateur',
+          sansJeton.statut === 403);
+
+    // ===== La meme situation, mais menee depuis l app =====
+    const code = await ouvrirSession(5);
+    log('       session de l app : ' + code);
+    await invite(code, 'Ana',  ANA);
+    await invite(code, 'Bob',  BOB);
+    await invite(code, 'Cleo', CLEO);
+    await wait(2600);
+    log('       vu par l app : "' + $('session-compteur').textContent + '"'
+        + ' · lancer desactive : ' + $('btn-session-lancer').disabled);
+    log('       vu par le serveur : ' + JSON.stringify((await api('etat', { code })).corps.joueurs));
+
+    // ===== La boite s ouvre au « Suivant » =====
+    $('btn-session-lancer').click();
+    await wait(600);
+    // 12 cartes : l app previent d abord que le paquet est court. On confirme.
+    if ($('dialog-overlay').style.display !== 'none') { $('dialog-confirm').click(); await wait(600); }
+    await wait(600);
+    log('       ecran apres Suivant : ' + ecran()
+        + ' · bouton desactive : ' + $('btn-session-lancer').disabled
+        + ' · boite ordinaire : ' + $('dialog-overlay').style.display
+        + ' · titre ordinaire : "' + $('dialog-title').textContent + '"');
+    check('une boite annonce les doublons', boite());
+    log('       titre : "' + $('choix-titre').textContent + '"');
+    log('       texte : "' + $('choix-message').textContent + '"');
+    check('le titre annonce les cartes EN TROP, pas les doublons',
+          $('choix-titre').textContent.includes('4 cartes en trop'));
+    check('le detail dit combien de mots pour chaque nombre d occurrences',
+          $('choix-message').textContent.includes('2 mots ont été écrits 2 fois')
+          && $('choix-message').textContent.includes('1 mot 3 fois'));
+    check('il rappelle la taille du paquet',
+          $('choix-message').textContent.includes('11 mots différents sur 15 cartes'));
+    check('aucun mot du paquet n est affiche',
+          !$('choix-message').textContent.toLowerCase().includes('plage'));
+
+    log('       actions : ' + JSON.stringify(actions()));
+    check('les quatre issues sont proposees', actions().length === 4);
+    check('toutes sont visibles, sans repli',
+          !actions().some(t => t.includes('Autres options')));
+
+    // ===== « Rouvrir la saisie » ne ferme rien =====
+    // C est le seul choix qui a une date limite : apres la fermeture, plus
+    // personne ne peut corriger ses cartes.
+    cliquer('Rouvrir la saisie');
+    await wait(700);
+    check('la boite se referme', !boite());
+    check('on reste sur l ecran de session', ecran() === 'screen-session');
+    const apresRouvrir = (await api('etat', { code })).corps;
+    check('la session est TOUJOURS ouverte', apresRouvrir.ouverte === true);
+    check('les cartes sont intactes', apresRouvrir.total === 15);
+
+    // Un joueur en profite pour corriger : il remplace un doublon
+    const idBob = apresRouvrir.joueurs.find(j => j.prenom === 'Bob').id;
+    await api('deposer', { code, idJoueur: idBob,
+                           cartes: ['tongs', 'valise', 'soleil', 'pull', 'gants'], fini: true });
+    await wait(2600);
+
+    // ===== Deuxieme passage : on nettoie =====
+    $('btn-session-lancer').click();
+    await wait(600);
+    // 12 cartes : l app previent d abord que le paquet est court. On confirme.
+    if ($('dialog-overlay').style.display !== 'none') { $('dialog-confirm').click(); await wait(600); }
+    await wait(600);
+    check('la boite revient, avec le nouveau compte', boite());
+    log('       titre : "' + $('choix-titre').textContent + '"');
+    check('un doublon de moins', $('choix-titre').textContent.includes('3 cartes en trop'));
+
+    cliquer("Ne garder qu'un exemplaire");
+    await wait(1200);
+    check('la configuration reprend', ecran() === 'screen-jeu-mode');
+    const close = (await api('etat', { code })).corps;
+    check('la session est fermee cette fois', close.ouverte === false);
+
+    // Le paquet est deduplique : on le lit une fois la partie lancee
+    d.querySelector('[data-mode="simple"]').click();
+    await wait(300);
+    $('btn-repartition-jouer').click();
+    await wait(300);
+    $('btn-next-rounds').click();
+    $('btn-play').click();
+    await wait(900);
+    if ($('dialog-overlay').style.display !== 'none') { $('dialog-cancel').click(); await wait(700); }
+    const paquet = etat().masterDeck;
+    log('       paquet : ' + JSON.stringify(paquet.slice().sort()));
+    // 15 saisies moins 3 en trop : plage et valise et soleil chacun en double
+    check('le paquet ne garde qu un exemplaire de chaque mot', paquet.length === 12);
+    const cles = paquet.map(m => m.trim().toLowerCase());
+    check('plus aucun doublon dedans', new Set(cles).size === cles.length);
+    check('la casse d origine est conservee telle quelle',
+          paquet.some(m => m === 'plage') && !paquet.includes('PLAGE'));
+
+    log('SCENARIO 37 TERMINE');
+  } catch (e) { log('EXCEPTION: ' + e.message + '\n' + e.stack); }
+});
+</script>
+</body>
+</html>

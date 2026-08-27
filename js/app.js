@@ -7,11 +7,12 @@ import { showScreen, updateTimer, showCard, updateRoundScreen, updateTurnInfo, u
          afficherInvitation, afficherPartageSuivi, afficherInscription, renderInscrits,
          renderSession, renderBoutonMesCartes, renderSaisieLocale,
          showSaisieError, renderRepartition,
-         afficherEquipes, masquerEquipes, afficherBoutonEquipes } from './ui.js';
+         afficherEquipes, masquerEquipes, afficherBoutonEquipes, showChoices } from './ui.js';
 import { activerSuivi, couperSuivi, publierEtat, reprendreVersion } from './suivi.js';
 import { ouvrirSession, ouvrirSuiviSeul, ouvrirInscription, sessionCourante, oublierSession,
          adresseInvitation, adresseLisible,
          inscrire, deposerCartes, retirerJoueur, fermerSession, relancerSession, lireEtat,
+         compterDoublons,
          confierTour, lireTour, reprendreTour, suivreEtat,
          suivre, arreterSuivi } from './session.js';
 import { creerQrSvg } from './qr.js';
@@ -1220,6 +1221,82 @@ async function finirSaisieLocale() {
 // précède désormais l'étape des manches, qui verrouille elle-même les manches
 // trop exigeantes, comme dans une partie ordinaire.
 
+// ===== LES DOUBLONS DU PAQUET =====
+// Deux joueurs ont eu la même idée : la carte sortira deux fois dans la même
+// manche, et la seconde se devine en une seconde. On le dit à l'organisateur
+// avant de figer le paquet — jamais en citant les mots, il joue lui aussi.
+
+// « 4 mots ont été écrits 2 fois, 1 mot 3 fois. »
+function phraseDesDoublons(compte) {
+  const morceaux = compte.occurrences.map(({ fois, mots }, rang) => {
+    const pluriel = mots > 1;
+    const sujet = `${mots} mot${pluriel ? 's' : ''}`;
+    // Seul le premier morceau porte le verbe : la suite s'y accroche.
+    return rang === 0
+      ? `${sujet} ${pluriel ? 'ont' : 'a'} été écrit${pluriel ? 's' : ''} ${fois} fois`
+      : `${sujet} ${fois} fois`;
+  });
+  return `${morceaux.join(', ')}. `
+    + `Il reste ${compte.uniques} mots différents sur ${compte.saisies} cartes saisies.`;
+}
+
+// Ne garder qu'un exemplaire de chaque mot. La comparaison ignore la casse et
+// les espaces, comme la page des invités : « Plage » et « plage » sont le même
+// mot, et deux joueurs les écriront différemment.
+function sansLesDoublons(cartes) {
+  const vues = new Set();
+  return cartes.filter(carte => {
+    const cle = String(carte).trim().toLowerCase();
+    if (vues.has(cle)) return false;
+    vues.add(cle);
+    return true;
+  });
+}
+
+// Remplacer les exemplaires en trop par des mots tirés des thèmes officiels,
+// déjà chargés : le paquet garde sa taille et rien ne dépend du réseau. Ces
+// cartes-là ne viennent de personne — c'est le prix de la taille conservée.
+function avecDesMotsAuHasard(cartes) {
+  const gardees = sansLesDoublons(cartes);
+  const manquantes = cartes.length - gardees.length;
+  if (manquantes === 0) return gardees;
+
+  const dejaPris = new Set(gardees.map(c => String(c).trim().toLowerCase()));
+  const vivier = [];
+  Object.values(THEMES).forEach(theme => {
+    (theme.words || []).forEach(mot => {
+      const cle = String(mot).trim().toLowerCase();
+      if (!dejaPris.has(cle)) { dejaPris.add(cle); vivier.push(mot); }
+    });
+  });
+  return gardees.concat(shuffle(vivier).slice(0, manquantes));
+}
+
+// Renvoie ce qu'il faut faire du paquet : 'avancer', 'nettoyer', 'hasard',
+// ou 'rouvrir' — le seul cas où la session ne doit pas être fermée.
+async function questionDesDoublons() {
+  let compte;
+  try {
+    compte = await compterDoublons();
+  } catch {
+    // Le comptage est un confort : son échec ne doit pas bloquer le lancement.
+    return 'avancer';
+  }
+  if (!compte || !compte.enTrop) return 'avancer';
+
+  const enTrop = compte.enTrop;
+  return showChoices({
+    title: `😅 ${enTrop} carte${enTrop > 1 ? 's' : ''} en trop`,
+    message: phraseDesDoublons(compte),
+    choices: [
+      { libelle: "🧹 Ne garder qu'un exemplaire", valeur: 'nettoyer', principal: true },
+      { libelle: '🎲 Remplacer par des mots au hasard', valeur: 'hasard' },
+      { libelle: '✏️ Rouvrir la saisie des cartes', valeur: 'rouvrir' },
+      { libelle: 'Avancer sans rien changer', valeur: 'avancer' }
+    ]
+  });
+}
+
 // Tout le monde a saisi : on fige le paquet, puis on reprend la configuration.
 // Fermer est irréversible : on vérifie l'effectif AVANT, sinon un refus
 // laisserait une session close que plus personne ne pourrait rejoindre.
@@ -1241,6 +1318,11 @@ async function terminerSaisieEtConfigurer() {
       if (!continuer) return;
     }
 
+    // Les doublons se comptent AVANT la fermeture : c'est ce qui laisse encore
+    // le droit de rouvrir la saisie. Après, le paquet est figé pour de bon.
+    const quoiFaire = await questionDesDoublons();
+    if (quoiFaire === 'rouvrir') return;   // la session reste ouverte, on ne ferme rien
+
     // La session de saisie change de métier : elle servait à collecter les
     // cartes, elle sert maintenant aux invités à suivre la partie. On retient
     // le code avant `oublierSession()`, qui efface tout un peu plus bas.
@@ -1248,7 +1330,10 @@ async function terminerSaisieEtConfigurer() {
     const resultat = await fermerSession();
     arreterSuivi();
     if (sessionFinie) activerSuivi(sessionFinie.code, sessionFinie.jeton);
-    game.customCards = resultat.cartes;
+    game.customCards =
+      quoiFaire === 'nettoyer' ? sansLesDoublons(resultat.cartes)
+      : quoiFaire === 'hasard' ? avecDesMotsAuHasard(resultat.cartes)
+      : resultat.cartes;
 
     // En rejeu, équipes et réglages n'ont pas bougé : on relance directement
     if (modeRejeu) {

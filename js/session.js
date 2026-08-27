@@ -23,6 +23,16 @@ export function oublierSession() {
   courante = null;
 }
 
+// Reprise après un rechargement de page. Le code et le jeton, eux, ont survécu
+// dans le stockage du suivi ; ce module-ci n'a pas de mémoire, et sans cette
+// reprise l'organisateur cesse silencieusement de confier les tours aux
+// téléphones : il se retrouve à pouvoir lancer le tour d'un autre depuis le sien.
+export function reprendreSession(code, jeton) {
+  if (!code || !jeton || courante) return courante;
+  courante = { code, jeton };
+  return courante;
+}
+
 async function appeler(action, donnees = {}) {
   const reponse = await fetch(ROUTE, {
     method: 'POST',

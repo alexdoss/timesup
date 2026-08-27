@@ -66,6 +66,7 @@ $SCENARIOS = @(
   @{ f = '36-jouer-son-tour.html';                 b = 220000; p = 'aj' }
   @{ f = '37-doublons-du-paquet.html';             b = 40000;  p = 'ak' }
   @{ f = '38-doublons-mots-au-hasard.html';        b = 40000;  p = 'al' }
+  @{ f = '39-reprise-apres-rafraichissement.html';   b = 220000; p = 'am' }
 )
 
 function Resolve-Chrome {

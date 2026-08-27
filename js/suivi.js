@@ -58,6 +58,13 @@ export function suiviActif() {
   return !!etat;
 }
 
+// Le code et le jeton de la partie en cours, relus du stockage au chargement.
+// Ce sont les seuls à survivre à un rafraîchissement : le client de session,
+// lui, repart vide et doit les réadopter pour continuer à parler aux téléphones.
+export function sessionSuivie() {
+  return etat ? { code: etat.code, jeton: etat.jeton } : null;
+}
+
 // Appelé quand la partie démarre à partir d'une session de saisie partagée :
 // le code et le jeton sont ceux de cette session, elle sert maintenant à suivre.
 export function activerSuivi(code, jeton) {

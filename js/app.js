@@ -8,12 +8,12 @@ import { showScreen, updateTimer, showCard, updateRoundScreen, updateTurnInfo, u
          renderSession, renderBoutonMesCartes, renderSaisieLocale,
          showSaisieError, renderRepartition,
          afficherEquipes, masquerEquipes, afficherBoutonEquipes, showChoices } from './ui.js';
-import { activerSuivi, couperSuivi, publierEtat, reprendreVersion } from './suivi.js';
+import { activerSuivi, couperSuivi, publierEtat, reprendreVersion, sessionSuivie } from './suivi.js';
 import { ouvrirSession, ouvrirSuiviSeul, ouvrirInscription, sessionCourante, oublierSession,
          adresseInvitation, adresseLisible,
          inscrire, deposerCartes, retirerJoueur, fermerSession, relancerSession, lireEtat,
          confierTour, lireTour, reprendreTour, suivreEtat,
-         suivre, arreterSuivi } from './session.js';
+         suivre, arreterSuivi, reprendreSession } from './session.js';
 import { creerQrSvg } from './qr.js';
 import { creerSablier, svgSablier } from './sablier.js';
 import { getCustomThemes, saveCustomTheme, deleteCustomTheme, generateWithAI, getQuota } from './library.js';
@@ -111,6 +111,13 @@ function resumeGame() {
   restoreInto(game, pendingResume);
   pendingResume = null;
   showResumeOption(null);
+
+  // Le lien avec les téléphones des joueurs ne survit pas au rechargement : il
+  // vit en mémoire, alors que le code et le jeton, eux, sont dans le stockage
+  // du suivi. Sans cette reprise, plus aucun tour n'est confié et l'organisateur
+  // se retrouve à pouvoir lancer le tour d'un autre depuis son propre appareil.
+  const suivie = sessionSuivie();
+  if (suivie) reprendreSession(suivie.code, suivie.jeton);
 
   if (game.turnActive && game.timeLeft > 0 && getCurrentCard()) {
     // Interruption en plein tour : on réaffiche le jeu figé, puis on repasse par le sas 3·2·1

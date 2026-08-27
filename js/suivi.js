@@ -148,7 +148,9 @@ function resume(etape) {
     tour: enTour ? {
       equipe: game.turnTeam,
       joueur: game.nominativeMode ? game.turnPlayer : null,
-      duree: game.turnTime,
+      // La durée réelle du tour, pas le réglage : un tour ouvert sur un report
+      // est plus court, et le sablier des invités doit partir plein.
+      duree: game.turnDuree || game.turnTime,
       // Le temps restant AU MOMENT de la publication. L'invité le rejoue à
       // partir de l'heure du serveur, sans jamais consulter sa propre horloge.
       restant: game.timeLeft

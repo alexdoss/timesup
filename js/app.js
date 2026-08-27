@@ -2,7 +2,7 @@
 // Orchestre les modules et gère les événements
 
 import { loadThemes } from './themes.js';
-import { game, ROUNDS, shuffle, resetGame, replayGame, buildDeck, startNewRound, getCurrentCard, cardFound, cardPassed, switchTeam, isRoundOver, isGameOver, nextRound, getCardsRemaining, addPlayer, removePlayer, assignTeamsRoundRobin, getCurrentPlayer, advancePlayer, getActiveRound, syncChosenTeams, canPass, getPlannedTeamSizes, beginTurn, closeTurn, uncountCard, countCard, getRoundScores, getSessionScores, playerExists, recordRound, getRoundHistory, getPlayerBreakdown, appliquerTourDistant } from './game.js';
+import { game, ROUNDS, shuffle, resetGame, replayGame, buildDeck, startNewRound, getCurrentCard, cardFound, cardPassed, switchTeam, isRoundOver, isGameOver, nextRound, getCardsRemaining, addPlayer, removePlayer, assignTeamsRoundRobin, getCurrentPlayer, advancePlayer, getActiveRound, syncChosenTeams, canPass, getPlannedTeamSizes, beginTurn, closeTurn, reporterLeTempsRestant, uncountCard, countCard, getRoundScores, getSessionScores, playerExists, recordRound, getRoundHistory, getPlayerBreakdown, appliquerTourDistant } from './game.js';
 import { showScreen, updateTimer, showCard, updateRoundScreen, updateTurnInfo, updateGameHeader, showTurnResult, showRoundEnd, showFinalScreen, renderThemeButtons, renderPlayerList, updateCurrentPlayer, renderPlayerStats, renderRoundsSelector, applyTeamAccent, showResumeOption, renderSoundSetting, renderRules, showPauseOverlay, showPauseCountdown, hidePause, showPuppetConfirm, setRoundsNextEnabled, renderThemeEditor, showThemeEditError, renderCustomThemes, showDialog,
          afficherInvitation, afficherPartageSuivi, afficherInscription, renderInscrits,
          renderSession, renderBoutonMesCartes, renderSaisieLocale,
@@ -1875,7 +1875,7 @@ function showRoundScreen() {
   const round = getActiveRound();
   applyTeamAccent(game.teams[game.currentTeam].color);
   updateRoundScreen(round, game.teams, getRoundLabel(), getRoundScores(),
-                    libelleRestantes(getCardsRemaining()));
+                    libelleRestantes(getCardsRemaining()), libelleReport());
   updateTurnInfo(game.teams[game.currentTeam].name);
   updateCurrentPlayer(game.nominativeMode ? getCurrentPlayer() : null);
   afficherBoutonEquipes(game.nominativeMode && game.teams.some(e => e.players.length > 0));
@@ -2010,6 +2010,17 @@ document.getElementById('distant-bloc-chrono')
 function repartirLEcranDeLancement(reparti) {
   const bloc = document.querySelector('#screen-round .round-content');
   if (bloc) bloc.classList.toggle('reparti', reparti);
+}
+
+// L'écran de lancement ne change pas : c'est le même tour, avec un temps plus
+// court. Une ligne suffit à le dire — sans elle, le chrono partirait à 12 s
+// sans que personne comprenne pourquoi.
+function libelleReport() {
+  const s = game.reportTemps;
+  // « Écourté » sonnerait comme une punition : c'est l'inverse, l'équipe a
+  // gagné ce temps en vidant le paquet. Formulation neutre, qui vaut aussi
+  // bien pour une équipe que pour un joueur nommé.
+  return s > 0 ? `⏱️ Temps restant : ${s} s` : '';
 }
 
 // Le libellé du paquet restant, comme sur la page des invités.
@@ -2300,8 +2311,14 @@ function endTurn(paquetVide = false) {
     ? `${game.turnPlayer} (${teamName})`
     : teamName;
 
-  if (game.nominativeMode) advancePlayer();
-  switchTeam();
+  // Paquet vidé avant la fin du temps : la même équipe, et le même joueur,
+  // enchaînent sur la manche suivante avec ce qui reste au chrono. On ne passe
+  // donc la main ni à l'équipe suivante ni au joueur suivant.
+  const reporte = paquetVide ? reporterLeTempsRestant() : 0;
+  if (!reporte) {
+    if (game.nominativeMode) advancePlayer();
+    switchTeam();
+  }
   saveGame(game);
   publierEtat('entre-tours');
   renderTurnEnd();
@@ -2394,7 +2411,7 @@ function endRound() {
       showScreen('screen-final');
     };
   } else {
-    btnNext.textContent = "Manche suivante ▶️";
+    btnNext.textContent = 'Manche suivante ▶️';
     btnNext.onclick = () => {
       nextRound();
       beginRound();

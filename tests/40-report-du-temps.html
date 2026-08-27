@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head><meta charset="utf-8"><title>Test Rush — le temps restant passe à la manche suivante</title></head>
+<body>
+<pre id="log">demarrage...</pre>
+<div id="hote"></div>
+<script>
+const out = [];
+function log(s) { out.push(s); document.getElementById('log').textContent = out.join('\n'); }
+function check(name, cond) { log((cond ? 'PASS' : 'FAIL') + ' -- ' + name); }
+const wait = ms => new Promise(r => setTimeout(r, ms));
+
+localStorage.removeItem('timesup_partie_en_cours');
+
+const f = document.createElement('iframe');
+f.src = '/';
+f.style.cssText = 'width:420px;height:1000px;border:1px solid #ccc';
+document.getElementById('hote').appendChild(f);
+
+let demarre = false;
+f.addEventListener('load', async () => {
+  if (demarre) return;
+  demarre = true;
+
+  const d = f.contentDocument, w = f.contentWindow;
+  w.onerror = (m, s, l) => log('ERREUR APP: ' + m + ' @' + s + ':' + l);
+  const $ = id => d.getElementById(id);
+  const ecran = () => [...d.querySelectorAll('.screen')].find(s => s.classList.contains('active'))?.id;
+  const etat = () => JSON.parse(w.localStorage.getItem('timesup_partie_en_cours') || 'null')?.state;
+
+  try {
+    await wait(1200);
+
+    // ===== Une partie simple, sur un theme =====
+    $('btn-start').click();
+    d.querySelector('[data-source="themes"]').click();
+    d.querySelectorAll('#theme-selector .btn-theme')[0].click();
+    $('btn-next-step').click();
+    d.querySelector('[data-mode="simple"]').click();
+    $('btn-repartition-jouer').click();
+    $('btn-next-rounds').click();
+    $('btn-play').click();
+    // Partie a themes : l app propose de partager le suivi avant de lancer
+    if ($('dialog-overlay').style.display !== 'none') $('dialog-cancel').click();
+    await wait(700);
+    check('la partie demarre', ecran() === 'screen-round');
+
+    const equipeAvant = etat().currentTeam;
+    const duree = etat().turnTime;
+    log('       equipe qui ouvre : ' + equipeAvant + ' · tour de ' + duree + ' s');
+
+    // ===== L equipe vide le paquet avant la fin du temps =====
+    // On enchaine les « Trouve » sans rendre la main : aucune seconde virtuelle
+    // ne s ecoule tant qu on ne rend pas la main au navigateur.
+    $('btn-start-turn').click();
+    check('le tour est lance', ecran() === 'screen-game');
+    // On laisse filer quelques secondes avant de vider le paquet : sinon le
+    // report vaudrait la duree pleine et le test ne prouverait rien.
+    await wait(4000);
+    let coups = 0;
+    while (ecran() === 'screen-game' && coups < 200) { $('btn-found').click(); coups++; }
+    log('       cartes trouvees d affilee : ' + coups + ' · ecran : ' + ecran());
+    check('le paquet se vide avant le chrono', ecran() === 'screen-turn-end');
+    check('l ecran le dit', $('turn-end-title').textContent.includes('Plus de cartes'));
+
+    const apresTour = etat();
+    log('       apres le tour : reste ' + apresTour.timeLeft + ' s · report '
+        + apresTour.reportTemps + ' · equipe ' + apresTour.currentTeam);
+    check('il restait du temps au chrono', apresTour.timeLeft > 0);
+    check('ce temps est mis de cote pour la manche suivante',
+          apresTour.reportTemps === apresTour.timeLeft);
+    check('la main NE passe PAS a l autre equipe',
+          apresTour.currentTeam === equipeAvant);
+
+    // ===== La manche s acheve, la suivante reprend avec ce temps =====
+    $('btn-next-turn').click();
+    await wait(400);
+    check('on arrive sur la fin de manche', ecran() === 'screen-round-end');
+    // Rien de special sur ce bouton : c est une manche suivante ordinaire.
+    check('le bouton de manche suivante reste celui de toujours',
+          $('btn-next-round').textContent.includes('Manche suivante'));
+
+    $('btn-next-round').click();
+    await wait(400);
+    check('on ouvre la manche suivante', ecran() === 'screen-round');
+    check('c est la manche 2', etat().currentRound === 1);
+    check('la meme equipe reprend la main', etat().currentTeam === equipeAvant);
+    log('       mention : "' + $('report-temps').textContent + '"');
+    check('l ecran de lancement annonce le temps repris',
+          $('report-temps').textContent.includes(String(apresTour.reportTemps)));
+    // « Ecourte » sonnerait comme une punition : l equipe a gagne ce temps.
+    check('sans donner l impression d une sanction',
+          !$('report-temps').textContent.includes('court'));
+
+    // ===== Le tour repart sur les secondes restantes, pas sur un tour plein =====
+    $('btn-start-turn').click();
+    const enJeu = etat();
+    log('       chrono au depart : ' + enJeu.timeLeft + ' s (tour plein : ' + duree + ' s)');
+    check('le tour demarre sur le temps reporte', enJeu.timeLeft === apresTour.reportTemps);
+    check('et pas sur un tour plein', enJeu.timeLeft < duree);
+    check('le chrono affiche la meme chose', $('timer').textContent === String(enJeu.timeLeft));
+    check('le report est consomme, pas rejoue', !enJeu.reportTemps);
+
+    // ===== Un tour ordinaire retrouve sa duree pleine =====
+    // On laisse le chrono s epuiser : le tour suivant ne doit pas heriter
+    // du report deja consomme.
+    let n = 0;
+    while (ecran() === 'screen-game' && n++ < 90) await wait(1000);
+    check('le tour finit par le temps ecoule', ecran() === 'screen-turn-end');
+    check('rien n est reporte quand c est le temps qui manque', !etat().reportTemps);
+    $('btn-next-turn').click();
+    await wait(400);
+    $('btn-start-turn').click();
+    log('       tour suivant : ' + etat().timeLeft + ' s');
+    check('le tour suivant repart sur une duree pleine', etat().timeLeft === duree);
+
+    log('SCENARIO 40 TERMINE');
+  } catch (e) { log('EXCEPTION: ' + e.message + '\n' + e.stack); }
+});
+</script>
+</body>
+</html>

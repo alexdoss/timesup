@@ -28,9 +28,20 @@ document.getElementById('f').addEventListener('load', async () => {
     $('btn-add-player').click();
   }
 
-  // Un tour suffit a vider le paquet : chaque manche a donc un seul marqueur,
-  // et un marqueur different a chaque fois puisque le tour tourne.
+  // Deux tours par manche, comme dans une vraie partie : le premier s epuise
+  // sans rien marquer, le second vide ce qui reste. Un seul marqueur par manche
+  // donc, et un marqueur different a chaque fois puisque le tour tourne.
+  //
+  // Le premier tour compte : sans lui, le meme joueur viderait tous les paquets
+  // d un souffle et garderait la main de manche en manche — c est la regle du
+  // report du temps, et elle donnerait un tableau a un seul marqueur.
   async function jouerLaManche() {
+    $('btn-start-turn').click();
+    let secondes = 0;
+    while (ecran() === 'screen-game' && secondes++ < 90) await wait(1000);
+    $('btn-next-turn').click();
+    await wait(200);
+
     $('btn-start-turn').click();
     let clics = 0;
     while (ecran() === 'screen-game' && clics < 300) { $('btn-found').click(); clics++; }

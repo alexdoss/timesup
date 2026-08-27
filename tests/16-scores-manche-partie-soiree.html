@@ -84,8 +84,15 @@ document.getElementById('f').addEventListener('load', async () => {
     log('       rappel du total : "' + $('round-total').textContent + '"');
     check('mais rappelle le total de la partie',
           parseInt(rappel[1], 10) === total1[0] && parseInt(rappel[2], 10) === total1[1]);
+    // Ici le paquet est vide d un seul souffle, sans qu une seconde s ecoule :
+    // l equipe garde donc la main sur la manche suivante avec tout son temps.
+    // C est la regle du report — vider le paquet avant la fin du temps ne fait
+    // pas perdre les secondes gagnees. L alternance, elle, reprend des qu un
+    // tour s acheve sur le chrono (scenario 40).
     const ouvre2 = equipeQuiJoue();
-    check('la manche 2 est ouverte par l autre equipe', ouvre2 === 1 - ouvre1);
+    check('l equipe qui a vide le paquet garde la main sur la manche 2',
+          ouvre2 === ouvre1);
+    check('avec le temps qu il lui restait', sauvegarde().state.timeLeft > 0);
     await jouerLaManche();
     total1[ouvre2] += paquet;
     check('fin de la manche 2', ecran() === 'screen-round-end');
@@ -101,17 +108,21 @@ document.getElementById('f').addEventListener('load', async () => {
     check('la precedente est passee en retrait',
           lignesManches()[0].classList.contains('manche-passee'));
 
-    // --- Manche 3 : la rotation ramene la premiere equipe ---
+    // --- Manche 3 : meme cause, meme effet ---
     $('btn-next-round').click();
     const ouvre3 = equipeQuiJoue();
-    check('la manche 3 revient a l equipe qui a ouvert la partie', ouvre3 === ouvre1);
+    check('la manche 3 revient encore a celle qui vide les paquets', ouvre3 === ouvre1);
     await jouerLaManche();
     total1[ouvre3] += paquet;
     check('fin de la manche 3', ecran() === 'screen-round-end');
     check('les totaux atteignent trois manches',
           scorePartie(0) === total1[0] && scorePartie(1) === total1[1]);
     check('le paquet complet a ete distribue', total1[0] + total1[1] === paquet * 3);
-    check('personne n a ouvert les trois manches', total1[0] > 0 && total1[1] > 0);
+    // Cas limite, propre au test : personne ne vide un paquet de 30 cartes en
+    // zero seconde dans une vraie partie. Il verifie surtout que le cumul suit
+    // l equipe qui marque, manche apres manche.
+    check('tout est alle a l equipe qui a vide les trois paquets',
+          total1[ouvre1] === paquet * 3 && total1[1 - ouvre1] === 0);
     check('les trois manches sont detaillees', lignesManches().length === 3);
     check('leur somme vaut exactement le total',
           sommeDesManches(0) === scorePartie(0) && sommeDesManches(1) === scorePartie(1));

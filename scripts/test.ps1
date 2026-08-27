@@ -50,7 +50,7 @@ $SCENARIOS = @(
   @{ f = '22-reprise-puis-nouvelle-partie.html';   b = 20000; p = 'v' }
   @{ f = '23-cartes-remises-en-jeu.html';          b = 20000; p = 'w' }
   @{ f = '24-rejouer-cartes-perso.html';           b = 45000; p = 'x' }
-  @{ f = '25-detail-par-joueur.html';              b = 30000; p = 'y' }
+  @{ f = '25-detail-par-joueur.html';              b = 200000; p = 'y' }
   @{ f = '26-suivi-de-partie.html';                b = 15000; p = 'z' }
   @{ f = '27-publication-du-suivi.html';           b = 40000; p = 'aa' }
   @{ f = '28-invite-suit-la-salle-d-attente.html'; b = 25000; p = 'ab' }
@@ -67,6 +67,7 @@ $SCENARIOS = @(
   @{ f = '37-doublons-du-paquet.html';             b = 40000;  p = 'ak' }
   @{ f = '38-doublons-mots-au-hasard.html';        b = 40000;  p = 'al' }
   @{ f = '39-reprise-apres-rafraichissement.html';   b = 220000; p = 'am' }
+  @{ f = '40-report-du-temps.html';                 b = 200000; p = 'an' }
 )
 
 function Resolve-Chrome {

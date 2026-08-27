@@ -53,6 +53,10 @@ export const game = {
   gamesPlayed: 0,          // nombre de parties déjà terminées dans la série en cours
   timerInterval: null,
   timeLeft: 0,
+  // Secondes gagnées par l'équipe qui a vidé le paquet avant la fin du temps :
+  // elles ouvrent la manche suivante au lieu d'être perdues. Voir reporterLeTempsRestant().
+  reportTemps: 0,
+  turnDuree: 0,            // durée réelle du tour en cours : un tour reporté est plus court
   turnActive: false,       // un tour est en cours (sert à reprendre une partie interrompue en plein tour)
   // Le tour qui vient de s'achever est encore corrigeable : ses cartes trouvées
   // et passées sont toujours en mémoire. Elles s'effacent au tour suivant, et
@@ -86,6 +90,8 @@ export function resetGame({ keepSession = false } = {}) {
   game.turnPlayer = null;
   game.roundStartScores = [0, 0];
   game.roundHistory = [];
+  game.reportTemps = 0;
+  game.turnDuree = 0;
   if (!keepSession) {
     game.sessionScores = [0, 0];
     game.gamesPlayed = 0;
@@ -340,8 +346,27 @@ export function beginTurn() {
   game.turnMissed = [];
   game.turnTeam = game.currentTeam;
   game.turnPlayer = getCurrentPlayer();
-  game.timeLeft = game.turnTime;
+  // Une manche ouverte sur un report reprend le temps qui restait, pas un tour
+  // plein. Le report ne sert qu'une fois : on le consomme ici.
+  game.timeLeft = game.reportTemps > 0 ? game.reportTemps : game.turnTime;
+  game.reportTemps = 0;
+  // La durée réelle, pour le sablier des invités : un tour reporté est plus
+  // court, et son décompte doit partir plein plutôt qu'à moitié entamé.
+  game.turnDuree = game.timeLeft;
   game.turnActive = true;
+}
+
+// Le paquet s'est vidé avant la fin du temps : l'équipe garde la main sur la
+// manche suivante, avec les secondes qu'il lui restait. Aller vite doit
+// rapporter quelque chose — sinon le temps gagné est simplement perdu, et
+// l'équipe suivante repart avec un tour plein.
+//
+// Rien à reporter sur la dernière manche : la partie s'achève avec elle.
+// Renvoie les secondes reportées, 0 s'il n'y a rien à reporter.
+export function reporterLeTempsRestant() {
+  if (game.timeLeft <= 0 || isGameOver()) return 0;
+  game.reportTemps = game.timeLeft;
+  return game.reportTemps;
 }
 
 // Clôture du tour : la carte restée à l'écran a été vue, elle est rattrapable,

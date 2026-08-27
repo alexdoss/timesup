@@ -369,50 +369,6 @@ async function fermer(req, res, session, code) {
   return res.status(200).json({ cartes, joueurs: detailJoueurs(session) });
 }
 
-// Combien de fois chaque mot a-t-il été écrit — sans jamais dire lesquels.
-// C'est le serveur qui compte, et pour deux raisons :
-//   — l'organisateur joue lui aussi : lui livrer les mots en double lui
-//     donnerait des cartes d'avance ;
-//   — surtout, on peut alors compter AVANT de fermer la session. Fermer est
-//     sans retour, et découvrir les doublons une fois le paquet figé
-//     interdirait de redemander quoi que ce soit aux joueurs.
-function compterLesDoublons(session) {
-  const parMot = new Map();
-  Object.values(session.joueurs).forEach(joueur => {
-    (joueur.cartes || []).forEach(carte => {
-      // Même normalisation que la page des invités : « Plage » et « plage »
-      // sont le même mot, et deux joueurs les écriront différemment.
-      const cle = String(carte).trim().toLowerCase();
-      if (cle) parMot.set(cle, (parMot.get(cle) || 0) + 1);
-    });
-  });
-
-  const parNombre = new Map();
-  let saisies = 0;
-  parMot.forEach(fois => {
-    saisies += fois;
-    if (fois > 1) parNombre.set(fois, (parNombre.get(fois) || 0) + 1);
-  });
-
-  const occurrences = [...parNombre.entries()]
-    .map(([fois, mots]) => ({ fois, mots }))
-    .sort((a, b) => a.fois - b.fois);
-
-  return {
-    occurrences,
-    saisies,
-    uniques: parMot.size,
-    enTrop: saisies - parMot.size
-  };
-}
-
-async function doublons(req, res, session) {
-  if (req.body.jeton !== session.config.jeton) {
-    return res.status(403).json({ error: "Action réservée à l'organisateur." });
-  }
-  return res.status(200).json(compterLesDoublons(session));
-}
-
 // L'identifiant accompagne le prénom : c'est lui qui permettra plus tard de
 // confier un tour au bon téléphone. Sans lui, l'organisateur ne saurait pas
 // qui joindre — un prénom ne désigne aucun appareil.
@@ -698,7 +654,6 @@ export default async function handler(req, res) {
       case 'rejoindre': return await rejoindre(req, res, session, code);
       case 'deposer':   return await deposer(req, res, session, code);
       case 'retirer':   return await retirer(req, res, session, code);
-      case 'doublons':  return await doublons(req, res, session);
       case 'fermer':    return await fermer(req, res, session, code);
       case 'relancer':  return await relancer(req, res, session, code);
       default:          return res.status(400).json({ error: 'Action inconnue.' });

@@ -155,13 +155,6 @@ export function reprendreTour() {
   return appeler('reprendreTour', { code: courante.code, jeton: courante.jeton });
 }
 
-// Combien de fois chaque mot a été écrit — le serveur compte, et ne renvoie que
-// des nombres. Interrogé AVANT la fermeture : c'est ce qui laisse à
-// l'organisateur la possibilité de rouvrir la saisie s'il n'aime pas le compte.
-export function compterDoublons() {
-  return appeler('doublons', { code: courante.code, jeton: courante.jeton });
-}
-
 // Ferme la session et récupère enfin les cartes : c'est le seul appel qui les rapatrie.
 export function fermerSession() {
   return appeler('fermer', { code: courante.code, jeton: courante.jeton });

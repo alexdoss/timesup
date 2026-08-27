@@ -12,7 +12,6 @@ import { activerSuivi, couperSuivi, publierEtat, reprendreVersion } from './suiv
 import { ouvrirSession, ouvrirSuiviSeul, ouvrirInscription, sessionCourante, oublierSession,
          adresseInvitation, adresseLisible,
          inscrire, deposerCartes, retirerJoueur, fermerSession, relancerSession, lireEtat,
-         compterDoublons,
          confierTour, lireTour, reprendreTour, suivreEtat,
          suivre, arreterSuivi } from './session.js';
 import { creerQrSvg } from './qr.js';
@@ -1272,29 +1271,55 @@ function avecDesMotsAuHasard(cartes) {
   return gardees.concat(shuffle(vivier).slice(0, manquantes));
 }
 
-// Renvoie ce qu'il faut faire du paquet : 'avancer', 'nettoyer', 'hasard',
-// ou 'rouvrir' — le seul cas où la session ne doit pas être fermée.
-async function questionDesDoublons() {
-  let compte;
-  try {
-    compte = await compterDoublons();
-  } catch {
-    // Le comptage est un confort : son échec ne doit pas bloquer le lancement.
-    return 'avancer';
-  }
-  if (!compte || !compte.enTrop) return 'avancer';
+// Compte les occurrences du paquet reçu. Le comptage se fait ici, et non sur le
+// serveur : une fois la session fermée, l'app détient les cartes de toute façon.
+// Elle n'en montre aucune — l'organisateur joue, et lire les doublons lui
+// donnerait des cartes d'avance.
+function compterLesDoublons(cartes) {
+  const parMot = new Map();
+  cartes.forEach(carte => {
+    const cle = String(carte).trim().toLowerCase();
+    if (cle) parMot.set(cle, (parMot.get(cle) || 0) + 1);
+  });
 
-  const enTrop = compte.enTrop;
-  return showChoices({
-    title: `😅 ${enTrop} carte${enTrop > 1 ? 's' : ''} en trop`,
+  const parNombre = new Map();
+  parMot.forEach(fois => {
+    if (fois > 1) parNombre.set(fois, (parNombre.get(fois) || 0) + 1);
+  });
+
+  return {
+    occurrences: [...parNombre.entries()]
+      .map(([fois, mots]) => ({ fois, mots }))
+      .sort((a, b) => a.fois - b.fois),
+    saisies: cartes.length,
+    uniques: parMot.size,
+    enTrop: cartes.length - parMot.size
+  };
+}
+
+// Renvoie le paquet à jouer : inchangé, nettoyé, ou complété au hasard.
+// Rien à décider quand il n'y a pas de doublon — la boîte ne s'ouvre pas.
+//
+// Il n'y a délibérément pas d'option « rouvrir la saisie » : redemander leurs
+// cartes aux joueurs n'offre aucune garantie que la seconde fournée soit
+// meilleure, et fait recommencer tout le monde pour rien.
+async function paquetSansMauvaiseSurprise(cartes) {
+  const compte = compterLesDoublons(cartes);
+  if (!compte.enTrop) return cartes;
+
+  const choix = await showChoices({
+    title: `😅 ${compte.enTrop} carte${compte.enTrop > 1 ? 's' : ''} en trop`,
     message: phraseDesDoublons(compte),
     choices: [
       { libelle: "🧹 Ne garder qu'un exemplaire", valeur: 'nettoyer', principal: true },
       { libelle: '🎲 Remplacer par des mots au hasard', valeur: 'hasard' },
-      { libelle: '✏️ Rouvrir la saisie des cartes', valeur: 'rouvrir' },
       { libelle: 'Avancer sans rien changer', valeur: 'avancer' }
     ]
   });
+
+  if (choix === 'nettoyer') return sansLesDoublons(cartes);
+  if (choix === 'hasard') return avecDesMotsAuHasard(cartes);
+  return cartes;
 }
 
 // Tout le monde a saisi : on fige le paquet, puis on reprend la configuration.
@@ -1318,11 +1343,6 @@ async function terminerSaisieEtConfigurer() {
       if (!continuer) return;
     }
 
-    // Les doublons se comptent AVANT la fermeture : c'est ce qui laisse encore
-    // le droit de rouvrir la saisie. Après, le paquet est figé pour de bon.
-    const quoiFaire = await questionDesDoublons();
-    if (quoiFaire === 'rouvrir') return;   // la session reste ouverte, on ne ferme rien
-
     // La session de saisie change de métier : elle servait à collecter les
     // cartes, elle sert maintenant aux invités à suivre la partie. On retient
     // le code avant `oublierSession()`, qui efface tout un peu plus bas.
@@ -1330,10 +1350,9 @@ async function terminerSaisieEtConfigurer() {
     const resultat = await fermerSession();
     arreterSuivi();
     if (sessionFinie) activerSuivi(sessionFinie.code, sessionFinie.jeton);
-    game.customCards =
-      quoiFaire === 'nettoyer' ? sansLesDoublons(resultat.cartes)
-      : quoiFaire === 'hasard' ? avecDesMotsAuHasard(resultat.cartes)
-      : resultat.cartes;
+    // Le paquet arrive tel que les joueurs l'ont écrit, doublons compris :
+    // l'organisateur décide de ce qu'on en fait avant que la partie s'ouvre.
+    game.customCards = await paquetSansMauvaiseSurprise(resultat.cartes);
 
     // En rejeu, équipes et réglages n'ont pas bougé : on relance directement
     if (modeRejeu) {

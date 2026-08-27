@@ -156,8 +156,11 @@ function Invoke-FausseSession($corps) {
     if (([string]$corps.idJoueur) -ne $t.idJoueur) {
       return @{ statut = 403; corps = @{ error = "Ce tour n'est pas le tien." } }
     }
+    # restant : les secondes qui restaient quand le paquet s est vide. Elles
+    # ouvriront la manche suivante, pour la meme equipe.
     $t.rendu = [ordered]@{
       trouvees = @($corps.trouvees); manquees = @($corps.manquees)
+      restant = [Math]::Max(0, [int]($corps.restant ?? 0))
       renduA = (Get-HorodatageMs) }
     return @{ statut = 200; corps = @{ rendu = $true } }
   }

@@ -363,10 +363,15 @@ export function beginTurn() {
 //
 // Rien à reporter sur la dernière manche : la partie s'achève avec elle.
 // Renvoie les secondes reportées, 0 s'il n'y a rien à reporter.
-export function reporterLeTempsRestant() {
-  if (game.timeLeft <= 0 || isGameOver()) return 0;
-  game.reportTemps = game.timeLeft;
-  return game.reportTemps;
+//
+// `secondes` n'est fourni que pour un tour joué sur le téléphone d'un joueur :
+// c'est lui qui tenait le chrono, et il renvoie ce qu'il restait avec son
+// comptage. Sur cet appareil-ci, c'est `game.timeLeft` qui fait foi.
+export function reporterLeTempsRestant(secondes = game.timeLeft) {
+  const restant = Math.max(0, Math.floor(Number(secondes) || 0));
+  if (restant <= 0 || isGameOver()) return 0;
+  game.reportTemps = restant;
+  return restant;
 }
 
 // Clôture du tour : la carte restée à l'écran a été vue, elle est rattrapable,

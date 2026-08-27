@@ -1137,7 +1137,11 @@ async function validerMonComptage() {
   try {
     await appeler('rendreTour', {
       code: session.code, idJoueur: session.idJoueur,
-      trouvees: p.trouvees, manquees: p.manquees
+      trouvees: p.trouvees, manquees: p.manquees,
+      // Le paquet vidé avant la fin du temps : les secondes qui restaient
+      // ouvrent la manche suivante, pour la même équipe. C'est ce téléphone
+      // qui tenait le chrono, personne d'autre ne connaît ce nombre.
+      restant: p.paquetVide ? Math.max(0, Math.round(p.restant)) : 0
     });
   } catch {
     // Hors ligne : le tour est joué, l'organisateur reprendra la main

@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head><meta charset="utf-8"><title>Test Rush — le temps restant passe à la manche suivante, depuis un téléphone</title></head>
+<body>
+<pre id="log">demarrage...</pre>
+<div id="hote" style="display:flex;gap:8px"></div>
+<script>
+const out = [];
+function log(s) { out.push(s); document.getElementById('log').textContent = out.join('\n'); }
+function check(name, cond) { log((cond ? 'PASS' : 'FAIL') + ' -- ' + name); }
+const wait = ms => new Promise(r => setTimeout(r, ms));
+
+async function api(action, donnees = {}) {
+  const r = await fetch('/api/session', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ action, ...donnees })
+  });
+  return { statut: r.status, corps: await r.json().catch(() => ({})) };
+}
+
+function cadre(src, largeur) {
+  const f = document.createElement('iframe');
+  f.src = src;
+  f.style.cssText = `width:${largeur}px;height:1000px;border:1px solid #ccc`;
+  document.getElementById('hote').appendChild(f);
+  return new Promise(r => f.addEventListener('load', () => r(f), { once: true }));
+}
+
+localStorage.removeItem('timesup_partie_en_cours');
+localStorage.removeItem('timesup_suivi');
+localStorage.removeItem('timesup_rejoint');
+
+(async () => {
+  try {
+    const app = await cadre('/', 400);
+    const da = app.contentDocument, wa = app.contentWindow;
+    wa.onerror = (m, s, l) => log('ERREUR APP: ' + m + ' @' + s + ':' + l);
+    const A = id => da.getElementById(id);
+    const ecranApp = () => [...da.querySelectorAll('.screen')].find(s => s.classList.contains('active'))?.id;
+    const etat = () => JSON.parse(wa.localStorage.getItem('timesup_partie_en_cours') || 'null')?.state;
+    await wait(1200);
+
+    // ===== Partie a themes, nominative, inscription par QR =====
+    A('btn-start').click();
+    da.querySelector('[data-source="themes"]').click();
+    da.querySelectorAll('#theme-selector .btn-theme')[0].click();
+    A('btn-next-step').click();
+    da.querySelector('[data-mode="nominatif"]').click();
+    await wait(900);
+    const code = A('inscription-code').textContent.trim();
+    log('       session : ' + code);
+
+    A('inscription-moi-prenom').value = 'Admin';
+    A('btn-inscription-moi-ok').click();
+    await wait(700);
+    const ids = {};
+    for (const p of ['Marc', 'Sacha', 'Nour']) {
+      ids[p] = (await api('rejoindre', { code, prenom: p })).corps.idJoueur;
+    }
+    await wait(2600);
+
+    A('btn-inscription-suivant').click();
+    await wait(900);
+    A('btn-repartition-jouer').click();
+    await wait(400);
+    A('btn-next-rounds').click();
+    A('btn-play').click();
+    await wait(900);
+    check('la partie demarre', ecranApp() === 'screen-round');
+
+    // Si le paquet reste ici, on joue le tour pour passer la main a un telephone
+    if (A('btn-start-turn').style.display !== 'none'
+        && A('attente-du-joueur').style.display === 'none') {
+      log('       tour de l organisateur : on le joue');
+      A('btn-start-turn').click();
+      let n = 0;
+      while (ecranApp() === 'screen-game' && n++ < 60) await wait(1000);
+      A('btn-next-turn').click();
+      await wait(900);
+    }
+
+    const tour = (await api('lireTour', { code })).corps.tour;
+    check('un tour est confie a un telephone', !!tour);
+    const prenomQuiJoue = Object.keys(ids).find(p => ids[p] === tour.idJoueur);
+    log('       le paquet part chez : ' + prenomQuiJoue);
+    const equipeAvant = etat().currentTeam;
+    const dureeReglee = etat().turnTime;
+
+    // ===== Le joueur ouvre sa page =====
+    const amorce = await cadre('/rejoindre.html?c=' + code, 380);
+    await wait(600);
+    amorce.contentWindow.localStorage.setItem('timesup_rejoint', JSON.stringify({
+      code, idJoueur: tour.idJoueur, prenom: prenomQuiJoue,
+      cartes: [], cartesParJoueur: 5, mode: 'nominatif', fini: true, inscription: true
+    }));
+    const tel = await cadre('/rejoindre.html', 380);
+    amorce.remove();
+    const dj = tel.contentDocument, wj = tel.contentWindow;
+    wj.onerror = (m, s, l) => log('ERREUR JOUEUR: ' + m + ' @' + s + ':' + l);
+    const J = id => dj.getElementById(id);
+    const ecranJ = () => [...dj.querySelectorAll('.screen')].find(s => s.classList.contains('active'))?.id;
+    await wait(3200);
+    check('son telephone annonce que c est a lui', J('bloc-a-toi').style.display !== 'none');
+
+    // ===== Il vide le paquet avant la fin du temps =====
+    J('btn-atoi-lancer').click();
+    await wait(400);
+    check('il joue sur son telephone', ecranJ() === 'screen-mon-tour');
+    // Quelques secondes s ecoulent : sans elles le report vaudrait la duree
+    // pleine et le test ne prouverait rien.
+    await wait(5000);
+    const avantVidage = parseInt(J('mon-timer').textContent, 10);
+    log('       chrono avant de vider le paquet : ' + avantVidage + ' s');
+    let coups = 0;
+    while (ecranJ() === 'screen-mon-tour' && coups < 200) { J('btn-mon-found').click(); coups++; }
+    log('       cartes trouvees : ' + coups + ' · ecran : ' + ecranJ());
+    check('vider le paquet le mene au comptage', ecranJ() === 'screen-mon-comptage');
+    check('l ecran dit que c est le paquet, pas le temps',
+          J('mon-fin-titre').textContent.includes('Plus de cartes'));
+
+    J('btn-mon-comptage-valider').click();
+    await wait(1500);
+
+    // ===== Ce qu il a rendu porte les secondes restantes =====
+    // Avec le jeton de l organisateur : sans lui le serveur ne rend qu une vue
+    // reduite, ou `rendu` n est qu un booleen. C est voulu, et teste au 35.
+    const jeton = JSON.parse(wa.localStorage.getItem('timesup_suivi')).jeton;
+    const rendu = (await api('lireTour', { code, jeton })).corps.tour;
+    log('       tour rendu : ' + JSON.stringify(rendu?.rendu));
+    if (rendu?.rendu) {
+      check('le comptage rendu porte le temps qui restait',
+            typeof rendu.rendu.restant === 'number' && rendu.rendu.restant > 0);
+      check('et ce temps est celui du chrono de son telephone',
+            Math.abs(rendu.rendu.restant - avantVidage) <= 1);
+    } else {
+      log('       (deja applique par l organisateur : verifie plus bas sur la partie)');
+      check('le comptage a ete applique', !!etat());
+    }
+
+    // ===== L organisateur enchaine la manche suivante =====
+    await wait(3500);
+    const apres = etat();
+    log('       apres application : manche ' + (apres.currentRound + 1)
+        + ' · equipe ' + apres.currentTeam + ' · report ' + apres.reportTemps
+        + ' · ecran ' + ecranApp());
+    check('la manche est terminee, on est sur son bilan ou sur la suivante',
+          ecranApp() === 'screen-round-end' || ecranApp() === 'screen-round');
+    check('la main reste a l equipe qui a vide le paquet',
+          apres.currentTeam === equipeAvant);
+    check('le temps restant a ete mis de cote', apres.reportTemps > 0);
+    check('et il est plus court qu un tour plein', apres.reportTemps < dureeReglee);
+
+    if (ecranApp() === 'screen-round-end') { A('btn-next-round').click(); await wait(1200); }
+    check('la manche suivante est ouverte', etat().currentRound === 1);
+    check('par le meme joueur', A('current-player').textContent.includes(prenomQuiJoue));
+    log('       mention : "' + A('report-temps').textContent + '"');
+    check('l ecran de l organisateur annonce le temps repris',
+          A('report-temps').textContent.includes(String(etat().reportTemps)));
+
+    // ===== Et le paquet neuf repart chez le meme joueur, pour ce temps-la =====
+    await wait(1500);
+    const suivant = (await api('lireTour', { code, idJoueur: tour.idJoueur })).corps.tour;
+    log('       nouveau tour confie : ' + (suivant
+      ? suivant.mots.length + ' cartes, ' + suivant.duree + ' s, manche '
+        + suivant.manche.numero
+      : 'aucun'));
+    check('un nouveau tour est confie au meme telephone',
+          !!suivant && suivant.idJoueur === tour.idJoueur && !suivant.rendu);
+    check('avec le paquet de la manche suivante', suivant.manche.numero === 2);
+    check('et la duree reprise, pas un tour plein',
+          suivant.duree === etat().reportTemps && suivant.duree < dureeReglee);
+
+    log('SCENARIO 41 TERMINE');
+  } catch (e) { log('EXCEPTION: ' + e.message + '\n' + e.stack); }
+})();
+</script>
+</body>
+</html>

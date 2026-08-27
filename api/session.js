@@ -582,6 +582,10 @@ async function rendreTour(req, res, code) {
   tour.rendu = {
     trouvees: liste(req.body.trouvees),
     manquees: liste(req.body.manquees),
+    // Secondes restantes quand le paquet s'est vidé avant la fin du temps :
+    // elles ouvriront la manche suivante. Seul ce téléphone les connaît, il
+    // tenait le chrono.
+    restant: Math.max(0, Math.floor(Number(req.body.restant) || 0)),
     renduA: Date.now()
   };
   await commandeKV(['SET', cleTour(code), JSON.stringify(tour), 'EX', DUREE_TOUR_S]);

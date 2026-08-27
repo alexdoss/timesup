@@ -1913,7 +1913,9 @@ async function confierLeTourSiPossible() {
     await confierTour(
       idJoueur,
       game.deck.slice(game.currentCardIndex),
-      game.turnTime,
+      // Une manche ouverte sur un report se joue sur ce qu'il restait, pas sur
+      // un tour plein : le téléphone doit partir avec la bonne durée.
+      game.reportTemps > 0 ? game.reportTemps : game.turnTime,
       { numero: game.currentRound + 1, sur: game.activeRounds.length,
         nom: round.name, icone: round.icon, regle: round.desc }
     );
@@ -2097,9 +2099,14 @@ async function suivreLeTourDistant() {
 // exactement comme après un tour mené depuis cet appareil.
 function appliquerLeTourRendu(rendu) {
   appliquerTourDistant(rendu.trouvees);
-  // Même bascule qu'à la fin d'un tour local : le joueur suivant, puis l'équipe
-  if (game.nominativeMode) advancePlayer();
-  switchTeam();
+  // Même règle qu'à la fin d'un tour joué ici : le joueur qui a vidé le paquet
+  // avant la fin du temps garde la main sur la manche suivante. Les secondes
+  // viennent de son téléphone — c'est lui qui tenait le chrono.
+  const reporte = isRoundOver() ? reporterLeTempsRestant(rendu.restant) : 0;
+  if (!reporte) {
+    if (game.nominativeMode) advancePlayer();
+    switchTeam();
+  }
   saveGame(game);
   afficherAttenteDuJoueur(null);
   onNextTurn();

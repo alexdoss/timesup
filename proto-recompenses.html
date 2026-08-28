@@ -1,0 +1,540 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Rush — récompenses : sons et moments</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root {
+  --fond: #14102B; --fond-halo: #2A1F5C; --surface: #1E1846; --bord: #2E2660;
+  --texte: #FFF6F0; --doux: #A79BD6;
+  --violet: #7C3AED; --violet-clair: #B14BFF; --ambre: #FFB020;
+  --vert: #22C55E; --rouge: #EF4444;
+  --e1: 4px; --e2: 8px; --e3: 16px; --e4: 24px; --e5: 32px; --e6: 48px;
+  --t1: .75rem; --t2: .875rem; --t3: 1rem; --t4: 1.375rem; --t5: 2rem; --t6: 3rem;
+  --r-bloc: 20px; --r-pastille: 100px; --ombre: 0 10px 30px rgba(0,0,0,.35);
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  font-family: 'Outfit', sans-serif;
+  background: radial-gradient(120% 50% at 50% 0%, var(--fond-halo) 0%, var(--fond) 55%);
+  color: var(--texte); padding: var(--e4); line-height: 1.5;
+}
+h1 { font-size: var(--t4); margin-bottom: var(--e1); }
+h2 { font-size: var(--t1); text-transform: uppercase; letter-spacing: .1em;
+     color: var(--ambre); margin: var(--e6) 0 var(--e3); font-weight: 700; }
+.intro { color: var(--doux); font-size: var(--t2); max-width: 900px; }
+.intro strong { color: var(--texte); }
+.rangee { display: flex; gap: var(--e4); flex-wrap: wrap; align-items: flex-start; }
+.cas { width: 320px; display: flex; flex-direction: column; gap: var(--e2); }
+.cas > h3 { font-size: var(--t3); font-weight: 700; }
+.cas > p { font-size: var(--t2); color: var(--doux); }
+.scene {
+  position: relative; overflow: hidden;
+  background: var(--surface); border: 1px solid var(--bord);
+  border-radius: var(--r-bloc); box-shadow: var(--ombre);
+  padding: var(--e4) var(--e3); text-align: center; min-height: 300px;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: var(--e3);
+}
+.btn { font-family: inherit; font-size: var(--t3); font-weight: 700; border: none;
+       border-radius: var(--r-pastille); padding: 13px 18px; cursor: pointer; width: 100%;
+       background: linear-gradient(135deg, var(--violet), var(--violet-clair)); color: #fff;
+       box-shadow: 0 8px 22px rgba(124,58,237,.45); transition: transform 120ms; }
+.btn:active { transform: scale(.97); }
+.btn.plat { background: transparent; border: 1px solid var(--bord); box-shadow: none;
+            color: var(--texte); font-size: var(--t2); font-weight: 600; padding: 10px; }
+.sons { display: grid; grid-template-columns: 1fr 1fr; gap: var(--e2); }
+
+.sur-titre { font-size: var(--t1); font-weight: 700; color: var(--ambre);
+             text-transform: uppercase; letter-spacing: .1em; }
+.titre-moment { font-size: var(--t4); font-weight: 800; }
+.sous { font-size: var(--t2); color: var(--doux); }
+.compte { font-size: 3rem; font-weight: 800; line-height: 1; font-variant-numeric: tabular-nums;
+          background: linear-gradient(180deg, #fff, var(--ambre));
+          -webkit-background-clip: text; background-clip: text; color: transparent; }
+.compte.pousse { animation: pousse 140ms ease-out; }
+@keyframes pousse { 50% { transform: scale(1.14) } }
+
+.tableau { width: 100%; }
+.ligne { display: flex; justify-content: space-between; align-items: center;
+         padding: 10px 12px; border-radius: 12px; font-size: var(--t3);
+         background: rgba(0,0,0,.2); }
+.ligne + .ligne { margin-top: var(--e1); }
+.ligne b { font-variant-numeric: tabular-nums; font-size: var(--t4); }
+.ligne.gagne { background: rgba(255,176,32,.16); color: var(--ambre); font-weight: 800; }
+.ligne.monte { animation: pousse 200ms ease-out; }
+
+.confetti { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }
+.confetti i { position: absolute; top: -14px; width: 8px; height: 12px; border-radius: 2px; opacity: 0; }
+.confetti.tombe i { animation: chute 1500ms ease-in forwards; }
+@keyframes chute { 0% { opacity: 1; transform: translateY(0) rotate(0) } 100% { opacity: 0; transform: translateY(340px) rotate(420deg) } }
+.coupe { font-size: 3rem; }
+.coupe.saute { animation: saute 600ms cubic-bezier(.2,.9,.3,1.6); }
+@keyframes saute { 0% { transform: scale(.4); opacity: 0 } 60% { transform: scale(1.2) } 100% { transform: scale(1) } }
+
+.avis { border-left: 3px solid var(--ambre); padding-left: var(--e3);
+        margin-top: var(--e3); max-width: 900px; }
+.avis h4 { font-size: var(--t3); margin-bottom: var(--e2); }
+.avis p { font-size: var(--t2); color: var(--doux); }
+.avis p + p { margin-top: var(--e2); }
+</style>
+</head>
+<body>
+
+<h1>Récompenses — les sons, et les moments qui les méritent</h1>
+<p class="intro">
+  Tout est généré à la volée avec le moteur audio déjà présent dans Rush : aucun fichier,
+  fonctionne hors ligne. <strong>Mets le son.</strong> La vibration part aussi, elle ne se
+  sentira que sur un téléphone Android.
+</p>
+
+<!-- ════════════════════ LES SONS ════════════════════ -->
+<h2>Six sons pour une carte trouvée</h2>
+<p class="intro">
+  Dix fois par tour, toutes les quatre secondes. La contrainte n'est pas la beauté du son,
+  c'est sa <strong>brièveté</strong> et le fait qu'il ne fatigue pas à la sixième écoute.
+  Appuie plusieurs fois de suite sur chacun — c'est la répétition qui départage.
+</p>
+<div class="rangee">
+  <div class="cas">
+    <div class="scene" style="min-height:auto;padding:var(--e3)">
+      <div class="sons" style="width:100%">
+        <button class="btn plat" onclick="essai('pincee')">1 · Pincé</button>
+        <button class="btn plat" onclick="essai('montee')">2 · Deux notes montantes</button>
+        <button class="btn plat" onclick="essai('bulle')">3 · Bulle</button>
+        <button class="btn plat" onclick="essai('cloche')">4 · Clochette</button>
+        <button class="btn plat" onclick="essai('bois')">5 · Bois</button>
+        <button class="btn plat" onclick="essai('quinte')">6 · Quinte</button>
+      </div>
+    </div>
+    <p><b>1 · Pincé</b> — une note triangulaire très courte. Neutre, ne lasse pas.<br>
+       <b>2 · Montante</b> — deux notes qui grimpent. Sensation de progression, mais deux fois plus long.<br>
+       <b>3 · Bulle</b> — une note qui monte en glissant. Ludique, un peu enfantin.<br>
+       <b>4 · Clochette</b> — un métal clair. Élégant, mais proche du tic du chrono : risque de confusion.<br>
+       <b>5 · Bois</b> — sec et mat, sans hauteur marquée. Discret, se fond dans le bruit d'une pièce.<br>
+       <b>6 · Quinte</b> — deux notes ensemble. Le plus « satisfaisant », et le plus vite envahissant.</p>
+  </div>
+</div>
+
+<!-- ════════════════════ LES MOMENTS ════════════════════ -->
+<h2>Où les chiffres montent</h2>
+
+<div class="rangee">
+
+  <div class="cas">
+    <h3>Au lancement du tour suivant</h3>
+    <p>C'est ici que le joueur découvre <strong>le nouveau total de son équipe</strong> —
+       l'écran de correction ne montrait que le score du tour. Seule l'équipe qui vient de
+       marquer bouge ; l'autre reste figée.</p>
+    <div class="scene">
+      <div class="sur-titre">Score de la manche</div>
+      <div class="tableau">
+        <div class="ligne" id="L1"><span>Les Rapides</span><b id="a1">7</b></div>
+        <div class="ligne" id="L2"><span>Les Malins</span><b id="a2">5</b></div>
+      </div>
+      <div class="sous">Total de la partie : <span id="atot">19 – 16</span></div>
+      <div class="titre-moment" style="font-size:var(--t3)">🎯 Au tour des Malins</div>
+    </div>
+    <button class="btn" onclick="lancementSuivant()">Arriver sur cet écran</button>
+  </div>
+
+  <div class="cas">
+    <h3>À la fin d'une manche — en deux temps</h3>
+    <p><b>1.</b> Sur la ligne de la manche, seule <strong>l'équipe qui vient de finir</strong>
+       monte ; l'autre s'affiche, sans animation — son chiffre n'a pas bougé.
+       <b>2.</b> Puis les deux totaux de la partie montent <strong>ensemble</strong>.</p>
+    <div class="scene">
+      <div class="titre-moment">Fin de la manche 2/3</div>
+      <div class="tableau">
+        <div class="sur-titre" style="text-align:left;margin-bottom:var(--e1)">Cette manche</div>
+        <div class="ligne"><span>Les Rapides</span><b id="m1">0</b></div>
+        <div class="ligne"><span>Les Malins</span><b id="m2">0</b></div>
+        <div class="sur-titre" style="text-align:left;margin:var(--e3) 0 var(--e1)">Total de la partie</div>
+        <div class="ligne"><span>Les Rapides</span><b id="p1">0</b></div>
+        <div class="ligne"><span>Les Malins</span><b id="p2">0</b></div>
+      </div>
+      <div class="sous" id="msous">&nbsp;</div>
+    </div>
+    <button class="btn" onclick="finManche()">Rejouer la fin de manche</button>
+  </div>
+
+  <div class="cas">
+    <h3>Au récapitulatif de fin de partie</h3>
+    <p>Seul <strong>le cumul de la soirée</strong> monte : les totaux de la partie ont déjà
+       grimpé manche après manche, les rejouer n'apprendrait rien. Sur la première partie,
+       il n'y a pas de cumul — l'écran reste sobre, et c'est assumé.</p>
+    <div class="scene" id="scene3">
+      <div class="confetti" id="confetti"></div>
+      <div class="coupe" id="coupe">🏆</div>
+      <div class="titre-moment" id="t3">Les Rapides l'emportent</div>
+      <div class="tableau">
+        <div class="sur-titre" style="text-align:left;margin-bottom:var(--e1)">Cette partie</div>
+        <div class="ligne gagne"><span>Les Rapides</span><b id="v1">34</b></div>
+        <div class="ligne"><span>Les Malins</span><b id="v2">27</b></div>
+        <div class="sur-titre" id="titre-cumul" style="text-align:left;margin:var(--e3) 0 var(--e1)">Cumul de la soirée · 3 parties</div>
+        <div class="ligne" id="lc1"><span>Les Rapides</span><b id="c1">0</b></div>
+        <div class="ligne" id="lc2"><span>Les Malins</span><b id="c2">0</b></div>
+      </div>
+      <div class="sous" id="vsous">&nbsp;</div>
+    </div>
+    <div class="sons">
+      <button class="btn plat" onclick="finPartie(true)">3ᵉ partie — avec cumul</button>
+      <button class="btn plat" onclick="finPartie(false)">1ʳᵉ partie — sans cumul</button>
+    </div>
+  </div>
+
+</div>
+
+<!-- ════════════════════ QUI VOIT QUOI ════════════════════ -->
+<h2>La fin de partie — trois écrans, trois points de vue</h2>
+<p class="intro">
+  Change l'écart, puis relance : <strong>seuls les mots et l'emoji changent</strong>, jamais
+  l'animation. C'est ce qui rend la variation abordable — l'app choisit une phrase, elle
+  ne joue pas une seconde mise en scène.
+  <br><br>
+  L'écran de l'organisateur est posé sur la table : il ne prend pas parti. Les téléphones
+  des invités appartiennent à quelqu'un : en mode nominatif, ils savent de quel côté ils
+  sont. En mode simple, ils affichent l'écran neutre.
+</p>
+<div class="rangee" style="margin-bottom:var(--e3)">
+  <div class="sons" style="width:320px">
+    <button class="btn plat" onclick="ecart('serre')">Écart serré — 2 points</button>
+    <button class="btn plat" onclick="ecart('net')">Écart net — 9 points</button>
+    <button class="btn plat" onclick="ecart('ecrasant')">Écrasant — 21 points</button>
+    <button class="btn" onclick="rejouerFin()">Rejouer les trois</button>
+  </div>
+</div>
+
+<div class="rangee">
+
+  <div class="cas">
+    <h3>Sur la table — l'organisateur</h3>
+    <p>Neutre. Il nomme le vainqueur, il ne s'adresse à personne. C'est le seul écran
+       qui reçoit les confettis.</p>
+    <div class="scene">
+      <div class="confetti" id="cf-table"></div>
+      <div class="coupe" id="cp-table">🏆</div>
+      <div class="titre-moment" id="ti-table">Les Rapides l'emportent</div>
+      <div class="tableau">
+        <div class="ligne gagne"><span>Les Rapides</span><b id="tb1">0</b></div>
+        <div class="ligne"><span>Les Malins</span><b id="tb2">0</b></div>
+      </div>
+      <div class="sous" id="so-table">&nbsp;</div>
+    </div>
+  </div>
+
+  <div class="cas">
+    <h3>Chez un joueur des Rapides</h3>
+    <p>Il sait qu'il a gagné. Même animation, mais la phrase s'adresse à lui.</p>
+    <div class="scene">
+      <div class="confetti" id="cf-gagne"></div>
+      <div class="coupe" id="cp-gagne">🎉</div>
+      <div class="titre-moment" id="ti-gagne">Vous l'emportez !</div>
+      <div class="tableau">
+        <div class="ligne gagne"><span>Ton équipe</span><b id="gb1">0</b></div>
+        <div class="ligne"><span>Les Malins</span><b id="gb2">0</b></div>
+      </div>
+      <div class="sous" id="so-gagne">&nbsp;</div>
+    </div>
+  </div>
+
+  <div class="cas">
+    <h3>Chez un joueur des Malins</h3>
+    <p>Pas de confettis, pas de fanfare — mais pas de silence non plus. On reconnaît la
+       défaite, on donne le chiffre, et on propose la revanche.</p>
+    <div class="scene">
+      <div class="coupe" id="cp-perd">🥲</div>
+      <div class="titre-moment" id="ti-perd">Battus de peu</div>
+      <div class="tableau">
+        <div class="ligne"><span>Ton équipe</span><b id="pb1">0</b></div>
+        <div class="ligne gagne"><span>Les Rapides</span><b id="pb2">0</b></div>
+      </div>
+      <div class="sous" id="so-perd">&nbsp;</div>
+      <button class="btn" style="margin-top:var(--e2)">Revanche</button>
+    </div>
+  </div>
+
+</div>
+
+<!-- ════════════════════ L'AVIS ════════════════════ -->
+<h2>Ce que je recommande, et dans quel ordre</h2>
+<div class="avis">
+  <h4>Une seule animation, trois jeux de mots.</h4>
+  <p><b>Ce qui coûte cher, ce sont les animations ; ce qui ne coûte presque rien, ce sont
+     les mots.</b> Les trois écrans ci-dessus partagent la même mise en scène — les
+     chiffres montent, la coupe saute. Seuls changent l'emoji, le titre et la phrase de
+     fin. C'est ce qui rend la variation par écart et par équipe abordable : l'app choisit
+     une phrase dans un tableau, elle ne joue pas une seconde mise en scène.</p>
+  <p><b>La seule vraie différence entre gagnants et perdants est le retrait.</b> Pas de
+     confettis, pas de fanfare chez celui qui perd — un son plus grave et plus court. Le
+     silence relatif dit le résultat mieux qu'un effet triste, qui sonnerait faux.</p>
+  <p><b>L'ordre que je recommande, du moins risqué au plus :</b><br>
+     <b>1.</b> La phrase qui dépend de l'écart, la même pour tout le monde. Une ligne de
+     code, aucun risque, et c'est déjà 80 % de l'effet — « battus de 2 points » ne se lit
+     pas comme « écrasés de 21 ».<br>
+     <b>2.</b> La distinction gagnant / perdant sur les téléphones des invités, en mode
+     nominatif. L'app sait déjà qui est dans quelle équipe : c'est une condition, pas un
+     chantier. En mode simple, tout le monde voit l'écran neutre.<br>
+     <b>3.</b> Si l'envie persiste, des animations distinctes. Mais on l'évaluera après
+     avoir vu les deux premières à la table — mon pari est qu'elles suffiront.</p>
+</div>
+
+<script>
+let ctx = null;
+function ouvrirAudio() {
+  if (!ctx) { const A = window.AudioContext || window.webkitAudioContext; if (A) ctx = new A(); }
+  if (ctx && ctx.state === 'suspended') ctx.resume();
+}
+function tone({ freq, freq2, type = 'sine', dur, gain = .25, when = 0 }) {
+  if (!ctx) return;
+  const t0 = ctx.currentTime + when;
+  const osc = ctx.createOscillator(), g = ctx.createGain();
+  osc.type = type;
+  osc.frequency.setValueAtTime(freq, t0);
+  if (freq2) osc.frequency.exponentialRampToValueAtTime(freq2, t0 + dur);
+  g.gain.setValueAtTime(.0001, t0);
+  g.gain.exponentialRampToValueAtTime(gain, t0 + .012);
+  g.gain.exponentialRampToValueAtTime(.0001, t0 + dur);
+  osc.connect(g); g.connect(ctx.destination);
+  osc.start(t0); osc.stop(t0 + dur + .05);
+}
+const PARTIELS = [[1,1],[2.0,.55],[2.41,.4],[2.98,.28],[4.5,.14]];
+function bell({ base, dur, gain, when = 0 }) {
+  PARTIELS.forEach(([r, p]) => tone({ freq: base*r, dur: dur*(1-(r-1)*.13), gain: gain*p, when }));
+}
+function vibrer(p) { try { navigator.vibrate && navigator.vibrate(p); } catch {} }
+
+// ═══ les six sons ═══
+const SONS = {
+  pincee:  () => tone({ freq: 880, type: 'triangle', dur: .09, gain: .2 }),
+  montee:  () => { tone({ freq: 660, dur: .07, gain: .18 });
+                   tone({ freq: 990, dur: .1, gain: .18, when: .06 }); },
+  bulle:   () => tone({ freq: 420, freq2: 1180, type: 'sine', dur: .13, gain: .2 }),
+  cloche:  () => bell({ base: 1320, dur: .5, gain: .1 }),
+  bois:    () => { tone({ freq: 300, freq2: 180, type: 'triangle', dur: .05, gain: .3 });
+                   tone({ freq: 1600, type: 'square', dur: .015, gain: .05 }); },
+  quinte:  () => { tone({ freq: 700, type: 'triangle', dur: .11, gain: .13 });
+                   tone({ freq: 1050, type: 'triangle', dur: .11, gain: .11 }); }
+};
+function essai(nom) { ouvrirAudio(); SONS[nom](); vibrer(18); }
+
+// ═══ montée d un compteur ═══
+// Même règle que pour la montée simultanée : le nombre de pas est borné, pour
+// qu une montée dure toujours à peu près le même temps.
+function monter(el, de, a, quand) {
+  if (a <= de) { if (quand) quand(); return; }
+  const nbPas = Math.min(PAS_MAX, a - de);
+  let i = 0, n = de;
+  el.textContent = n;
+  const pas = () => {
+    i += 1;
+    n = Math.min(a, de + Math.round((a - de) * i / nbPas));
+    el.textContent = n;
+    el.parentElement.classList.add('monte');
+    tone({ freq: 520 + i * 40, type: 'triangle', dur: .07, gain: .15 });
+    vibrer(12);
+    setTimeout(() => el.parentElement.classList.remove('monte'), 180);
+    if (n < a) setTimeout(pas, DUREE_PAS);
+    else if (quand) quand();
+  };
+  setTimeout(pas, 250);
+}
+
+// ═══ 1 · lancement du tour suivant ═══
+function lancementSuivant() {
+  ouvrirAudio();
+  document.getElementById('a1').textContent = '7';
+  document.getElementById('a2').textContent = '5';
+  document.getElementById('atot').textContent = '19 – 16';
+  // Seule l equipe qui vient de marquer bouge
+  monter(document.getElementById('a1'), 7, 13, () => {
+    document.getElementById('atot').textContent = '25 – 16';
+  });
+}
+
+// ═══ 2 · fin de manche, en deux temps ═══
+// 1) la ligne de la manche : seule l equipe qui vient de finir monte. L autre
+//    s affiche telle quelle — animer un chiffre qui n a pas bouge brouille le
+//    sens du mouvement.
+// 2) la ligne de la partie : les deux totaux montent ensemble.
+function finManche() {
+  ouvrirAudio();
+  document.getElementById('msous').innerHTML = '&nbsp;';
+  const m1 = document.getElementById('m1'), m2 = document.getElementById('m2');
+  const p1 = document.getElementById('p1'), p2 = document.getElementById('p2');
+  m1.textContent = '0'; p1.textContent = '19'; p2.textContent = '16';
+  m2.textContent = '11';                       // l autre equipe : affichee, pas animee
+
+  [0, .26].forEach(w => bell({ base: 700, dur: .7, gain: .13, when: w }));
+
+  monter(m1, 0, 13, () => {
+    // Temps 2 : les deux totaux de partie, en meme temps
+    setTimeout(() => {
+      monterEnsemble([[p1, 19, 32], [p2, 16, 27]], () => {
+        document.getElementById('msous').textContent = '5 points d’écart — tout se joue encore';
+      });
+    }, 350);
+  });
+}
+
+// Fait monter plusieurs compteurs au meme rythme, une seule note par pas.
+//
+// Le nombre de PAS est borne, pas l increment : une montee doit durer une
+// seconde et demie, qu il s agisse de gagner 6 points ou 96. Sans cette borne,
+// le cumul d une soiree defilerait pendant seize secondes.
+const PAS_MAX = 12;
+const DUREE_PAS = 130;
+
+function monterEnsemble(paires, quand) {
+  const ecart = Math.max(...paires.map(([, de, a]) => a - de));
+  if (ecart <= 0) { if (quand) quand(); return; }
+  const nbPas = Math.min(PAS_MAX, ecart);
+  const restants = paires.map(([el, de, a]) => ({ el, n: de, de, a, i: 0 }));
+  restants.forEach(r => r.el.textContent = r.n);
+
+  const pas = () => {
+    let bouge = false;
+    restants.forEach(r => {
+      if (r.n >= r.a) return;
+      r.i += 1;
+      // On repartit l ecart sur le meme nombre de pas pour tout le monde :
+      // les deux compteurs arrivent ensemble, quelle que soit leur amplitude.
+      r.n = Math.min(r.a, r.de + Math.round((r.a - r.de) * r.i / nbPas));
+      r.el.textContent = r.n;
+      r.el.parentElement.classList.add('monte');
+      bouge = true;
+    });
+    if (!bouge) { if (quand) quand(); return; }
+    tone({ freq: 520 + (restants[0].i * 24), type: 'triangle', dur: .06, gain: .13 });
+    vibrer(12);
+    setTimeout(() => restants.forEach(r => r.el.parentElement.classList.remove('monte')), 160);
+    setTimeout(pas, DUREE_PAS);
+  };
+  setTimeout(pas, 250);
+}
+
+// ═══ 3 · recapitulatif de fin de partie ═══
+// Seul le cumul de la soiree monte. Les totaux de la partie ont deja grimpe
+// manche apres manche : les rejouer n apprendrait rien.
+// Premiere partie de la soiree : il n y a pas de cumul, donc rien ne monte.
+// L ecran reste sobre, et c est assume.
+const COULEURS = ['#FFB020', '#B14BFF', '#22C55E', '#FF7DB0', '#7C3AED'];
+function finPartie(avecCumul) {
+  ouvrirAudio();
+  const boite = document.getElementById('confetti');
+  boite.innerHTML = '';
+  for (let i = 0; i < 34; i++) {
+    const c = document.createElement('i');
+    c.style.left = Math.random() * 100 + '%';
+    c.style.background = COULEURS[i % COULEURS.length];
+    c.style.animationDelay = (Math.random() * .45) + 's';
+    boite.appendChild(c);
+  }
+  boite.classList.remove('tombe'); void boite.offsetWidth; boite.classList.add('tombe');
+  const coupe = document.getElementById('coupe');
+  coupe.classList.remove('saute'); void coupe.offsetWidth; coupe.classList.add('saute');
+
+  [[523, 0], [659, .12], [784, .24]].forEach(([f, w]) =>
+    tone({ freq: f, type: 'triangle', dur: .18, gain: .2, when: w }));
+  bell({ base: 1046, dur: 1.6, gain: .18, when: .4 });
+  vibrer([60, 60, 60, 60, 220]);
+
+  // Les totaux de la partie sont poses, sans animation
+  document.getElementById('v1').textContent = '34';
+  document.getElementById('v2').textContent = '27';
+  document.getElementById('vsous').innerHTML = '&nbsp;';
+
+  const titre = document.getElementById('titre-cumul');
+  const l1 = document.getElementById('lc1'), l2 = document.getElementById('lc2');
+  const afficher = avecCumul ? '' : 'none';
+  titre.style.display = afficher; l1.style.display = afficher; l2.style.display = afficher;
+
+  if (!avecCumul) {
+    setTimeout(() => {
+      document.getElementById('vsous').textContent = '7 points d’écart — la revanche ?';
+    }, 900);
+    return;
+  }
+  monterEnsemble([[document.getElementById('c1'), 0, 96],
+                  [document.getElementById('c2'), 0, 88]], () => {
+    document.getElementById('vsous').textContent = 'Sur la soirée : 8 points d’écart';
+  });
+}
+
+// ═══ 4 · la fin de partie vue par trois personnes ═══
+// Une seule mise en scène, trois jeux de mots. C'est ce qui rend la variation
+// abordable : on choisit une phrase, on ne rejoue pas une animation.
+const ECARTS = {
+  serre:    { gagnant: 34, perdant: 32,
+              table:  { emoji: '🏆', titre: 'Les Rapides l’emportent', sous: '2 points d’écart — ça s’est joué à trois cartes' },
+              gagne:  { emoji: '😮‍💨', titre: 'Vous l’emportez, de justesse', sous: '2 points d’avance — il s’en est fallu de peu' },
+              perd:   { emoji: '🥲', titre: 'Battus de peu', sous: '2 points, soit trois cartes. La revanche ?' } },
+  net:      { gagnant: 34, perdant: 25,
+              table:  { emoji: '🏆', titre: 'Les Rapides l’emportent', sous: '9 points d’écart' },
+              gagne:  { emoji: '🎉', titre: 'Vous l’emportez !', sous: '9 points d’avance' },
+              perd:   { emoji: '🥲', titre: 'C’est passé pour eux', sous: '9 points d’écart — rattrapable en une manche' } },
+  ecrasant: { gagnant: 41, perdant: 20,
+              table:  { emoji: '🏆', titre: 'Démonstration des Rapides', sous: '21 points d’écart' },
+              gagne:  { emoji: '🔥', titre: 'Démonstration !', sous: '21 points d’avance — personne n’a rien pu faire' },
+              perd:   { emoji: '😅', titre: 'On efface et on recommence', sous: '21 points. Il y a des soirs comme ça.' } }
+};
+let ecartChoisi = 'serre';
+function ecart(nom) { ecartChoisi = nom; rejouerFin(); }
+
+function confettis(id) {
+  const boite = document.getElementById(id);
+  boite.innerHTML = '';
+  for (let i = 0; i < 30; i++) {
+    const c = document.createElement('i');
+    c.style.left = Math.random() * 100 + '%';
+    c.style.background = COULEURS[i % COULEURS.length];
+    c.style.animationDelay = (Math.random() * .45) + 's';
+    boite.appendChild(c);
+  }
+  boite.classList.remove('tombe'); void boite.offsetWidth; boite.classList.add('tombe');
+}
+function sauter(id) {
+  const el = document.getElementById(id);
+  el.classList.remove('saute'); void el.offsetWidth; el.classList.add('saute');
+}
+
+function rejouerFin() {
+  ouvrirAudio();
+  const e = ECARTS[ecartChoisi];
+
+  // Les mots
+  document.getElementById('ti-table').textContent = e.table.titre;
+  document.getElementById('cp-table').textContent = e.table.emoji;
+  document.getElementById('ti-gagne').textContent = e.gagne.titre;
+  document.getElementById('cp-gagne').textContent = e.gagne.emoji;
+  document.getElementById('ti-perd').textContent  = e.perd.titre;
+  document.getElementById('cp-perd').textContent  = e.perd.emoji;
+  ['so-table', 'so-gagne', 'so-perd'].forEach(id =>
+    document.getElementById(id).innerHTML = '&nbsp;');
+
+  // La mise en scène — identique chez le gagnant, retirée chez le perdant
+  confettis('cf-table'); confettis('cf-gagne');
+  sauter('cp-table'); sauter('cp-gagne'); sauter('cp-perd');
+
+  // Fanfare pour ceux qui gagnent, deux notes graves et brèves pour l autre
+  [[523, 0], [659, .12], [784, .24]].forEach(([f, w]) =>
+    tone({ freq: f, type: 'triangle', dur: .18, gain: .2, when: w }));
+  bell({ base: 1046, dur: 1.4, gain: .16, when: .4 });
+  tone({ freq: 330, type: 'sine', dur: .3, gain: .1, when: .1 });
+  vibrer([60, 60, 60, 60, 220]);
+
+  const finir = (id, texte) => { document.getElementById(id).textContent = texte; };
+  monter(document.getElementById('tb1'), 0, e.gagnant, () =>
+    monter(document.getElementById('tb2'), 0, e.perdant, () => finir('so-table', e.table.sous)));
+  monter(document.getElementById('gb1'), 0, e.gagnant, () =>
+    monter(document.getElementById('gb2'), 0, e.perdant, () => finir('so-gagne', e.gagne.sous)));
+  monter(document.getElementById('pb1'), 0, e.perdant, () =>
+    monter(document.getElementById('pb2'), 0, e.gagnant, () => finir('so-perd', e.perd.sous)));
+}
+</script>
+</body>
+</html>

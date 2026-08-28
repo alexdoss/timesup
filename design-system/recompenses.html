@@ -1,0 +1,142 @@
+<!-- @dsCard group="Fondations" -->
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<title>Rush — les récompenses</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root {
+  --fond: #14102B; --fond-halo: #2A1F5C; --surface: #1E1846; --bord: #2E2660;
+  --texte: #FFF6F0; --doux: #A79BD6;
+  --violet: #7C3AED; --violet-clair: #B14BFF; --ambre: #FFB020;
+  --vert: #22C55E; --rouge: #EF4444;
+  --e1: 4px; --e2: 8px; --e3: 16px; --e4: 24px; --e5: 32px; --e6: 48px;
+  --t1: .75rem; --t2: .875rem; --t3: 1rem; --t4: 1.375rem; --t5: 2rem;
+  --r-bloc: 20px; --r-pastille: 100px; --ombre: 0 10px 30px rgba(0,0,0,.35);
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  font-family: 'Outfit', sans-serif;
+  background: radial-gradient(120% 60% at 50% 0%, var(--fond-halo) 0%, var(--fond) 55%);
+  color: var(--texte); padding: var(--e4); line-height: 1.5;
+}
+h1 { font-size: var(--t4); margin-bottom: var(--e1); }
+h2 { font-size: var(--t1); text-transform: uppercase; letter-spacing: .1em;
+     color: var(--ambre); margin: var(--e5) 0 var(--e3); font-weight: 700; }
+.note { color: var(--doux); font-size: var(--t2); max-width: 660px; }
+.note + .note { margin-top: var(--e2); }
+.note b, .note strong { color: var(--texte); }
+table { border-collapse: collapse; width: 100%; max-width: 660px; margin-top: var(--e3); }
+th, td { text-align: left; padding: 10px 12px; font-size: var(--t2);
+         border-bottom: 1px solid var(--bord); vertical-align: top; }
+th { font-size: var(--t1); text-transform: uppercase; letter-spacing: .08em;
+     color: var(--ambre); font-weight: 700; }
+td:first-child { white-space: nowrap; font-weight: 600; }
+.regle { background: var(--surface); border: 1px solid var(--bord);
+         border-radius: var(--r-bloc); padding: var(--e3); margin-top: var(--e3);
+         max-width: 660px; }
+.regle b { color: var(--ambre); }
+.plus-tard { border-left: 3px solid var(--bord); padding-left: var(--e3);
+             margin-top: var(--e3); max-width: 660px; }
+</style>
+</head>
+<body>
+
+<h1>Les récompenses</h1>
+<p class="note">
+  Ce que l'app rend au joueur quand il agit. La règle qui gouverne tout le reste :
+  <b>la générosité est inversement proportionnelle à la fréquence</b>. Une carte trouvée
+  arrive toutes les quatre secondes, une fin de tour toutes les deux minutes, une victoire
+  une fois par soirée.
+</p>
+
+<h2>Le son</h2>
+<table>
+  <tr><th>Moment</th><th>Son</th><th>Vibration</th></tr>
+  <tr><td>Carte trouvée</td><td>deux notes qui montent — 660 Hz puis 990 Hz, 130 ms en tout</td><td>18 ms</td></tr>
+  <tr><td>Cinq dernières secondes</td><td>tic aigu, une fois par seconde <em>(existant)</em></td><td>20 ms</td></tr>
+  <tr><td>Fin de tour</td><td>trois coups de cloche <em>(existant)</em></td><td>trois impulsions</td></tr>
+  <tr><td>Chaque point qui monte</td><td>une note, un peu plus haute à chaque pas</td><td>12 ms</td></tr>
+  <tr><td>Victoire</td><td>trois notes montantes puis une cloche tenue</td><td>quatre brèves, une longue</td></tr>
+  <tr><td>Défaite</td><td>une note grave et courte — le retrait, pas un effet triste</td><td>aucune</td></tr>
+</table>
+<p class="note" style="margin-top:var(--e3)">
+  Tout est généré à la volée : aucun fichier audio, l'app reste jouable hors ligne. Le son
+  est le seul retour qui fonctionne quand le joueur regarde ses coéquipiers et non l'écran —
+  c'est-à-dire la moitié du temps.
+</p>
+
+<h2>Les chiffres qui montent</h2>
+<table>
+  <tr><th>Où</th><th>Ce qui monte</th></tr>
+  <tr><td>Lancement du tour</td><td>le score de la manche, <b>pour la seule équipe qui vient de marquer</b>. C'est ici que le joueur découvre le nouveau total : l'écran de correction ne montrait que le score du tour.</td></tr>
+  <tr><td>Fin de manche</td><td><b>en deux temps.</b> D'abord la ligne de la manche, où seule l'équipe qui vient de finir monte — l'autre s'affiche, immobile, son chiffre n'ayant pas bougé. Puis les deux totaux de la partie, <b>ensemble</b>.</td></tr>
+  <tr><td>Fin de partie</td><td>le <b>cumul de la soirée</b> seul. Les totaux de la partie ont déjà grimpé manche après manche. Sur la première partie il n'y a pas de cumul : l'écran reste sobre, et c'est assumé.</td></tr>
+</table>
+
+<div class="regle">
+  <b>Une montée dure toujours à peu près le même temps</b>, qu'il s'agisse de gagner 6 points
+  ou 96. C'est le <b>nombre de pas</b> qui est borné — douze au maximum — pas l'incrément.
+  Sans cette règle, le cumul d'une soirée défilerait pendant seize secondes.
+  <br><br>
+  Quand deux compteurs montent ensemble, ils <b>partent et arrivent en même temps</b>, quelle
+  que soit leur amplitude. Sinon l'un finirait en attendant l'autre, et l'écran donnerait
+  l'impression d'un bug.
+  <br><br>
+  On n'anime jamais un chiffre qui n'a pas changé : le mouvement doit signifier quelque chose.
+</div>
+
+<h2>Victoire et défaite</h2>
+<p class="note">
+  Une seule mise en scène, trois jeux de mots. Ce qui varie est <b>l'emoji, le titre et la
+  phrase de fin</b> — jamais l'animation. C'est ce qui rend la variation abordable :
+  l'app choisit une ligne dans un tableau.
+</p>
+<table>
+  <tr><th>Écart</th><th>Sur la table</th><th>Chez le gagnant</th><th>Chez le perdant</th></tr>
+  <tr><td>Serré<br><small>≤ 3 points</small></td>
+      <td>🏆 « ça s'est joué à trois cartes »</td>
+      <td>😮‍💨 « de justesse »</td>
+      <td>🥲 « Battus de peu. La revanche ? »</td></tr>
+  <tr><td>Net<br><small>4 à 15</small></td>
+      <td>🏆 « 9 points d'écart »</td>
+      <td>🎉 « Vous l'emportez ! »</td>
+      <td>🥲 « rattrapable en une manche »</td></tr>
+  <tr><td>Écrasant<br><small>&gt; 15</small></td>
+      <td>🏆 « Démonstration »</td>
+      <td>🔥 « personne n'a rien pu faire »</td>
+      <td>😅 « Il y a des soirs comme ça »</td></tr>
+</table>
+
+<div class="regle">
+  <b>L'écran de l'organisateur ne prend jamais parti.</b> Il est posé sur la table et regardé
+  par tout le monde : il nomme le vainqueur, il ne s'adresse à personne.
+  <br><br>
+  <b>Les téléphones des invités, eux, appartiennent à quelqu'un.</b> En mode nominatif, l'app
+  compare le prénom du joueur à la composition des équipes — qu'elle publie déjà — et choisit
+  la version qui le concerne. En mode simple, personne ne sait qui est où : tout le monde voit
+  l'écran neutre. Un joueur absent des deux équipes retombe sur le neutre, sans code particulier.
+  <br><br>
+  <b>La seule vraie différence entre gagner et perdre est le retrait :</b> pas de confettis,
+  pas de fanfare chez celui qui perd. Le silence relatif dit le résultat mieux qu'un effet
+  triste, qui sonnerait faux. Consoler serait condescendant ; reconnaître suffit.
+  <br><br>
+  <b>Ce que veut l'équipe qui perd, c'est rejouer.</b> Le bouton « Revanche » est l'action
+  principale de cet écran, et l'écart est présenté comme rattrapable plutôt que comme un verdict.
+</div>
+
+<div class="plus-tard">
+  <p class="note"><b>Écarté volontairement :</b> des chorégraphies distinctes selon l'issue —
+  lumière qui balaie, coupe qui tourne, lignes qui se réordonnent. Une fois le retrait et les
+  mots en place, il ne resterait que de l'ornement.</p>
+  <p class="note"><b>Gardé de côté :</b> le <em>coude-à-coude</em>. Quand l'écart est serré,
+  faire monter les deux totaux de la partie ensemble raconte la fin mieux qu'une phrase — on
+  voit les deux chiffres se poursuivre. Ce n'est pas de la décoration, c'est la donnée qui
+  devient lisible. À essayer quand le reste sera en place.</p>
+</div>
+
+</body>
+</html>

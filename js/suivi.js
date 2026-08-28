@@ -189,13 +189,15 @@ function resume(etape) {
   return paquet;
 }
 
-async function envoyer(battementSeul) {
+// secondEssai : on ne se resynchronise qu'une fois, pour ne pas boucler si le
+// serveur refusait toujours.
+async function envoyer(battementSeul, secondEssai = false) {
   if (!etat) return;
   if (!battementSeul) etat.version++;
   ecrireStockage();
 
   try {
-    await fetch(ROUTE, {
+    const reponse = await fetch(ROUTE, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -206,6 +208,31 @@ async function envoyer(battementSeul) {
         etat: resume(etapeCourante)
       })
     });
+
+    // Publication ignorée : le serveur détient un numéro plus élevé que le
+    // nôtre. C'est arrivé pendant qu'un joueur tenait le tour — c'était lui qui
+    // publiait, et son compteur a pris de l'avance. On adopte son numéro et on
+    // republie aussitôt.
+    //
+    // Sans cette reprise, l'organisateur publie dans le vide : la partie avance
+    // chez lui, personne n'en sait rien, et le téléphone du joueur suivant
+    // n'apprend jamais que son tour l'attend. Le rattraper ici plutôt qu'à
+    // chaque endroit qui rend la main — il y en a trop pour les tenir tous.
+    //
+    // Jamais pour un battement, en revanche : il n'a rien à imposer, il prouve
+    // seulement que l'organisateur est toujours là. Le laisser se frayer un
+    // chemin lui ferait recouvrir l'écran que le joueur publie pendant son
+    // tour — son chrono, puis son comptage — avec un état vieux de quinze
+    // secondes. La garde de version protège aussi de ça.
+    if (!secondEssai && !battementSeul) {
+      const corps = await reponse.json().catch(() => null);
+      const detenu = Number(corps?.v) || 0;
+      if (corps?.ignore && detenu >= etat.version) {
+        etat.version = detenu;
+        ecrireStockage();
+        return envoyer(battementSeul, true);
+      }
+    }
   } catch {
     // Hors ligne : les invités s'en apercevront d'eux-mêmes, faute de battement.
     // La partie, elle, continue sans rien savoir de cet échec.

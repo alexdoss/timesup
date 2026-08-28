@@ -305,8 +305,23 @@ localStorage.removeItem('timesup_rejoint');
           A('dialog-message').textContent.includes(prenomQuiJoue));
 
     A('dialog-confirm').click();
+
+    // ===== Le sablier s arrete tout de suite, partout =====
+    // L app met plusieurs secondes a recuperer le decompte du joueur. Si elle
+    // attend pour publier, le dernier etat connu reste le tour en cours et le
+    // sablier continue de couler sur tous les ecrans — y compris celui du
+    // joueur qu on vient de dessaisir, qui regarde son propre tour s ecouler
+    // alors que plus personne ne joue.
+    let sablierCoule = false;
+    for (let k = 0; k < 4; k++) {
+      await wait(700);
+      if (dj.getElementById('bloc-tour').style.display !== 'none') sablierCoule = true;
+    }
+    check('le sablier s arrete des la confirmation, sans attendre le decompte',
+          !sablierCoule);
+
     // L app va chercher le decompte du joueur avant de rendre la main
-    await wait(9000);
+    await wait(7000);
     if (A('dialog-overlay').style.display !== 'none') {
       log('       bilan de la reprise : "' + A('dialog-title').textContent
           + '" — ' + A('dialog-message').textContent);

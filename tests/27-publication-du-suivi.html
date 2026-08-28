@@ -199,6 +199,35 @@ f.addEventListener('load', async () => {
           Array.isArray(finManche.etat.historique) && finManche.etat.historique.length === 1);
     check('la manche jouee est nommee', !!finManche.etat.historique[0].nom);
 
+    // ===== Un joueur a publie plus haut que nous : on se resynchronise =====
+    // Pendant qu un joueur tient le tour sur son telephone, c est LUI qui
+    // publie, et son compteur de version depasse celui de l organisateur. Le
+    // serveur refuse ensuite les publications au numero inferieur — c est la
+    // garde qui empeche un etat perime d ecraser un plus recent, et elle se
+    // retourne contre nous. Sans reprise, l organisateur publie dans le vide :
+    // la partie avance chez lui, personne n en sait rien, et le telephone du
+    // joueur suivant n apprend jamais que son tour l attend.
+    const avant = await suivi();
+    const tresHaut = Number(avant.v) + 500;
+    const jeton = JSON.parse(w.localStorage.getItem('timesup_suivi')).jeton;
+    await api('publier', { code, jeton, v: tresHaut, etat: {
+      etape: 'tour', restantes: 3,
+      equipes: [{ nom: 'A', partie: 0, manche: 0 }, { nom: 'B', partie: 0, manche: 0 }],
+      tour: { equipe: 0, joueur: null, duree: 40, restant: 12 }
+    } });
+    const usurpe = await suivi();
+    check('le serveur retient bien le numero le plus eleve', Number(usurpe.v) === tresHaut);
+
+    // L app change d etat : sa publication doit passer malgre son retard
+    $('btn-retour-correction').click();
+    await wait(300);
+    $('btn-next-turn').click();
+    const rattrape = await attendreEtape('fin-manche', 6000);
+    log('       version : ' + avant.v + ' -> ' + tresHaut + ' (joueur) -> ' + rattrape.v + ' (app)');
+    check('l app reprend le compte du joueur et republie',
+          rattrape.etat.etape === 'fin-manche');
+    check('avec un numero au-dessus du sien', Number(rattrape.v) >= tresHaut);
+
     // ===== L abandon coupe la publication =====
     check('le suivi est en memoire pendant la partie', !!w.localStorage.getItem('timesup_suivi'));
     d.querySelector('#screen-round-end .btn-close').click();

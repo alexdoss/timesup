@@ -2006,6 +2006,18 @@ async function reprendreLeTourIci() {
   try { await reprendreTour(); } catch { /* le tour expirera tout seul */ }
   tourConfieA = null;
 
+  // Dire tout de suite que ce tour est fini. Sans ça, le dernier état publié
+  // reste le tour en cours pendant qu'on va chercher le décompte du joueur :
+  // le sablier continue de couler sur tous les écrans — y compris celui du
+  // joueur qu'on vient de dessaisir, qui regarde son propre tour s'écouler
+  // alors que plus personne ne joue.
+  //
+  // Reprendre son numéro de version d'abord : pendant son tour c'est lui qui
+  // publiait, et une publication au numéro inférieur est rejetée en silence.
+  try { reprendreVersion((await suivreEtat()).suivi?.v); } catch { /* au prochain coup */ }
+  afficherTourDistant(false);
+  publierEtat('entre-tours');
+
   const rendu = enCours ? await attendreLeComptageDuJoueur(qui) : null;
   try { await reprendreTour(true); } catch { /* la clé expirera d'elle-même */ }
 
@@ -2030,11 +2042,6 @@ async function reprendreLeTourIci() {
   // finit à zéro chez eux pendant que l'écran de l'organisateur annonce le temps
   // repris. Deux écrans, deux vérités.
   //
-  // Reprendre son numéro de version d'abord : pendant son tour, c'est lui qui
-  // publiait, et son compte a dépassé le nôtre. Une publication au numéro
-  // inférieur est rejetée en silence — la garde qui empêche un état périmé
-  // d'écraser un plus récent se retournerait ici contre nous.
-  try { reprendreVersion((await suivreEtat()).suivi?.v); } catch { /* au prochain coup */ }
   publierEtat('entre-tours');
 
   if (rendu && rendu.trouvees.length) {

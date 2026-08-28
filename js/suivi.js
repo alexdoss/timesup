@@ -136,6 +136,10 @@ function resume(etape) {
     // Combien de cartes il reste dans le paquet de la manche. Un nombre, jamais
     // un mot : c'est ce qui dit si la manche touche à sa fin, sans rien révéler.
     restantes: getCardsRemaining(),
+    // Les secondes reprises de la manche précédente, quand une équipe a vidé le
+    // paquet avant la fin du temps. Sans ça, les invités voient un tour se
+    // terminer bien plus tôt que prévu sans comprendre pourquoi.
+    report: game.reportTemps || 0,
     equipes: game.teams.map((equipe, index) => ({
       nom: equipe.name,
       couleur: equipe.color,

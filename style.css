@@ -546,12 +546,25 @@ body {
   padding: 26px 0 4px;   /* de quoi passer sous la croix de fermeture */
 }
 
-.round-content.reparti .aire {
+/* Une aire d'information : un fond, un cadre, et de l'air autour. Définie hors
+   de `.reparti` parce que les invités s'en servent aussi — leur écran de
+   lancement est le miroir de celui-ci, et doit lui ressembler. */
+.aire {
   width: 100%;
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--r-lg);
   padding: 18px 16px;
+}
+
+/* Chez les invités, les aires se suivent dans le flux de l'écran d'attente :
+   il leur faut leur propre respiration, faute du `gap` de `.round-content`. */
+#bloc-lancement .aire + .aire {
+  margin-top: 14px;
+}
+
+#bloc-lancement .round-icon {
+  font-size: 3rem;
 }
 
 .round-content.reparti #round-header {

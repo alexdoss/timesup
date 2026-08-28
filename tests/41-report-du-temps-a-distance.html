@@ -167,15 +167,55 @@ localStorage.removeItem('timesup_rejoint');
     if (ecranApp() === 'screen-round-end') { A('btn-next-round').click(); await wait(1200); }
     check('la manche suivante est ouverte', etat().currentRound === 1);
     check('par le meme joueur', A('current-player').textContent.includes(prenomQuiJoue));
-    // Le temps repris n est annonce que tant que l organisateur tient le tour.
-    // Des qu il part sur un telephone, ce nombre est ecrit une fois pour toutes
-    // pendant que le chrono du joueur descend : deux temps pour la meme chose,
-    // sur deux appareils cote a cote.
-    await wait(1500);
-    log('       mention chez l organisateur : "' + A('report-temps').textContent
-        + '" · affichee : ' + (A('report-temps').style.display !== 'none'));
-    check('le temps repris n est plus annonce quand le tour part sur un telephone',
-          A('report-temps').style.display === 'none');
+    // Le meme texte, au meme endroit, sur les trois ecrans de lancement : celui
+    // de l organisateur, celui du joueur, et le miroir des spectateurs. Poses
+    // cote a cote sur une table, ils ne doivent pas se contredire.
+    await wait(3000);
+    log('       chez l organisateur : "' + A('report-temps').textContent + '"');
+    check('l organisateur annonce le temps repris',
+          A('report-temps').textContent.includes(String(etat().reportTemps)));
+    // Chez l organisateur, le temps est dans le bloc de la manche, juste
+    // au-dessus des cartes restantes.
+    const entete = [...A('round-header').children].map(e => e.id);
+    log('       ordre dans le bloc manche : ' + JSON.stringify(entete));
+    check('les cartes restantes se lisent sous le temps restant',
+          entete.indexOf('report-temps') < entete.indexOf('round-restantes'));
+
+    // ===== Et chez un joueur qui ne joue pas ce tour-ci =====
+    // Son ecran est le miroir de celui de l organisateur : memes zones, memes
+    // informations, meme ordre. Sans quoi deux telephones poses cote a cote
+    // racontent deux choses.
+    const spectateur = Object.entries(ids).find(([, id]) => id !== tour.idJoueur);
+    const identiteJoueur = localStorage.getItem('timesup_rejoint');
+    localStorage.setItem('timesup_rejoint', JSON.stringify({
+      code, idJoueur: spectateur[1], prenom: spectateur[0],
+      cartes: [], cartesParJoueur: 5, mode: 'nominatif', fini: true, inscription: true
+    }));
+    const temoin = await cadre('/rejoindre.html', 380);
+    const dt = temoin.contentDocument;
+    await wait(3200);
+    const S = id => dt.getElementById(id);
+    log('       chez ' + spectateur[0] + ' : "' + S('lancement-report').textContent
+        + '" / "' + S('lancement-restantes').textContent + '"');
+    check('le spectateur voit lui aussi le temps repris',
+          S('lancement-report').textContent.includes(String(etat().reportTemps)));
+    check('avec le meme texte que l organisateur',
+          S('lancement-report').textContent === A('report-temps').textContent);
+    check('et les cartes restantes juste en dessous',
+          [...S('lancement-report').parentElement.children].map(e => e.id)
+            .indexOf('lancement-report')
+          < [...S('lancement-report').parentElement.children].map(e => e.id)
+            .indexOf('lancement-restantes'));
+
+    const zones = [...S('bloc-lancement').children].filter(e => e.classList.contains('aire'));
+    log('       zones grises : ' + zones.length);
+    check('son ecran est decoupe en trois zones, comme celui de l organisateur',
+          zones.length === 3);
+    check('elles ont bien un fond',
+          temoin.contentWindow.getComputedStyle(zones[0]).backgroundColor
+          !== 'rgba(0, 0, 0, 0)');
+    temoin.remove();
+    if (identiteJoueur) localStorage.setItem('timesup_rejoint', identiteJoueur);
 
     // ===== Et le paquet neuf repart chez le meme joueur, pour ce temps-la =====
     await wait(1500);
@@ -229,10 +269,12 @@ localStorage.removeItem('timesup_rejoint');
     }
     log('       joueur/admin : ' + releves.join('  '));
     log('       ecart maximum : ' + ecartMax + ' s');
-    // Une seconde d ecart est normale : l un arrondit vers le haut, l autre
-    // decompte par pas entiers. Au-dela, les deux ecrans ne parlent plus du
-    // meme tour.
-    check('le sablier de l organisateur suit le chrono du joueur', ecartMax <= 1);
+    // Une a deux secondes d ecart sont normales : l un arrondit vers le haut,
+    // l autre decompte par pas entiers, et dans ce test trois cadres se
+    // partagent le meme navigateur — celui qui n a pas le focus voit ses
+    // minuteries ralenties, ce qui n arrive pas a deux vrais telephones.
+    // Au-dela, les deux ecrans ne parlent plus du meme tour.
+    check('le sablier de l organisateur suit le chrono du joueur', ecartMax <= 2);
 
     // ===== L organisateur reprend le tour en cours de route =====
     // Le joueur ne repond plus, son telephone se bloque : l organisateur
@@ -291,21 +333,25 @@ localStorage.removeItem('timesup_rejoint');
     // Rien ne peut lui etre pousse : c est lui qui verifie, toutes les cinq
     // secondes. Sans ca, deux personnes font deviner le meme tour en meme
     // temps, chacune persuadee de le tenir.
+    // Il redevient un spectateur parmi les autres : retour direct au suivi,
+    // sans ecran intermediaire ni bouton a presser.
     let repris = false;
     for (let k = 0; k < 10 && !repris; k++) {
       await wait(1000);
-      repris = ecranJ() === 'screen-message';
+      repris = ecranJ() === 'screen-attente';
     }
-    log('       ecran du joueur : ' + ecranJ()
-        + ' — "' + dj.getElementById('message-titre').textContent + '"');
-    check('le telephone du joueur apprend que le tour lui a ete retire', repris);
+    log('       ecran du joueur : ' + ecranJ());
     check('son chrono s est arrete', ecranJ() !== 'screen-mon-tour');
-    check('on lui dit ce qui s est passe',
-          dj.getElementById('message-texte').textContent.includes('repris ce tour'));
-    // Ses cartes ont ete transmises avant qu il rende la main : on le lui dit,
-    // sinon il croit avoir joue pour rien.
-    check('et que ses cartes ont bien ete transmises',
-          dj.getElementById('message-texte').textContent.includes('comptent'));
+    check('il se retrouve directement sur le suivi, comme les autres', repris);
+    check('sans ecran intermediaire a valider', ecranJ() !== 'screen-message');
+
+    // Et il y lit la meme chose que les autres : le temps repris annonce par
+    // l organisateur, et non le chrono mort du tour qu on vient de lui retirer.
+    await wait(3000);
+    log('       il lit : "' + dj.getElementById('lancement-report').textContent + '"');
+    check('le temps repris lui est annonce, comme aux autres spectateurs',
+          dj.getElementById('lancement-report').textContent
+          === A('report-temps').textContent);
 
     A('btn-start-turn').click();
     await wait(300);

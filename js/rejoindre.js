@@ -1009,7 +1009,6 @@ async function monTourMEstRetire() {
   monTourRendu = false;
   afficherMonTour(false);
 
-  const compte = p.trouvees.length;
   try {
     await appeler('rendreTour', {
       code: session.code, idJoueur: session.idJoueur,
@@ -1021,11 +1020,10 @@ async function monTourMEstRetire() {
     // Rien ne part : l'organisateur repartira sans ces cartes, et le dira.
   }
 
-  bloquer('📱', 'Tour repris',
-    compte > 0
-      ? `L'organisateur a repris ce tour sur son téléphone. Tes ${compte} carte(s) trouvée(s) lui ont été transmises, elles comptent.`
-      : "L'organisateur a repris ce tour sur son téléphone, avec le temps qu'il te restait.",
-    'Suivre la partie', ouvrirAttente);
+  // Retour direct au suivi, sans écran intermédiaire ni bouton à presser : ce
+  // joueur redevient un spectateur parmi les autres, et rien ne justifie de lui
+  // demander de le confirmer. La partie continue sans lui, il la regarde.
+  ouvrirAttente();
 }
 
 // Ce que les autres voient de mon tour. Le chrono ne demande qu'une
@@ -1264,6 +1262,9 @@ function rendreLancement(etat) {
   T('lancement-s1', e1.manche);
   T('lancement-s2', e2.manche);
   T('lancement-total', `Total de la partie : ${e1.partie} – ${e2.partie}`);
+  // Le temps repris d'abord, les cartes ensuite : le même ordre et les mêmes
+  // mots que sur l'écran de l'organisateur, dont celui-ci est le miroir.
+  T('lancement-report', etat.report > 0 ? `⏱️ Temps restant : ${etat.report} s` : '');
   T('lancement-restantes', libelleRestantes(etat.restantes));
 
   // `aVenir` et non `tour` : entre deux tours, `tour` désignerait encore

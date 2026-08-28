@@ -185,26 +185,34 @@
             <p id="atoi-manche" class="round-name-label"></p>
             <p id="atoi-regle" class="round-desc"></p>
           </div>
-          <p id="atoi-reste" class="cartes-restantes"></p>
-          <!-- Son équipe a vidé le paquet à la manche précédente : ce tour-ci
-               reprend les secondes gagnées, et son chrono partira plus bas
-               que d'habitude. Il doit le savoir avant de se lancer. -->
+          <!-- Le temps d'abord, les cartes ensuite, comme sur les autres écrans
+               de lancement. Son équipe a vidé le paquet à la manche précédente :
+               son chrono partira plus bas que d'habitude, il doit le savoir
+               avant de se lancer. -->
           <p id="atoi-duree" class="cartes-restantes"></p>
+          <p id="atoi-reste" class="cartes-restantes"></p>
           <button id="btn-atoi-lancer" class="btn btn-primary">🚀 Je me lance</button>
         </div>
 
         <!-- LANCEMENT DE TOUR — le même écran que l'organisateur, sans le
              bouton « Lancer le tour » qui reste à sa main -->
+        <!-- Trois zones, comme sur l'écran de l'organisateur : la manche, le
+             score, à qui de jouer. Les invités regardent le même écran que lui,
+             et deux présentations différentes de la même chose se contredisent
+             dès qu'on pose deux téléphones côte à côte. -->
         <div id="bloc-lancement" style="display:none">
-          <h2 id="lancement-titre">Manche 1/3</h2>
-          <p id="lancement-nom" class="round-name-label"></p>
-          <div id="lancement-icone" class="round-icon"></div>
-          <p id="lancement-regle" class="round-desc"></p>
-          <!-- Le paquet restant appartient à la manche, pas au score : il dit
-               si elle touche à sa fin. Même place que sur l'écran de
-               l'organisateur, où il vit dans le bloc de la manche. -->
-          <p id="lancement-restantes" class="cartes-restantes"></p>
-          <div class="bloc-score">
+          <div class="aire">
+            <h2 id="lancement-titre">Manche 1/3</h2>
+            <p id="lancement-nom" class="round-name-label"></p>
+            <div id="lancement-icone" class="round-icon"></div>
+            <p id="lancement-regle" class="round-desc"></p>
+            <!-- Le temps d'abord, les cartes ensuite : les deux disent ce qui
+                 reste, et l'ordre est le même partout. Le temps n'apparaît que
+                 sur un tour repris. -->
+            <p id="lancement-report" class="cartes-restantes"></p>
+            <p id="lancement-restantes" class="cartes-restantes"></p>
+          </div>
+          <div class="bloc-score aire">
             <p class="score-cap">Score de la manche</p>
             <div class="score-board">
               <div class="score-team">
@@ -218,8 +226,10 @@
             </div>
             <p id="lancement-total" class="score-rappel"></p>
           </div>
-          <p id="lancement-tour" class="turn-info"></p>
-          <p id="lancement-joueur" class="player-info"></p>
+          <div class="aire">
+            <p id="lancement-tour" class="turn-info"></p>
+            <p id="lancement-joueur" class="player-info"></p>
+          </div>
         </div>
 
         <!-- TOUR EN COURS — le téléphone devient l'horloge de la table :

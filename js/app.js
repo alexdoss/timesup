@@ -1939,11 +1939,6 @@ function afficherAttenteDuJoueur(prenom) {
   bouton.style.display = prenom ? 'none' : '';
   attente.style.display = prenom ? '' : 'none';
   mention.style.display = prenom ? '' : 'none';
-  // Le temps repris est annoncé une fois, à l'ouverture de l'écran. Dès que le
-  // tour part sur un téléphone, ce n'est plus cet écran la référence : le
-  // joueur lance quand il veut, son chrono descend, et le nombre écrit ici
-  // devient faux sans que rien ne le corrige. On l'efface.
-  document.getElementById('report-temps').style.display = prenom ? 'none' : '';
   if (prenom) {
     mention.textContent = `📱 ${prenom} lance depuis son téléphone`;
   } else {
@@ -2030,6 +2025,17 @@ async function reprendreLeTourIci() {
   // reconfierait le tour au téléphone qu'on vient justement de dessaisir.
   updateRoundScreen(getActiveRound(), game.teams, getRoundLabel(), getRoundScores(),
                     libelleRestantes(getCardsRemaining()), libelleReport());
+  // Et on le dit à tout le monde. Sans cette publication, le dernier état connu
+  // des autres téléphones reste le tour qu'on vient d'interrompre : son décompte
+  // finit à zéro chez eux pendant que l'écran de l'organisateur annonce le temps
+  // repris. Deux écrans, deux vérités.
+  //
+  // Reprendre son numéro de version d'abord : pendant son tour, c'est lui qui
+  // publiait, et son compte a dépassé le nôtre. Une publication au numéro
+  // inférieur est rejetée en silence — la garde qui empêche un état périmé
+  // d'écraser un plus récent se retournerait ici contre nous.
+  try { reprendreVersion((await suivreEtat()).suivi?.v); } catch { /* au prochain coup */ }
+  publierEtat('entre-tours');
 
   if (rendu && rendu.trouvees.length) {
     await showDialog({

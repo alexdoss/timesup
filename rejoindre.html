@@ -206,11 +206,6 @@
             <p id="lancement-nom" class="round-name-label"></p>
             <div id="lancement-icone" class="round-icon"></div>
             <p id="lancement-regle" class="round-desc"></p>
-            <!-- Le temps d'abord, les cartes ensuite : les deux disent ce qui
-                 reste, et l'ordre est le même partout. Le temps n'apparaît que
-                 sur un tour repris. -->
-            <p id="lancement-report" class="cartes-restantes"></p>
-            <p id="lancement-restantes" class="cartes-restantes"></p>
           </div>
           <div class="bloc-score aire">
             <p class="score-cap">Score de la manche</p>
@@ -226,9 +221,14 @@
             </div>
             <p id="lancement-total" class="score-rappel"></p>
           </div>
+          <!-- Ce qui décrit le tour qui va s'ouvrir : qui joue, avec combien de
+               temps et combien de cartes. Même agencement que sur l'écran de
+               l'organisateur, dont celui-ci est le miroir. -->
           <div class="aire">
             <p id="lancement-tour" class="turn-info"></p>
             <p id="lancement-joueur" class="player-info"></p>
+            <p id="lancement-report" class="cartes-restantes"></p>
+            <p id="lancement-restantes" class="cartes-restantes"></p>
           </div>
         </div>
 

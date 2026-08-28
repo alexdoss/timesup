@@ -174,12 +174,15 @@ localStorage.removeItem('timesup_rejoint');
     log('       chez l organisateur : "' + A('report-temps').textContent + '"');
     check('l organisateur annonce le temps repris',
           A('report-temps').textContent.includes(String(etat().reportTemps)));
-    // Chez l organisateur, le temps est dans le bloc de la manche, juste
-    // au-dessus des cartes restantes.
-    const entete = [...A('round-header').children].map(e => e.id);
-    log('       ordre dans le bloc manche : ' + JSON.stringify(entete));
+    // Les deux lignes decrivent le tour qui s ouvre : elles vivent dans la zone
+    // « c est au tour de X », juste au-dessus du bouton — la ou regarde celui
+    // qui va jouer. Le temps d abord, les cartes en dessous.
+    const zoneTour = [...A('bloc-tour-a-venir').children].map(e => e.id);
+    log('       zone du tour a venir : ' + JSON.stringify(zoneTour));
+    check('le temps et les cartes sont sous « X fait deviner »',
+          zoneTour.indexOf('report-temps') > zoneTour.indexOf('current-player'));
     check('les cartes restantes se lisent sous le temps restant',
-          entete.indexOf('report-temps') < entete.indexOf('round-restantes'));
+          zoneTour.indexOf('report-temps') < zoneTour.indexOf('round-restantes'));
 
     // ===== Et chez un joueur qui ne joue pas ce tour-ci =====
     // Son ecran est le miroir de celui de l organisateur : memes zones, memes
@@ -201,11 +204,12 @@ localStorage.removeItem('timesup_rejoint');
           S('lancement-report').textContent.includes(String(etat().reportTemps)));
     check('avec le meme texte que l organisateur',
           S('lancement-report').textContent === A('report-temps').textContent);
+    const zoneInvite = [...S('lancement-report').parentElement.children].map(e => e.id);
+    log('       zone du tour a venir, chez lui : ' + JSON.stringify(zoneInvite));
+    check('chez lui aussi, sous « X fait deviner »',
+          zoneInvite.indexOf('lancement-report') > zoneInvite.indexOf('lancement-joueur'));
     check('et les cartes restantes juste en dessous',
-          [...S('lancement-report').parentElement.children].map(e => e.id)
-            .indexOf('lancement-report')
-          < [...S('lancement-report').parentElement.children].map(e => e.id)
-            .indexOf('lancement-restantes'));
+          zoneInvite.indexOf('lancement-report') < zoneInvite.indexOf('lancement-restantes'));
 
     const zones = [...S('bloc-lancement').children].filter(e => e.classList.contains('aire'));
     log('       zones grises : ' + zones.length);

@@ -615,11 +615,6 @@
           <p id="round-name-label" class="round-name-label">🗣️ Description libre</p>
           <div id="round-icon" class="round-icon">🗣️</div>
           <p id="round-description" class="round-desc"></p>
-          <!-- Le temps d'abord, les cartes ensuite : les deux disent ce qui
-               reste, et l'ordre est le même sur tous les écrans de lancement.
-               Le temps n'apparaît que sur un tour repris. -->
-          <p id="report-temps" class="cartes-restantes"></p>
-          <p id="round-restantes" class="cartes-restantes"></p>
         </div>
         <!-- Le grand chiffre est celui de la manche en cours ; le total de la
              partie tient dans le rappel juste en dessous. -->
@@ -639,9 +634,15 @@
         </div>
         <!-- Qui s'apprête à jouer. Les deux lignes vivent dans la même aire :
              les masquer séparément laisserait un cadre vide à l'écran. -->
+        <!-- Ce qui décrit le tour qui va s'ouvrir : qui joue, avec combien de
+             temps et combien de cartes. Ces deux dernières lignes tiennent ici
+             plutôt que dans la manche : c'est l'enjeu du tour, et c'est juste
+             au-dessus du bouton, là où regarde celui qui va jouer. -->
         <div id="bloc-tour-a-venir" class="aire">
           <p id="current-team-turn" class="turn-info"></p>
           <p id="current-player" class="player-info"></p>
+          <p id="report-temps" class="cartes-restantes"></p>
+          <p id="round-restantes" class="cartes-restantes"></p>
         </div>
         <button id="btn-start-turn" class="btn btn-primary">Lancer le tour ▶️</button>
         <!-- Le tour a été confié au téléphone du joueur : c'est lui qui lance.

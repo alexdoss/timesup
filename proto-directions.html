@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Rush — deux directions</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+/* ============================================================
+   LES DEUX ÉCHELLES — communes aux deux directions.
+   C'est le point : la régularité n'est pas une esthétique, c'est
+   la condition des deux. Aujourd'hui Rush utilise 25 espacements
+   et 43 tailles de texte différentes. Ici : 6 et 6.
+   ============================================================ */
+:root {
+  --e1: 4px;  --e2: 8px;  --e3: 16px; --e4: 24px; --e5: 32px; --e6: 48px;
+  --t1: 0.75rem; --t2: 0.875rem; --t3: 1rem; --t4: 1.375rem; --t5: 2rem; --t6: 3rem;
+  --page: #0d1117;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  font-family: 'Outfit', sans-serif;
+  background: var(--page); color: #e6edf3;
+  padding: var(--e4); line-height: 1.5;
+}
+h1 { font-size: var(--t4); margin-bottom: var(--e1); }
+.intro { color: #8b949e; font-size: var(--t2); max-width: 860px; margin-bottom: var(--e4); }
+.intro strong { color: #e6edf3; }
+
+.colonnes { display: flex; gap: var(--e6); flex-wrap: wrap; align-items: flex-start; }
+.colonne { display: flex; flex-direction: column; gap: var(--e3); }
+.colonne > h2 { font-size: var(--t3); text-transform: uppercase; letter-spacing: .08em; }
+.colonne > p { color: #8b949e; font-size: var(--t2); max-width: 420px; }
+.paire { display: flex; gap: var(--e3); }
+
+.tel {
+  width: 300px; height: 620px; flex: none; overflow: hidden;
+  border-radius: 20px; position: relative;
+  display: flex; flex-direction: column;
+}
+
+/* ============================================================
+   DIRECTION 1 — SOBRE
+   Une seule couleur d'accent. Surfaces plates, bordures fines,
+   angles courts. Aucun emoji d'interface. Le sérieux d'un outil.
+   ============================================================ */
+.sobre {
+  --fond: #0F1115; --surface: #16181D; --bord: #262A32;
+  --texte: #F2F4F7; --doux: #8A9099; --accent: #7C5CFF;
+  background: var(--fond); color: var(--texte);
+  padding: var(--e4) var(--e3);
+  gap: var(--e3); align-items: center; text-align: center;
+}
+.sobre .marque { font-size: var(--t2); font-weight: 700; letter-spacing: .14em;
+                 text-transform: uppercase; color: var(--doux); }
+.sobre .bloc {
+  width: 100%; background: var(--surface); border: 1px solid var(--bord);
+  border-radius: 10px; padding: var(--e3);
+}
+.sobre .sur-titre { font-size: var(--t1); text-transform: uppercase; letter-spacing: .1em;
+                    color: var(--doux); font-weight: 600; margin-bottom: var(--e2); }
+.sobre h3 { font-size: var(--t4); font-weight: 700; }
+.sobre .regle { font-size: var(--t2); color: var(--doux); margin-top: var(--e2); }
+.sobre .duo { display: flex; justify-content: space-between; align-items: baseline; }
+.sobre .duo + .duo { margin-top: var(--e2); }
+.sobre .chiffre { font-size: var(--t4); font-weight: 700; font-variant-numeric: tabular-nums; }
+.sobre .qui { font-size: var(--t3); font-weight: 600; }
+.sobre .qui small { display: block; font-size: var(--t1); color: var(--doux);
+                    font-weight: 500; margin-top: var(--e1); text-transform: uppercase;
+                    letter-spacing: .08em; }
+.sobre .bouton {
+  width: 100%; padding: 14px; border: none; border-radius: 8px;
+  background: var(--accent); color: #fff; font-family: inherit;
+  font-size: var(--t3); font-weight: 600; cursor: pointer;
+}
+.sobre .champ {
+  width: 100%; padding: 14px; border-radius: 8px; background: var(--fond);
+  border: 1px solid var(--bord); color: var(--texte);
+  font-family: inherit; font-size: var(--t3);
+}
+.sobre .pied { margin-top: auto; font-size: var(--t1); color: var(--doux); }
+
+/* ============================================================
+   DIRECTION 2 — FESTIF
+   Deux accents assumés, angles généreux, un dégradé, des chiffres
+   qui prennent de la place. La même rigueur d'espacement.
+   ============================================================ */
+.festif {
+  --fond: #14102B; --surface: #1E1846; --bord: #2E2660;
+  --texte: #FFF6F0; --doux: #A79BD6; --violet: #7C3AED; --ambre: #FFB020;
+  background: radial-gradient(120% 80% at 50% 0%, #2A1F5C 0%, var(--fond) 60%);
+  color: var(--texte); padding: var(--e4) var(--e3);
+  gap: var(--e3); align-items: center; text-align: center;
+}
+.festif .marque { font-size: var(--t2); font-weight: 800; letter-spacing: .18em;
+                  text-transform: uppercase;
+                  background: linear-gradient(90deg, var(--ambre), #FF7DB0);
+                  -webkit-background-clip: text; background-clip: text; color: transparent; }
+.festif .bloc {
+  width: 100%; background: var(--surface); border: 1px solid var(--bord);
+  border-radius: 20px; padding: var(--e3);
+  box-shadow: 0 10px 30px rgba(0,0,0,.35);
+}
+.festif .sur-titre { font-size: var(--t1); font-weight: 700; color: var(--ambre);
+                     text-transform: uppercase; letter-spacing: .1em; margin-bottom: var(--e2); }
+.festif h3 { font-size: var(--t5); font-weight: 800; letter-spacing: -.02em; }
+.festif .regle { font-size: var(--t2); color: var(--doux); margin-top: var(--e2); }
+.festif .duo { display: flex; justify-content: space-between; align-items: center; }
+.festif .duo + .duo { margin-top: var(--e2); }
+.festif .chiffre { font-size: var(--t5); font-weight: 800; font-variant-numeric: tabular-nums;
+                   background: linear-gradient(180deg, #fff, var(--ambre));
+                   -webkit-background-clip: text; background-clip: text; color: transparent; }
+.festif .qui { font-size: var(--t4); font-weight: 800; }
+.festif .qui small { display: block; font-size: var(--t2); color: var(--doux);
+                     font-weight: 600; margin-top: var(--e1); }
+.festif .bouton {
+  width: 100%; padding: 16px; border: none; border-radius: 100px;
+  background: linear-gradient(135deg, var(--violet), #B14BFF);
+  color: #fff; font-family: inherit; font-size: var(--t3); font-weight: 700;
+  box-shadow: 0 8px 22px rgba(124,58,237,.45); cursor: pointer;
+}
+.festif .champ {
+  width: 100%; padding: 16px; border-radius: 14px; background: rgba(0,0,0,.25);
+  border: 1px solid var(--bord); color: var(--texte);
+  font-family: inherit; font-size: var(--t3); text-align: center;
+}
+.festif .pied { margin-top: auto; font-size: var(--t1); color: var(--doux); }
+.festif .pastille {
+  display: inline-block; padding: 6px 14px; border-radius: 100px;
+  background: rgba(255,176,32,.14); color: var(--ambre);
+  font-size: var(--t1); font-weight: 700;
+}
+.sobre .pastille {
+  display: inline-block; padding: 5px 12px; border-radius: 6px;
+  background: var(--bord); color: var(--doux);
+  font-size: var(--t1); font-weight: 600;
+  text-transform: uppercase; letter-spacing: .06em;
+}
+.legende { font-size: var(--t1); color: #6e7681; text-align: center; }
+</style>
+</head>
+<body>
+
+<h1>Deux directions pour la page des invités</h1>
+<p class="intro">
+  Le même contenu, les mêmes blocs, les mêmes textes. Seuls changent les couleurs, les
+  formes et le ton. <strong>Les deux colonnes partagent la même échelle d'espacement
+  (6 pas) et la même échelle typographique (6 tailles)</strong> — là où Rush en utilise
+  aujourd'hui 25 et 43. C'est volontaire : la régularité n'est pas une direction, c'est
+  ce qui manque aux deux.
+  <br><br>
+  À gauche l'arrivée après le scan du QR, à droite l'écran de suivi pendant la partie.
+</p>
+
+<div class="colonnes">
+
+  <!-- ============== DIRECTION SOBRE ============== -->
+  <div class="colonne">
+    <h2>Direction 1 — Sobre</h2>
+    <p>Un seul accent, des surfaces plates, des angles courts, aucun emoji d'interface.
+       Rush a l'air d'un outil bien fait. Le risque : on oublie que c'est un jeu.</p>
+    <div class="paire">
+
+      <div class="tel sobre">
+        <div class="marque">Rush</div>
+        <div class="bloc">
+          <div class="sur-titre">Partie CEHX</div>
+          <h3>Comment tu t'appelles ?</h3>
+          <div class="regle">Les autres joueurs te verront sous ce nom.</div>
+        </div>
+        <input class="champ" placeholder="Ton prénom" value="Nijinski">
+        <button class="bouton">Rejoindre</button>
+        <div class="pied">4 joueurs déjà inscrits</div>
+      </div>
+
+      <div class="tel sobre">
+        <div class="marque">Rush</div>
+        <div class="bloc">
+          <div class="sur-titre">Manche 2 sur 3</div>
+          <h3>Un seul mot</h3>
+          <div class="regle">Un seul mot pour faire deviner la carte. Les gestes sont interdits.</div>
+        </div>
+        <div class="bloc">
+          <div class="sur-titre">Score de la manche</div>
+          <div class="duo"><span>Les Rapides</span><span class="chiffre">7</span></div>
+          <div class="duo"><span>Les Malins</span><span class="chiffre">5</span></div>
+        </div>
+        <div class="bloc">
+          <div class="qui">Flonx<small>Les Rapides</small></div>
+          <div style="margin-top:var(--e2)"><span class="pastille">14 cartes restantes</span></div>
+        </div>
+        <div class="pied">La partie est en cours</div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ============== DIRECTION FESTIVE ============== -->
+  <div class="colonne">
+    <h2>Direction 2 — Festive</h2>
+    <p>Deux accents assumés, des angles généreux, des chiffres qui prennent de la place.
+       On voit tout de suite que c'est un jeu. Le risque : la fatigue à la dixième partie,
+       et un rendu plus daté dans deux ans.</p>
+    <div class="paire">
+
+      <div class="tel festif">
+        <div class="marque">Rush</div>
+        <div class="bloc">
+          <div class="sur-titre">Partie CEHX</div>
+          <h3>Tu es qui ?</h3>
+          <div class="regle">Les autres joueurs te verront sous ce nom.</div>
+        </div>
+        <input class="champ" placeholder="Ton prénom" value="Nijinski">
+        <button class="bouton">C'est parti</button>
+        <div class="pied">4 joueurs déjà là</div>
+      </div>
+
+      <div class="tel festif">
+        <div class="marque">Rush</div>
+        <div class="bloc">
+          <div class="sur-titre">Manche 2 sur 3</div>
+          <h3>Un seul mot</h3>
+          <div class="regle">Un seul mot pour faire deviner la carte. Les gestes sont interdits.</div>
+        </div>
+        <div class="bloc">
+          <div class="sur-titre">Score de la manche</div>
+          <div class="duo"><span>Les Rapides</span><span class="chiffre">7</span></div>
+          <div class="duo"><span>Les Malins</span><span class="chiffre">5</span></div>
+        </div>
+        <div class="bloc">
+          <div class="qui">Flonx<small>fait deviner pour Les Rapides</small></div>
+          <div style="margin-top:var(--e2)"><span class="pastille">14 cartes restantes</span></div>
+        </div>
+        <div class="pied">La partie est en cours</div>
+      </div>
+
+    </div>
+  </div>
+
+</div>
+
+<p class="legende" style="margin-top:var(--e5)">
+  Aucune des deux n'est définitive : ce qui se décide ici, c'est le parti — sobre ou festif.
+  Les détails se règlent ensuite, dans le système.
+</p>
+
+</body>
+</html>

@@ -1,0 +1,124 @@
+<!-- @dsCard group="Composants" -->
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<title>Rush — les boîtes de dialogue</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root {
+  --fond: #14102B; --fond-halo: #2A1F5C; --surface: #1E1846; --bord: #2E2660;
+  --texte: #FFF6F0; --doux: #A79BD6;
+  --violet: #7C3AED; --violet-clair: #B14BFF; --ambre: #FFB020;
+  --vert: #22C55E; --rouge: #EF4444;
+  --e1: 4px; --e2: 8px; --e3: 16px; --e4: 24px; --e5: 32px;
+  --t1: 0.75rem; --t2: 0.875rem; --t3: 1rem; --t4: 1.375rem;
+  --r-bloc: 20px; --r-pastille: 100px; --ombre: 0 10px 30px rgba(0,0,0,.35);
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  font-family: 'Outfit', sans-serif;
+  background: radial-gradient(120% 60% at 50% 0%, var(--fond-halo) 0%, var(--fond) 55%);
+  color: var(--texte); padding: var(--e4); line-height: 1.5;
+}
+h1 { font-size: var(--t4); margin-bottom: var(--e1); }
+h2 { font-size: var(--t1); text-transform: uppercase; letter-spacing: .1em;
+     color: var(--ambre); margin: var(--e5) 0 var(--e3); font-weight: 700; }
+.note { color: var(--doux); font-size: var(--t2); max-width: 620px; }
+.rangee { display: flex; flex-wrap: wrap; gap: var(--e4); align-items: flex-start; }
+
+/* ═══════ LA BOÎTE ═══════
+   Elle interrompt. Elle doit donc dire ce qui va se passer, pas poser
+   une question vague, et nommer les issues par leur conséquence. */
+.voile {
+  width: 320px; padding: var(--e4);
+  background: rgba(10,7,26,.72); border-radius: var(--r-bloc);
+  display: flex; align-items: center; justify-content: center;
+}
+.boite {
+  width: 100%; background: var(--surface); border: 1px solid var(--bord);
+  border-radius: var(--r-bloc); box-shadow: var(--ombre);
+  padding: var(--e4) var(--e3) var(--e3); text-align: center;
+}
+.boite h3 { font-size: var(--t3); font-weight: 800; margin-bottom: var(--e2); }
+.boite p { font-size: var(--t2); color: var(--doux); }
+.actions { display: flex; flex-direction: column; gap: var(--e2); margin-top: var(--e3); }
+.btn { font-family: inherit; font-size: var(--t3); font-weight: 700; border: none;
+       border-radius: var(--r-pastille); padding: 14px; cursor: pointer; width: 100%; }
+.btn-agir { background: linear-gradient(135deg, var(--violet), var(--violet-clair)); color: #fff; }
+.btn-second { background: transparent; color: var(--texte); border: 1px solid var(--bord); }
+.btn-danger { background: var(--rouge); color: #fff; }
+.liste { list-style: none; margin: var(--e3) 0 0; display: flex; flex-direction: column; gap: var(--e1); }
+.liste li { display: flex; justify-content: space-between; align-items: baseline;
+            background: rgba(0,0,0,.22); border-radius: 10px; padding: var(--e2) 12px;
+            font-size: var(--t2); }
+.liste b { color: var(--ambre); font-weight: 800; }
+</style>
+</head>
+<body>
+
+<h1>Les boîtes de dialogue</h1>
+<p class="note">
+  Une boîte interrompt la partie. Elle doit donc mériter l'interruption, dire ce qui va
+  se passer, et nommer chaque issue par sa conséquence — jamais « OK » et « Annuler ».
+</p>
+
+<h2>Deux issues</h2>
+<div class="rangee">
+  <div class="voile">
+    <div class="boite">
+      <h3>Reprendre ce tour ici ?</h3>
+      <p>Le tour de Flonx s'arrêtera sur son téléphone. Il reprendra ici, avec les 22 s
+         qu'il lui restait.</p>
+      <div class="actions">
+        <button class="btn btn-danger">Reprendre le tour</button>
+        <button class="btn btn-second">Le laisser jouer</button>
+      </div>
+    </div>
+  </div>
+  <p class="note" style="width:300px">
+    Le titre pose la question, le texte annonce <b>les conséquences chiffrées</b> — qui est
+    interrompu, combien de temps est repris. Les boutons disent ce qu'ils font, pas
+    « Confirmer ».
+    <br><br>
+    L'action destructrice est en rouge et en premier ; la sortie de secours est toujours
+    en dernière position, au même endroit d'une boîte à l'autre.
+  </p>
+</div>
+
+<h2>Plusieurs issues, aucune n'étant « annuler »</h2>
+<div class="rangee">
+  <div class="voile">
+    <div class="boite">
+      <h3>😅 6 cartes en trop</h3>
+      <p>4 mots ont été écrits 2 fois, 1 mot 3 fois. Il reste 34 mots différents sur
+         40 cartes saisies.</p>
+      <ul class="liste">
+        <li><span>écrits 2 fois</span><b>4 mots</b></li>
+        <li><span>écrit 3 fois</span><b>1 mot</b></li>
+      </ul>
+      <div class="actions">
+        <button class="btn btn-agir">Ne garder qu'un exemplaire</button>
+        <button class="btn btn-second">Remplacer par des mots au hasard</button>
+        <button class="btn btn-second">Avancer sans rien changer</button>
+      </div>
+    </div>
+  </div>
+  <p class="note" style="width:300px">
+    Toutes les issues restent visibles : replier les moins fréquentes coûte un geste et
+    cache parfois celle qui a une date limite.
+    <br><br>
+    Cette boîte ne cite <b>aucun mot du paquet</b> — l'organisateur joue lui aussi. Le
+    principe vaut partout : ce qui est publié ou affiché ne doit jamais donner d'avance
+    à celui qui le lit.
+    <br><br>
+    Le titre annonce les cartes <b>en trop</b>, pas « les doublons » : sur un mot écrit
+    trois fois, deux exemplaires sont en trop mais ne forment pas un doublon. Le nombre
+    affiché est celui qui décide — ce que l'on perd en nettoyant.
+  </p>
+</div>
+
+</body>
+</html>

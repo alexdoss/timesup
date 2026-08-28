@@ -1,0 +1,129 @@
+<!-- @dsCard group="Composants" -->
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<title>Rush — les blocs d'information</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root {
+  --fond: #14102B; --fond-halo: #2A1F5C; --surface: #1E1846; --bord: #2E2660;
+  --texte: #FFF6F0; --doux: #A79BD6;
+  --violet: #7C3AED; --violet-clair: #B14BFF; --ambre: #FFB020;
+  --vert: #22C55E; --rouge: #EF4444;
+  --e1: 4px; --e2: 8px; --e3: 16px; --e4: 24px; --e5: 32px; --e6: 48px;
+  --t1: 0.75rem; --t2: 0.875rem; --t3: 1rem; --t4: 1.375rem; --t5: 2rem;
+  --r-bloc: 20px; --r-pastille: 100px; --ombre: 0 10px 30px rgba(0,0,0,.35);
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  font-family: 'Outfit', sans-serif;
+  background: radial-gradient(120% 60% at 50% 0%, var(--fond-halo) 0%, var(--fond) 55%);
+  color: var(--texte); padding: var(--e4); line-height: 1.5;
+}
+h1 { font-size: var(--t4); margin-bottom: var(--e1); }
+h2 { font-size: var(--t1); text-transform: uppercase; letter-spacing: .1em;
+     color: var(--ambre); margin: var(--e5) 0 var(--e3); font-weight: 700; }
+.note { color: var(--doux); font-size: var(--t2); max-width: 620px; }
+.rangee { display: flex; flex-wrap: wrap; gap: var(--e3); align-items: flex-start; }
+.colonne { width: 300px; }
+
+/* ═══════ L'AIRE ═══════
+   L'unité de découpage d'un écran. Une aire = une idée. Trois au maximum
+   par écran : au-delà, plus rien ne ressort. */
+.aire {
+  background: var(--surface); border: 1px solid var(--bord);
+  border-radius: var(--r-bloc); padding: var(--e3); box-shadow: var(--ombre);
+  text-align: center;
+}
+.aire + .aire { margin-top: var(--e3); }
+.sur-titre { font-size: var(--t1); font-weight: 700; color: var(--ambre);
+             text-transform: uppercase; letter-spacing: .1em; margin-bottom: var(--e2); }
+.aire h3 { font-size: var(--t4); font-weight: 800; }
+.aire .regle { font-size: var(--t2); color: var(--doux); margin-top: var(--e2); }
+
+.duo { display: flex; justify-content: space-between; align-items: center; }
+.duo + .duo { margin-top: var(--e2); }
+.chiffre { font-size: var(--t5); font-weight: 800; font-variant-numeric: tabular-nums;
+           background: linear-gradient(180deg, #fff, var(--ambre));
+           -webkit-background-clip: text; background-clip: text; color: transparent; }
+.rappel { font-size: var(--t1); color: var(--doux); margin-top: var(--e2); }
+.qui { font-size: var(--t4); font-weight: 800; }
+.qui small { display: block; font-size: var(--t2); color: var(--doux);
+             font-weight: 600; margin-top: var(--e1); }
+.pastille { display: inline-block; padding: 6px 14px; border-radius: var(--r-pastille);
+            background: rgba(255,176,32,.14); color: var(--ambre);
+            font-size: var(--t1); font-weight: 700; margin-top: var(--e2); }
+
+/* ═══════ LES RUBANS ═══════
+   Une ligne pour dire ce qui vient de se passer. Jamais deux à la fois. */
+.ruban { display: flex; align-items: center; gap: var(--e2);
+         border-radius: var(--r-bloc); padding: 12px var(--e3);
+         font-size: var(--t2); font-weight: 600; text-align: left; }
+.ruban-ok    { background: rgba(34,197,94,.12);  border: 1px solid rgba(34,197,94,.35);  color: var(--vert); }
+.ruban-info  { background: rgba(255,176,32,.12); border: 1px solid rgba(255,176,32,.35); color: var(--ambre); }
+.ruban-alerte{ background: rgba(239,68,68,.12);  border: 1px solid rgba(239,68,68,.35);  color: var(--rouge); }
+</style>
+</head>
+<body>
+
+<h1>Les blocs d'information</h1>
+<p class="note">
+  Un écran de Rush se lit en trois zones au maximum. Chaque zone porte une idée et une
+  seule : où on en est, combien on a, qui joue. Au-delà de trois, plus rien ne ressort.
+</p>
+
+<h2>Les trois aires d'un écran de lancement</h2>
+<div class="rangee">
+  <div class="colonne">
+    <div class="aire">
+      <div class="sur-titre">Manche 2 sur 3</div>
+      <h3>Un seul mot</h3>
+      <div class="regle">Un seul mot pour faire deviner la carte. Les gestes sont interdits.</div>
+    </div>
+    <div class="aire">
+      <div class="sur-titre">Score de la manche</div>
+      <div class="duo"><span>Les Rapides</span><span class="chiffre">7</span></div>
+      <div class="duo"><span>Les Malins</span><span class="chiffre">5</span></div>
+      <div class="rappel">Total de la partie : 19 – 16</div>
+    </div>
+    <div class="aire">
+      <div class="qui">Flonx<small>fait deviner pour Les Rapides</small></div>
+      <span class="pastille">14 cartes restantes</span>
+    </div>
+  </div>
+  <p class="note" style="width:280px">
+    L'ordre ne change jamais : <b>la manche</b>, puis <b>le score</b>, puis <b>qui joue</b>.
+    Du contexte le plus stable au plus immédiat.
+    <br><br>
+    Le temps et les cartes restantes vivent dans la troisième aire, sous le nom du joueur :
+    ils décrivent le tour qui s'ouvre, pas la manche. C'est aussi là que regarde celui qui
+    va appuyer sur le bouton.
+    <br><br>
+    Le même écran, au mot près, est affiché à l'organisateur et aux invités. Deux
+    appareils posés côte à côte ne doivent jamais se contredire.
+  </p>
+</div>
+
+<h2>Les rubans</h2>
+<div class="rangee">
+  <div class="colonne">
+    <div class="ruban ruban-ok"><span>✅</span><span>Tes 5 cartes sont arrivées</span></div>
+    <div class="ruban ruban-info" style="margin-top:var(--e2)"><span>⏸️</span><span>Tour interrompu — il reprend sur le téléphone de l'organisateur</span></div>
+    <div class="ruban ruban-alerte" style="margin-top:var(--e2)"><span>📡</span><span>Connexion perdue — nouvelle tentative…</span></div>
+  </div>
+  <p class="note" style="width:280px">
+    Une ligne pour dire ce qui vient de se passer, et qui disparaît quand ce n'est plus
+    vrai. <b>Jamais deux rubans à la fois</b> : s'il y a deux choses à dire, c'est qu'une
+    des deux n'a rien à faire là.
+    <br><br>
+    Vert pour ce qui a réussi, ambre pour ce qu'il faut savoir, rouge pour ce qui empêche
+    de jouer. Le rouge est rare — s'il apparaît souvent, c'est le produit qu'il faut
+    corriger, pas le message.
+  </p>
+</div>
+
+</body>
+</html>

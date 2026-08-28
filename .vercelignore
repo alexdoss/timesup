@@ -23,3 +23,6 @@ file_*.png
 # téléphone sur un vrai réseau. À retirer une fois la mesure faite.
 !proto-suivi-organisateur.html
 !proto-suivi-invite.html
+
+# Systeme de design : pages de reference, pas des ecrans du jeu
+design-system/

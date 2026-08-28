@@ -1,0 +1,132 @@
+<!-- @dsCard group="Composants" -->
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<title>Rush — la carte et le chrono</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root {
+  --fond: #14102B; --fond-halo: #2A1F5C; --surface: #1E1846; --bord: #2E2660;
+  --texte: #FFF6F0; --doux: #A79BD6;
+  --violet: #7C3AED; --violet-clair: #B14BFF; --ambre: #FFB020;
+  --vert: #22C55E; --rouge: #EF4444;
+  --e1: 4px; --e2: 8px; --e3: 16px; --e4: 24px; --e5: 32px; --e6: 48px;
+  --t1: 0.75rem; --t2: 0.875rem; --t3: 1rem; --t4: 1.375rem; --t5: 2rem; --t6: 3rem;
+  --r-bloc: 20px; --r-pastille: 100px; --ombre: 0 10px 30px rgba(0,0,0,.35);
+  --sortie: 190ms; --entree: 220ms;
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  font-family: 'Outfit', sans-serif;
+  background: radial-gradient(120% 60% at 50% 0%, var(--fond-halo) 0%, var(--fond) 55%);
+  color: var(--texte); padding: var(--e4); line-height: 1.5;
+}
+h1 { font-size: var(--t4); margin-bottom: var(--e1); }
+h2 { font-size: var(--t1); text-transform: uppercase; letter-spacing: .1em;
+     color: var(--ambre); margin: var(--e5) 0 var(--e3); font-weight: 700; }
+.note { color: var(--doux); font-size: var(--t2); max-width: 620px; }
+.rangee { display: flex; flex-wrap: wrap; gap: var(--e4); align-items: flex-start; }
+.demo { text-align: center; }
+.demo > small { display: block; font-size: var(--t1); color: var(--doux); margin-top: var(--e2); }
+
+/* ═══════ LA CARTE ═══════
+   Le seul élément que le joueur regarde pendant son tour. Rien autour
+   d'elle ne doit lui disputer l'attention. */
+.carte {
+  width: 260px; min-height: 130px; padding: var(--e5) var(--e4);
+  background: var(--surface); border: 1px solid var(--bord);
+  border-radius: var(--r-bloc); box-shadow: var(--ombre);
+  display: flex; align-items: center; justify-content: center;
+  font-size: var(--t4); font-weight: 800; text-align: center;
+}
+
+/* ═══════ LE CHRONO ═══════
+   Ambre tant qu'il reste du temps, rouge et battant dans les cinq
+   dernières secondes. C'est le seul endroit où l'app crie. */
+.chrono { font-size: var(--t6); font-weight: 800; line-height: 1;
+          font-variant-numeric: tabular-nums;
+          background: linear-gradient(180deg, #fff, var(--ambre));
+          -webkit-background-clip: text; background-clip: text; color: transparent; }
+.chrono.urgent { background: none; color: var(--rouge); animation: battement 500ms infinite; }
+@keyframes battement { 0%,100% { transform: scale(1) } 50% { transform: scale(1.06) } }
+
+/* ═══════ LE MOUVEMENT ═══════ */
+.piste { position: relative; width: 260px; height: 150px; overflow: hidden; }
+.piste .carte { position: absolute; inset: 0; width: 100%; }
+.demo:hover .droite { animation: part-droite var(--sortie) ease-in forwards; }
+.demo:hover .gauche { animation: part-gauche var(--sortie) ease-in forwards; }
+@keyframes part-droite { to { transform: translateX(60px) rotate(5deg); opacity: 0 } }
+@keyframes part-gauche { to { transform: translateX(-60px) rotate(-5deg); opacity: 0 } }
+
+.pastille { display: inline-block; padding: 6px 14px; border-radius: var(--r-pastille);
+            background: rgba(255,176,32,.14); color: var(--ambre);
+            font-size: var(--t1); font-weight: 700; }
+</style>
+</head>
+<body>
+
+<h1>La carte et le chrono</h1>
+<p class="note">
+  Les deux seuls éléments que le joueur regarde pendant son tour. Tout ce qui les
+  entoure doit s'effacer : c'est le moment où l'interface doit disparaître.
+</p>
+
+<h2>La carte</h2>
+<div class="rangee">
+  <div class="demo">
+    <div class="carte">Cléopâtre</div>
+    <small>mot court</small>
+  </div>
+  <div class="demo">
+    <div class="carte">Le Chapelier fou</div>
+    <small>mot long — la carte grandit, la taille du texte ne change pas</small>
+  </div>
+</div>
+<p class="note" style="margin-top:var(--e3)">
+  Une seule taille de texte, quelle que soit la longueur du mot. Réduire la police pour
+  faire tenir un mot long crée une hiérarchie qui n'existe pas : toutes les cartes se valent.
+</p>
+
+<h2>Le chrono</h2>
+<div class="rangee">
+  <div class="demo"><div class="chrono">28</div><small>en cours</small></div>
+  <div class="demo"><div class="chrono urgent">4</div><small>cinq dernières secondes</small></div>
+</div>
+<p class="note" style="margin-top:var(--e3)">
+  Ambre tant qu'il reste du temps, rouge et battant dans les cinq dernières secondes,
+  accompagné d'un tic sonore et d'une vibration. C'est le seul endroit où l'app hausse
+  la voix — ailleurs, elle se tait.
+</p>
+
+<h2>Le mouvement — survole les cartes</h2>
+<div class="rangee">
+  <div class="demo">
+    <div class="piste"><div class="carte droite">Trouvée</div></div>
+    <small>trouvée → part à droite en 190 ms</small>
+  </div>
+  <div class="demo">
+    <div class="piste"><div class="carte gauche">Passée</div></div>
+    <small>passée → part à gauche, même durée</small>
+  </div>
+</div>
+<p class="note" style="margin-top:var(--e3)">
+  La carte part dans le sens de ce qu'on vient d'en faire, et la suivante arrive du bas
+  en 220 ms. Traitement égal entre la réussite et l'abandon : passer une carte est une
+  décision de jeu légitime, pas une faute — l'animation ne doit pas la juger.
+</p>
+
+<h2>Le paquet restant</h2>
+<div class="rangee">
+  <div class="demo"><span class="pastille">14 cartes restantes</span></div>
+  <div class="demo"><span class="pastille">Dernière carte !</span></div>
+</div>
+<p class="note" style="margin-top:var(--e3)">
+  Un nombre, jamais un mot du paquet. À une carte près de la fin, la pastille le dit en
+  toutes lettres : c'est l'information qui change la façon de jouer les dernières secondes.
+</p>
+
+</body>
+</html>

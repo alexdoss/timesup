@@ -1,0 +1,156 @@
+<!-- @dsCard group="Fondations" -->
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<title>Rush — fondations</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+/* ═══════════════════════════════════════════════════════════════
+   LES JETONS DE RUSH — direction « festive », arrêtée le 28/08/2026.
+
+   Deux accents : le violet pour agir, l'ambre pour informer.
+   Six espacements, six tailles de texte. Aucune valeur hors de ces
+   échelles ne doit apparaître dans l'app : c'est ce qui manquait
+   jusqu'ici (25 espacements et 43 tailles en circulation).
+   ═══════════════════════════════════════════════════════════════ */
+:root {
+  /* Couleurs — fond */
+  --fond:        #14102B;
+  --fond-halo:   #2A1F5C;   /* le halo en haut d'écran */
+  --surface:     #1E1846;
+  --bord:        #2E2660;
+
+  /* Couleurs — texte */
+  --texte:       #FFF6F0;
+  --doux:        #A79BD6;
+
+  /* Couleurs — accents */
+  --violet:      #7C3AED;   /* agir : boutons, sélection */
+  --violet-clair:#B14BFF;   /* fin de dégradé */
+  --ambre:       #FFB020;   /* informer : chiffres, libellés */
+  --vert:        #22C55E;   /* trouvé */
+  --rouge:       #EF4444;   /* erreur, abandon */
+
+  /* Espacements — les six seuls autorisés */
+  --e1: 4px; --e2: 8px; --e3: 16px; --e4: 24px; --e5: 32px; --e6: 48px;
+
+  /* Textes — les six seules tailles autorisées */
+  --t1: 0.75rem;  /* mentions, libellés en capitales */
+  --t2: 0.875rem; /* texte secondaire */
+  --t3: 1rem;     /* texte courant, boutons */
+  --t4: 1.375rem; /* titres de bloc */
+  --t5: 2rem;     /* chiffres marquants */
+  --t6: 3rem;     /* chrono */
+
+  /* Formes */
+  --r-bloc: 20px; --r-champ: 14px; --r-pastille: 100px;
+  --ombre: 0 10px 30px rgba(0,0,0,.35);
+  --ombre-action: 0 8px 22px rgba(124,58,237,.45);
+
+  /* Mouvement — direction B, arrêtée le 28/08/2026 */
+  --sortie-trouve: 190ms;  /* la carte part à droite */
+  --sortie-passe:  190ms;  /* la carte part à gauche */
+  --entree:        220ms;  /* la suivante arrive du bas */
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  font-family: 'Outfit', sans-serif;
+  background: radial-gradient(120% 60% at 50% 0%, var(--fond-halo) 0%, var(--fond) 55%);
+  color: var(--texte); padding: var(--e4); line-height: 1.5;
+}
+h1 { font-size: var(--t4); margin-bottom: var(--e1); }
+h2 { font-size: var(--t1); text-transform: uppercase; letter-spacing: .1em;
+     color: var(--ambre); margin: var(--e5) 0 var(--e3); font-weight: 700; }
+.note { color: var(--doux); font-size: var(--t2); max-width: 620px; }
+
+.grille { display: flex; flex-wrap: wrap; gap: var(--e3); }
+.teinte { width: 132px; }
+.pastille-couleur { height: 56px; border-radius: var(--r-champ); border: 1px solid var(--bord); }
+.teinte b { display: block; font-size: var(--t2); margin-top: var(--e2); font-weight: 600; }
+.teinte span { display: block; font-size: var(--t1); color: var(--doux);
+               font-variant-numeric: tabular-nums; }
+
+.barre { display: flex; align-items: flex-end; gap: var(--e3); }
+.pas { text-align: center; }
+.pas i { display: block; background: var(--violet); border-radius: 4px; width: 100%; }
+.pas b { display: block; font-size: var(--t1); margin-top: var(--e2); font-weight: 600; }
+.pas span { font-size: var(--t1); color: var(--doux); }
+
+.ligne-texte { display: flex; align-items: baseline; gap: var(--e3);
+               padding: var(--e2) 0; border-bottom: 1px solid var(--bord); }
+.ligne-texte code { font-size: var(--t1); color: var(--ambre); width: 3rem; flex: none; }
+.ligne-texte small { font-size: var(--t1); color: var(--doux); margin-left: auto; flex: none; }
+</style>
+</head>
+<body>
+
+<h1>Fondations</h1>
+<p class="note">
+  Direction « festive », arrêtée le 28 août 2026. Deux accents, six espacements,
+  six tailles. Toute valeur hors de ces échelles est une dérive à corriger.
+</p>
+
+<h2>Couleurs — fond et texte</h2>
+<div class="grille">
+  <div class="teinte"><div class="pastille-couleur" style="background:#14102B"></div><b>Fond</b><span>#14102B</span></div>
+  <div class="teinte"><div class="pastille-couleur" style="background:#2A1F5C"></div><b>Halo</b><span>#2A1F5C</span></div>
+  <div class="teinte"><div class="pastille-couleur" style="background:#1E1846"></div><b>Surface</b><span>#1E1846</span></div>
+  <div class="teinte"><div class="pastille-couleur" style="background:#2E2660"></div><b>Bord</b><span>#2E2660</span></div>
+  <div class="teinte"><div class="pastille-couleur" style="background:#FFF6F0"></div><b>Texte</b><span>#FFF6F0</span></div>
+  <div class="teinte"><div class="pastille-couleur" style="background:#A79BD6"></div><b>Doux</b><span>#A79BD6</span></div>
+</div>
+
+<h2>Couleurs — accents</h2>
+<div class="grille">
+  <div class="teinte"><div class="pastille-couleur" style="background:#7C3AED"></div><b>Violet — agir</b><span>#7C3AED</span></div>
+  <div class="teinte"><div class="pastille-couleur" style="background:#B14BFF"></div><b>Violet clair</b><span>#B14BFF</span></div>
+  <div class="teinte"><div class="pastille-couleur" style="background:#FFB020"></div><b>Ambre — informer</b><span>#FFB020</span></div>
+  <div class="teinte"><div class="pastille-couleur" style="background:#22C55E"></div><b>Vert — trouvé</b><span>#22C55E</span></div>
+  <div class="teinte"><div class="pastille-couleur" style="background:#EF4444"></div><b>Rouge — abandon</b><span>#EF4444</span></div>
+</div>
+<p class="note" style="margin-top:var(--e3)">
+  Le violet est réservé à ce sur quoi on appuie. L'ambre à ce qu'on lit — chiffres,
+  libellés en capitales, rappels. Les mélanger brouille la lecture d'un écran.
+</p>
+
+<h2>Espacements — six pas</h2>
+<div class="barre">
+  <div class="pas" style="width:36px"><i style="height:4px"></i><b>e1</b><span>4</span></div>
+  <div class="pas" style="width:36px"><i style="height:8px"></i><b>e2</b><span>8</span></div>
+  <div class="pas" style="width:36px"><i style="height:16px"></i><b>e3</b><span>16</span></div>
+  <div class="pas" style="width:36px"><i style="height:24px"></i><b>e4</b><span>24</span></div>
+  <div class="pas" style="width:36px"><i style="height:32px"></i><b>e5</b><span>32</span></div>
+  <div class="pas" style="width:36px"><i style="height:48px"></i><b>e6</b><span>48</span></div>
+</div>
+<p class="note" style="margin-top:var(--e3)">
+  <b>e3</b> est le pas courant : entre deux blocs, autour d'un texte. <b>e2</b> à
+  l'intérieur d'un bloc. <b>e5</b> et <b>e6</b> pour séparer deux parties d'écran.
+</p>
+
+<h2>Textes — six tailles</h2>
+<div>
+  <div class="ligne-texte"><code>t1</code><span style="font-size:.75rem;text-transform:uppercase;letter-spacing:.1em;font-weight:700">Score de la manche</span><small>0,75 rem — mentions, capitales</small></div>
+  <div class="ligne-texte"><code>t2</code><span style="font-size:.875rem;color:#A79BD6">Un seul mot pour faire deviner la carte.</span><small>0,875 rem — secondaire</small></div>
+  <div class="ligne-texte"><code>t3</code><span style="font-size:1rem;font-weight:600">Rejoindre la partie</span><small>1 rem — courant, boutons</small></div>
+  <div class="ligne-texte"><code>t4</code><span style="font-size:1.375rem;font-weight:800">Flonx fait deviner</span><small>1,375 rem — titres de bloc</small></div>
+  <div class="ligne-texte"><code>t5</code><span style="font-size:2rem;font-weight:800">14</span><small>2 rem — chiffres marquants</small></div>
+  <div class="ligne-texte"><code>t6</code><span style="font-size:3rem;font-weight:800">28</span><small>3 rem — chrono</small></div>
+</div>
+
+<h2>Formes et mouvement</h2>
+<div class="grille">
+  <div class="teinte"><div class="pastille-couleur" style="border-radius:20px;background:#1E1846"></div><b>Bloc</b><span>20 px</span></div>
+  <div class="teinte"><div class="pastille-couleur" style="border-radius:14px;background:#1E1846"></div><b>Champ</b><span>14 px</span></div>
+  <div class="teinte"><div class="pastille-couleur" style="border-radius:100px;background:#1E1846"></div><b>Pastille</b><span>100 px</span></div>
+</div>
+<p class="note" style="margin-top:var(--e3)">
+  Mouvement : une carte trouvée part à droite en 190 ms, une carte passée part à gauche
+  dans le même temps, la suivante arrive du bas en 220 ms. Rien d'autre ne bouge.
+</p>
+
+</body>
+</html>

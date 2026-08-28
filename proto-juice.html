@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Rush — la réponse au geste</title>
+<link rel="stylesheet" href="style.css">
+<style>
+  body { padding: 24px; overflow: auto; user-select: none; }
+  h1 { font-size: 1.3rem; margin-bottom: 6px; }
+  .intro { color: var(--muted); font-size: 0.9rem; max-width: 820px; line-height: 1.6; margin-bottom: 24px; }
+  .intro strong { color: var(--text); }
+  .rangee { display: flex; gap: 28px; flex-wrap: wrap; align-items: flex-start; }
+  .cas { display: flex; flex-direction: column; gap: 10px; }
+  .cas > h3 { font-size: 1rem; }
+  .cas > p { font-size: 0.82rem; color: var(--muted); max-width: 360px; line-height: 1.5; }
+  .tel {
+    width: 360px; height: 660px; flex: none;
+    border: 1px solid var(--border); border-radius: 22px;
+    overflow: hidden; position: relative; background: var(--background);
+  }
+  .tel .ecran {
+    position: absolute; inset: 0;
+    display: flex; flex-direction: column; align-items: center;
+    padding: 26px 22px; text-align: center;
+  }
+  .tel .card { margin: 18px 0; max-width: 300px; min-height: 120px; padding: 36px 20px; }
+  .tel .timer { font-size: 4rem; }
+  .tel .game-actions { margin-top: auto; }
+
+  /* ============ B — JUICE SOBRE ============
+     La réponse au geste, sans rien ajouter à l'écran : la carte part, la
+     suivante arrive, le compteur bouge. Aucun élément de plus.
+     La carte part DANS LE SENS DU GESTE : à droite quand elle est trouvée, à
+     gauche quand elle est passée. Le contraire dirait l'inverse de ce qu'on fait. */
+  .b .card.partie        { animation: b-sortie-d 190ms ease-in forwards; }
+  .b .card.partie.gauche { animation: b-sortie-g 190ms ease-in forwards; }
+  .b .card.arrivee       { animation: b-entree 220ms cubic-bezier(.2,.9,.3,1.4); }
+  @keyframes b-sortie-d { to { transform: translateX(60px) rotate(5deg); opacity: 0; } }
+  @keyframes b-sortie-g { to { transform: translateX(-60px) rotate(-5deg); opacity: 0; } }
+  @keyframes b-entree { from { transform: translateY(14px) scale(.96); opacity: 0; } }
+  .b .btn-skip:active { transform: scale(.96); }
+  .b .compteur.bouge { animation: b-compteur 300ms ease-out; }
+  @keyframes b-compteur { 50% { transform: scale(1.25); color: var(--success); } }
+  .b .btn-found:active { transform: scale(.96); }
+
+  /* ============ B′ — LA RÉUSSITE ET L'ABANDON NE SE RESSEMBLENT PAS ============
+     Même chose que B pour une carte trouvée. Mais une carte passée ne s'envole
+     pas : elle retombe, plus lentement, en perdant ses couleurs. Le geste dit
+     ce qu'il vaut, sans qu'un mot soit nécessaire. */
+  .d .card.partie        { animation: b-sortie-d 190ms ease-in forwards; }
+  .d .card.partie.gauche { animation: d-retombe 340ms cubic-bezier(.4,0,.7,.5) forwards; }
+  .d .card.arrivee       { animation: b-entree 220ms cubic-bezier(.2,.9,.3,1.4); }
+  @keyframes d-retombe {
+    to { transform: translate(-22px, 38px) rotate(-2deg); opacity: 0; filter: saturate(.25); }
+  }
+  .d .compteur.bouge { animation: b-compteur 300ms ease-out; }
+  @keyframes b-compteur { 50% { transform: scale(1.25); color: var(--success); } }
+  .d .btn-found:active, .d .btn-skip:active { transform: scale(.96); }
+
+  /* ============ C — JUICE GÉNÉREUX ============
+     La même chose, plus une célébration : la carte est validée avant de
+     partir, un halo traverse l'écran, le score s'envole. */
+  .c .card.partie  { animation: c-sortie 320ms cubic-bezier(.4,0,.9,.3) forwards; }
+  .c .card.arrivee { animation: c-entree 280ms cubic-bezier(.2,.9,.3,1.5); }
+  .c .card.validee { border-color: var(--success); box-shadow: 0 0 0 3px var(--success-soft), var(--shadow); }
+  @keyframes c-sortie { to { transform: translate(70px, -120px) rotate(14deg) scale(.7); opacity: 0; } }
+  @keyframes c-entree { from { transform: translateY(26px) scale(.9) rotate(-2deg); opacity: 0; } }
+  .c .compteur.bouge { animation: c-compteur 420ms ease-out; }
+  @keyframes c-compteur { 40% { transform: scale(1.5) rotate(-6deg); color: var(--success); } }
+  .c .halo {
+    position: absolute; inset: 0; pointer-events: none; opacity: 0;
+    background: radial-gradient(circle at 50% 45%, var(--success-soft), transparent 62%);
+  }
+  .c .halo.eclat { animation: c-halo 420ms ease-out; }
+  @keyframes c-halo { 0% { opacity: 1; transform: scale(.7); } 100% { opacity: 0; transform: scale(1.25); } }
+  .c .gain {
+    position: absolute; left: 50%; top: 46%; pointer-events: none;
+    font-size: 1.6rem; font-weight: 800; color: var(--success); opacity: 0;
+  }
+  .c .gain.vole { animation: c-gain 700ms ease-out; }
+  @keyframes c-gain {
+    0%   { opacity: 1; transform: translate(-50%, 0) scale(.8); }
+    100% { opacity: 0; transform: translate(-50%, -90px) scale(1.3); }
+  }
+  .c .btn-found:active { transform: scale(.94); }
+
+  .compteur { display: inline-block; font-weight: 800; }
+</style>
+</head>
+<body>
+
+<h1>La réponse au geste</h1>
+<p class="intro">
+  Trois fois le même écran de jeu, avec le vrai CSS de Rush. Ce qui change n'est pas
+  la mise en page — <strong>c'est ce qui se passe quand on appuie sur « Trouvé ✓ »</strong>.
+  Appuie plusieurs fois de suite sur chacun : ça se juge au doigt, pas à l'œil.
+  <br><br>
+  Le vocabulaire du métier appelle ça la <strong>« juice »</strong> : la générosité de la
+  réponse à une action. Elle récompense ce que le joueur vient de faire — à ne pas
+  confondre avec les mécaniques de rétention, qui fabriquent un manque pour le faire revenir.
+</p>
+
+<div class="rangee">
+
+  <div class="cas">
+    <h3>A — Aujourd'hui</h3>
+    <p>Le mot est remplacé, le compteur change. Rien d'autre. Rapide et honnête,
+       mais rien ne dit au joueur qu'il vient de réussir : à trois cartes par
+       minute, on ne ressent aucune progression.</p>
+    <div class="tel a" data-mode="a">
+      <div class="ecran">
+        <div class="game-header">
+          <span class="round-label">Manche 2</span>
+          <span class="team-label">Les Rapides</span>
+        </div>
+        <div class="timer">28</div>
+        <div class="card"><span class="mot">Cléopâtre</span></div>
+        <div class="cards-remaining">Cartes restantes : <span class="compteur">14</span></div>
+        <div class="game-actions">
+          <button class="btn btn-skip">Passer ✗</button>
+          <button class="btn btn-found">Trouvé ✓</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="cas">
+    <h3>B — Sobre</h3>
+    <p>La carte <strong>part à droite quand elle est trouvée, à gauche quand elle est
+       passée</strong> — dans le sens de ce qu'on vient d'en faire. La suivante arrive
+       du bas, le compteur tressaille en vert. Trois animations très courtes, aucun
+       élément ajouté à l'écran. Essaie les deux boutons.</p>
+    <div class="tel b" data-mode="b">
+      <div class="ecran">
+        <div class="game-header">
+          <span class="round-label">Manche 2</span>
+          <span class="team-label">Les Rapides</span>
+        </div>
+        <div class="timer">28</div>
+        <div class="card"><span class="mot">Cléopâtre</span></div>
+        <div class="cards-remaining">Cartes restantes : <span class="compteur">14</span></div>
+        <div class="game-actions">
+          <button class="btn btn-skip">Passer ✗</button>
+          <button class="btn btn-found">Trouvé ✓</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="cas">
+    <h3>B′ — Sobre, mais la réussite et l'abandon se distinguent</h3>
+    <p>Une carte trouvée s'envole à droite, vive. Une carte passée <strong>retombe</strong> :
+       plus lentement, vers le bas, en perdant ses couleurs. Le mouvement dit ce que le
+       geste valait, sans qu'un mot soit nécessaire. Alterne les deux boutons pour sentir
+       la différence.</p>
+    <div class="tel d" data-mode="d">
+      <div class="ecran">
+        <div class="game-header">
+          <span class="round-label">Manche 2</span>
+          <span class="team-label">Les Rapides</span>
+        </div>
+        <div class="timer">28</div>
+        <div class="card"><span class="mot">Cléopâtre</span></div>
+        <div class="cards-remaining">Cartes restantes : <span class="compteur">14</span></div>
+        <div class="game-actions">
+          <button class="btn btn-skip">Passer ✗</button>
+          <button class="btn btn-found">Trouvé ✓</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="cas">
+    <h3>C — Généreux</h3>
+    <p>La carte se cadre en vert un instant — « c'est compté » — puis s'envole en
+       tournant. Un halo traverse l'écran, un « +1 » monte et disparaît. C'est ce
+       qu'on trouve dans les jeux de fête ; c'est aussi ce qui fatigue le plus vite.</p>
+    <div class="tel c" data-mode="c">
+      <div class="halo"></div>
+      <div class="gain">+1</div>
+      <div class="ecran">
+        <div class="game-header">
+          <span class="round-label">Manche 2</span>
+          <span class="team-label">Les Rapides</span>
+        </div>
+        <div class="timer">28</div>
+        <div class="card"><span class="mot">Cléopâtre</span></div>
+        <div class="cards-remaining">Cartes restantes : <span class="compteur">14</span></div>
+        <div class="game-actions">
+          <button class="btn btn-skip">Passer ✗</button>
+          <button class="btn btn-found">Trouvé ✓</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<h2 style="font-size:1.05rem;margin:30px 0 8px">Ce que chaque direction coûte</h2>
+<div style="max-width:820px;color:var(--muted-strong);font-size:0.88rem;line-height:1.7">
+  <p><strong style="color:var(--text)">B</strong> — une trentaine de lignes de CSS et deux
+     classes posées puis retirées dans <code>app.js</code>. Aucun élément ajouté à l'écran,
+     donc aucun test à reprendre. C'est la direction que je recommande.</p>
+  <p><strong style="color:var(--text)">B′</strong> — une image-clé de plus que B, rien d'autre.
+     L'intérêt est ailleurs que dans le coût : à la fin d'un tour, celui qui regarde par-dessus
+     l'épaule sait, sans compter, si ça s'est bien passé. Le risque est de rendre l'abandon
+     désagréable — or passer une carte est une décision de jeu légitime, pas une faute. À
+     juger en enchaînant plusieurs passes d'affilée : si ça devient pénible, c'est trop appuyé.</p>
+  <p><strong style="color:var(--text)">Le sens de sortie</strong> — droite pour trouvée,
+     gauche pour passée. Rien à changer aux commandes : ce sont toujours les boutons qui
+     agissent, donc aucune fausse manœuvre possible et aucun test à reprendre. La même
+     animation devra exister sur l'écran du joueur qui joue depuis son téléphone, sans quoi
+     le jeu ne se comporterait pas pareil selon l'appareil.</p>
+  <p><strong style="color:var(--text)">C</strong> — même chose, plus deux éléments décoratifs
+     par écran de jeu. Rien de difficile, mais deux réserves : sur un tour de 40 secondes à
+     dix cartes, la célébration se répète dix fois et l'effet s'émousse ; et le halo attire
+     l'œil au centre alors que le joueur doit lire la carte suivante <em>tout de suite</em>.</p>
+  <p><strong style="color:var(--text)">Le son et la vibration</strong> existent déjà dans Rush
+     mais ne servent qu'au chrono. Une vibration très courte sur « Trouvé » ferait plus pour
+     la sensation que n'importe quelle animation — c'est le seul retour qui passe par le
+     corps, et il fonctionne même quand on regarde ses coéquipiers et non l'écran.</p>
+</div>
+
+<script>
+  // Chaque cadre rejoue un vrai tour : une pioche de mots, un compteur qui descend.
+  const MOTS = ['Cléopâtre', 'Trampoline', 'Le Grand Bleu', 'Boussole', 'Harry Potter',
+                'Tire-bouchon', 'Nikita', 'Le Chapelier fou', 'Aslan', 'Rocky'];
+
+  document.querySelectorAll('.tel').forEach(tel => {
+    const mode = tel.dataset.mode;
+    const carte = tel.querySelector('.card');
+    const mot = tel.querySelector('.mot');
+    const compteur = tel.querySelector('.compteur');
+    const halo = tel.querySelector('.halo');
+    const gain = tel.querySelector('.gain');
+    let index = 0;
+    let reste = 14;
+    let occupe = false;
+
+    const suivant = () => { index = (index + 1) % MOTS.length; return MOTS[index]; };
+
+    // versLaGauche : la carte a été passée. Elle repart dans l'autre sens, et
+    // le paquet ne diminue pas — la carte y retourne, c'est la règle du jeu.
+    function jouerLaCarte(versLaGauche = false) {
+      if (occupe) return;
+      occupe = true;
+      if (!versLaGauche) reste = Math.max(0, reste - 1);
+
+      if (mode === 'a') {
+        mot.textContent = suivant();
+        compteur.textContent = reste;
+        occupe = false;
+        return;
+      }
+      if (mode === 'c' && versLaGauche) {
+        // La célébration ne concerne que les cartes trouvées
+        carte.classList.add('partie', 'gauche');
+        setTimeout(() => {
+          mot.textContent = suivant();
+          carte.classList.remove('partie', 'gauche');
+          carte.classList.add('arrivee');
+          setTimeout(() => { carte.classList.remove('arrivee'); occupe = false; }, 300);
+        }, 200);
+        return;
+      }
+
+      if (mode === 'c') {
+        carte.classList.add('validee');
+        halo.classList.add('eclat');
+        gain.classList.add('vole');
+        setTimeout(() => { halo.classList.remove('eclat'); gain.classList.remove('vole'); }, 720);
+      }
+
+      const attente = mode === 'c' ? 140 : 0;
+      setTimeout(() => {
+        carte.classList.remove('validee');
+        carte.classList.add('partie');
+        if (versLaGauche) carte.classList.add('gauche');
+        // B′ : une carte passée retombe, plus lentement qu'une carte trouvée
+        const duree = mode === 'c' ? 320
+                    : (mode === 'd' && versLaGauche) ? 340
+                    : 190;
+        setTimeout(() => {
+          mot.textContent = suivant();
+          compteur.textContent = reste;
+          compteur.classList.add('bouge');
+          carte.classList.remove('partie');
+          carte.classList.add('arrivee');
+          setTimeout(() => {
+            carte.classList.remove('arrivee', 'gauche');
+            compteur.classList.remove('bouge');
+            occupe = false;
+          }, mode === 'c' ? 420 : 300);
+        }, duree);
+      }, attente);
+    }
+
+    tel.querySelector('.btn-found').addEventListener('click', () => jouerLaCarte(false));
+    tel.querySelector('.btn-skip').addEventListener('click', () => jouerLaCarte(true));
+  });
+</script>
+</body>
+</html>

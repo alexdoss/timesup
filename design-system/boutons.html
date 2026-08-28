@@ -1,0 +1,126 @@
+<!-- @dsCard group="Composants" -->
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<title>Rush — boutons</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root {
+  --fond: #14102B; --fond-halo: #2A1F5C; --surface: #1E1846; --bord: #2E2660;
+  --texte: #FFF6F0; --doux: #A79BD6;
+  --violet: #7C3AED; --violet-clair: #B14BFF; --ambre: #FFB020;
+  --vert: #22C55E; --rouge: #EF4444;
+  --e1: 4px; --e2: 8px; --e3: 16px; --e4: 24px; --e5: 32px; --e6: 48px;
+  --t1: 0.75rem; --t2: 0.875rem; --t3: 1rem; --t4: 1.375rem;
+  --r-pastille: 100px; --ombre-action: 0 8px 22px rgba(124,58,237,.45);
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  font-family: 'Outfit', sans-serif;
+  background: radial-gradient(120% 60% at 50% 0%, var(--fond-halo) 0%, var(--fond) 55%);
+  color: var(--texte); padding: var(--e4); line-height: 1.5;
+}
+h1 { font-size: var(--t4); margin-bottom: var(--e1); }
+h2 { font-size: var(--t1); text-transform: uppercase; letter-spacing: .1em;
+     color: var(--ambre); margin: var(--e5) 0 var(--e3); font-weight: 700; }
+.note { color: var(--doux); font-size: var(--t2); max-width: 620px; }
+.rangee { display: flex; flex-wrap: wrap; gap: var(--e3); align-items: center; }
+.cas { max-width: 320px; }
+.cas + .cas { margin-top: var(--e3); }
+.cas p { font-size: var(--t2); color: var(--doux); margin-top: var(--e2); }
+
+/* ═══════ LA FAMILLE DE BOUTONS ═══════
+   Un seul bouton violet par écran : celui qui fait avancer. Tout le reste
+   est secondaire ou discret. Deux boutons pleins côte à côte forcent à
+   choisir, et ralentissent. */
+.btn {
+  font-family: inherit; font-size: var(--t3); font-weight: 700;
+  border: none; border-radius: var(--r-pastille); padding: 16px 24px;
+  cursor: pointer; width: 100%; transition: transform 120ms ease-out;
+}
+.btn:active { transform: scale(.97); }
+
+.btn-agir {
+  background: linear-gradient(135deg, var(--violet), var(--violet-clair));
+  color: #fff; box-shadow: var(--ombre-action);
+}
+.btn-second {
+  background: var(--surface); color: var(--texte); border: 1px solid var(--bord);
+}
+.btn-discret {
+  background: transparent; color: var(--doux); font-weight: 600;
+  font-size: var(--t2); padding: 12px; text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.btn-danger { background: var(--rouge); color: #fff; }
+.btn:disabled { opacity: .4; cursor: not-allowed; box-shadow: none; }
+
+/* Les deux boutons du tour : ils vivent ensemble, jamais seuls. */
+.duo-jeu { display: flex; gap: var(--e2); }
+.btn-trouve { background: var(--vert); color: #06240f; flex: 1;
+              box-shadow: 0 8px 22px rgba(34,197,94,.35); }
+.btn-passe  { background: var(--surface); color: var(--texte);
+              border: 1px solid var(--bord); flex: 1; }
+</style>
+</head>
+<body>
+
+<h1>Boutons</h1>
+<p class="note">
+  Un seul bouton violet par écran : celui qui fait avancer la partie. Deux boutons
+  pleins côte à côte obligent à choisir, et ralentissent — sauf pendant un tour,
+  où le choix <em>est</em> le jeu.
+</p>
+
+<h2>Agir — un par écran</h2>
+<div class="cas">
+  <button class="btn btn-agir">C'est parti</button>
+  <p>Le seul bouton en dégradé violet. Il porte l'action qui fait avancer : rejoindre,
+     lancer le tour, passer à la manche suivante.</p>
+</div>
+
+<h2>Secondaire</h2>
+<div class="cas">
+  <button class="btn btn-second">Attendre les autres</button>
+  <p>L'issue alternative, réelle mais non recommandée. Même taille que l'action
+     principale : on ne cache pas une porte de sortie.</p>
+</div>
+
+<h2>Discret</h2>
+<div class="cas">
+  <button class="btn btn-discret">Voir les équipes</button>
+  <p>Un accès qui n'interrompt rien : consulter, revenir en arrière, corriger.
+     Jamais pour une action qui change la partie.</p>
+</div>
+
+<h2>Danger</h2>
+<div class="cas">
+  <button class="btn btn-danger">Reprendre ce tour</button>
+  <p>Réservé à ce qui coupe la partie de quelqu'un d'autre, ou l'efface.
+     Toujours précédé d'une confirmation qui nomme les conséquences.</p>
+</div>
+
+<h2>Le duo du tour</h2>
+<div class="cas">
+  <div class="duo-jeu">
+    <button class="btn btn-passe">Passer ✗</button>
+    <button class="btn btn-trouve">Trouvé ✓</button>
+  </div>
+  <p>La seule exception à la règle du bouton unique. « Trouvé » à droite, « Passer »
+     à gauche — dans le sens où part la carte. Cet ordre ne doit jamais s'inverser :
+     le geste devient un réflexe au bout de trois tours.</p>
+</div>
+
+<h2>Indisponible</h2>
+<div class="cas">
+  <button class="btn btn-agir" disabled>Lancer la partie</button>
+  <p>Grisé plutôt que caché, et toujours accompagné de la raison : « on attend
+     encore Marc et Inès ». Un bouton qui disparaît laisse l'organisateur sans
+     explication.</p>
+</div>
+
+</body>
+</html>

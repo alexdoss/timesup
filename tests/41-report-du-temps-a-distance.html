@@ -256,7 +256,15 @@ localStorage.removeItem('timesup_rejoint');
           J('atoi-duree').textContent.replace(/\d+/, 'N')
           === A('report-temps').textContent.replace(/\d+/, 'N'));
 
+    // Le chrono doit partir EXACTEMENT sur le nombre annonce. On lit tout de
+    // suite : une seconde plus tard, le decompte a deja commence et on ne
+    // saurait plus distinguer un depart correct d un depart ampute.
     J('btn-atoi-lancer').click();
+    await wait(0);
+    const depart = parseInt(J('mon-timer').textContent, 10);
+    log('       annonce ' + suivant.duree + ' s · chrono au demarrage ' + depart + ' s');
+    check('son chrono demarre sur le temps annonce', depart === suivant.duree);
+
     await wait(2500);
     check('il joue le tour reporte', ecranJ() === 'screen-mon-tour');
 

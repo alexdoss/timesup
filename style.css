@@ -620,10 +620,16 @@ body {
   color: var(--accent, var(--brand));
 }
 
+/* La largeur est bornée pour garder des lignes courtes, lisibles. Les marges
+   automatiques recentrent ce pavé : sans elles il se cale à gauche dès que son
+   conteneur est plus large que lui — ce qui est le cas depuis que le bloc de la
+   manche est une aire pleine largeur. Le texte était centré dans son pavé, le
+   pavé ne l'était pas dans l'écran. */
 .round-desc {
   font-size: 1rem;
   color: var(--muted);
   max-width: 280px;
+  margin-inline: auto;
   line-height: 1.6;
 }
 

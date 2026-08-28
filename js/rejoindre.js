@@ -574,7 +574,10 @@ function arreterAttente() {
 
 // Les moments où l'organisateur voit son écran de début de tour. L'invité voit
 // le même, sans le bouton « Lancer le tour » qui reste à la main de l'organisateur.
-const ETAPES_LANCEMENT = ['attente', 'entre-tours'];
+// « interruption » en fait partie : le tour a été coupé et reprend sur le
+// téléphone de l'organisateur. Ce qui s'affiche est bien l'écran de lancement —
+// même joueur, temps restant — avec un mot de plus pour dire ce qui s'est passé.
+const ETAPES_LANCEMENT = ['attente', 'entre-tours', 'interruption'];
 
 // Les moments où le chrono tourne chez l'organisateur
 const ETAPES_TOUR = ['tour', 'pause'];
@@ -1250,6 +1253,12 @@ function rendreComptage(etat) {
 function rendreLancement(etat) {
   const m = etat.manche;
   const T = (id, texte) => { document.getElementById(id).textContent = texte; };
+
+  // Le tour précédent a été coupé par l'organisateur, pas achevé. Le dire :
+  // sinon on voit un tour disparaître et le même joueur annoncé à nouveau.
+  T('lancement-interruption', etat.etape === 'interruption'
+    ? "⏸️ Tour interrompu — il reprend sur le téléphone de l'organisateur"
+    : '');
 
   T('lancement-titre', `Manche ${m.numero}/${m.sur}`);
   T('lancement-nom', `${m.icone} ${m.nom}`);

@@ -567,6 +567,23 @@ body {
   font-size: 3rem;
 }
 
+/* Le tour précédent a été coupé : un bandeau, pas une aire. Il parle de ce qui
+   vient de se passer, pas de ce qui s'annonce. */
+.ruban-interruption {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--secondary);
+  background: var(--secondary-soft);
+  border-radius: var(--r-md);
+  padding: 10px 14px;
+  margin-bottom: 14px;
+  line-height: 1.4;
+}
+
+.ruban-interruption:empty {
+  display: none;
+}
+
 .round-content.reparti #round-header {
   padding-top: 22px;
   padding-bottom: 22px;

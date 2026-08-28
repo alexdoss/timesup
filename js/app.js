@@ -2016,7 +2016,10 @@ async function reprendreLeTourIci() {
   // publiait, et une publication au numéro inférieur est rejetée en silence.
   try { reprendreVersion((await suivreEtat()).suivi?.v); } catch { /* au prochain coup */ }
   afficherTourDistant(false);
-  publierEtat('entre-tours');
+  // « Interruption » et non « entre-tours » : ce tour ne s'est pas terminé, il a
+  // été coupé et reprend ailleurs. Ceux qui regardent voyaient le tour
+  // disparaître et le même joueur être annoncé à nouveau, sans explication.
+  publierEtat('interruption');
 
   const rendu = enCours ? await attendreLeComptageDuJoueur(qui) : null;
   try { await reprendreTour(true); } catch { /* la clé expirera d'elle-même */ }

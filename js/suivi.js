@@ -116,7 +116,13 @@ function historique() {
 }
 
 // Le résumé envoyé aux invités.
-// etape : 'attente' | 'tour' | 'pause' | 'entre-tours' | 'fin-manche' | 'fin-partie'
+// etape : 'attente' | 'tour' | 'pause' | 'interruption' | 'entre-tours'
+//       | 'comptage' | 'fin-manche' | 'fin-partie'
+//
+// « interruption » : l'organisateur a repris un tour lancé sur un téléphone. Ce
+// n'est pas une fin de tour — le tour reprendra, avec le temps qui restait. Les
+// deux se ressemblent de l'extérieur, et les confondre revient à laisser la
+// table sans explication devant un tour qui disparaît.
 function resume(etape) {
   const manche = ROUNDS[game.activeRounds[game.currentRound]];
   const scoresManche = getRoundScores();

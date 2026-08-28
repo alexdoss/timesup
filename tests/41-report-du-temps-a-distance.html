@@ -312,13 +312,27 @@ localStorage.removeItem('timesup_rejoint');
     // sablier continue de couler sur tous les ecrans — y compris celui du
     // joueur qu on vient de dessaisir, qui regarde son propre tour s ecouler
     // alors que plus personne ne joue.
+    // On observe pendant la fenetre de recuperation, pas apres : elle dure
+    // deux a trois secondes, et l app republie ensuite l etat complet.
     let sablierCoule = false;
-    for (let k = 0; k < 4; k++) {
-      await wait(700);
+    const etapesVues = new Set();
+    for (let k = 0; k < 5; k++) {
+      await wait(600);
       if (dj.getElementById('bloc-tour').style.display !== 'none') sablierCoule = true;
+      const vu = (await api('suivre', { code })).corps.suivi;
+      if (vu?.etat?.etape) etapesVues.add(vu.etat.etape);
     }
     check('le sablier s arrete des la confirmation, sans attendre le decompte',
           !sablierCoule);
+
+    // Un tour repris n est pas un tour fini : sans un mot, la table voit le
+    // tour disparaitre et le meme joueur annonce a nouveau, sans raison.
+    log('       etapes publiees pendant la reprise : ' + [...etapesVues].join(', '));
+    check('l interruption est annoncee comme telle, pas comme une fin de tour',
+          etapesVues.has('interruption'));
+    log('       le joueur lit : "' + J('lancement-interruption').textContent + '"');
+    check('et son telephone l explique',
+          J('lancement-interruption').textContent.includes('interrompu'));
 
     // L app va chercher le decompte du joueur avant de rendre la main
     await wait(7000);
@@ -377,6 +391,37 @@ localStorage.removeItem('timesup_rejoint');
     log('       chrono sur l appareil de l organisateur : ' + etat().timeLeft + ' s');
     check('le tour reprend exactement la ou le joueur en etait',
           etat().timeLeft === reprise);
+
+    // ===== L organisateur vide le paquet : le tour revient au meme joueur =====
+    // La sequence complete signalee a la table : un tour repris, joue ici,
+    // termine avant le chrono — donc reporte — et rendu au meme joueur. Son
+    // telephone doit lui reproposer son tour. Il ne le va chercher que lorsque
+    // l etat publie annonce « entre deux tours » : si nos publications sont
+    // refusees, il reste bloque sur le dernier ecran qu il connaissait.
+    let clics = 0;
+    while (ecranApp() === 'screen-game' && clics < 300) { A('btn-found').click(); clics++; }
+    log('       l organisateur a vide le paquet en ' + clics + ' cartes · ecran ' + ecranApp());
+    check('le paquet se vide avant la fin du chrono', ecranApp() === 'screen-turn-end');
+    A('btn-next-turn').click();
+    await wait(500);
+    if (ecranApp() === 'screen-round-end') { A('btn-next-round').click(); await wait(1200); }
+    check('la manche 3 s ouvre', etat().currentRound === 2);
+    check('avec un temps reporte', etat().reportTemps > 0);
+    log('       a faire deviner en manche 3 : ' + A('current-player').textContent.trim());
+
+    // Le telephone du joueur doit reproposer son tour, sans qu on touche a rien
+    let repropose = false;
+    for (let k = 0; k < 14 && !repropose; k++) {
+      await wait(1000);
+      repropose = J('bloc-a-toi').style.display !== 'none';
+    }
+    log('       son ecran : ' + ecranJ()
+        + ' · a toi ' + J('bloc-a-toi').style.display
+        + ' · "' + J('atoi-duree').textContent + '"');
+    check('son telephone lui repropose son tour, sans blocage', repropose);
+    check('il n est pas reste sur la fin du tour precedent',
+          J('bloc-tour').style.display === 'none'
+          && J('bloc-comptage').style.display === 'none');
 
     log('SCENARIO 41 TERMINE');
   } catch (e) { log('EXCEPTION: ' + e.message + '\n' + e.stack); }

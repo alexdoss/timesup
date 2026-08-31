@@ -203,8 +203,8 @@ h2 { font-size: var(--t1); text-transform: uppercase; letter-spacing: .1em;
 <div class="rangee" style="margin-bottom:var(--e3)">
   <div class="sons" style="width:320px">
     <button class="btn plat" onclick="ecart('serre')">Écart serré — 2 points</button>
-    <button class="btn plat" onclick="ecart('net')">Écart net — 9 points</button>
-    <button class="btn plat" onclick="ecart('ecrasant')">Écrasant — 21 points</button>
+    <button class="btn plat" onclick="ecart('net')">Écart net — 7 points</button>
+    <button class="btn plat" onclick="ecart('ecrasant')">Écrasant — 14 points</button>
     <button class="btn" onclick="rejouerFin()">Rejouer les trois</button>
   </div>
 </div>
@@ -471,16 +471,16 @@ function finPartie(avecCumul) {
 const ECARTS = {
   serre:    { gagnant: 34, perdant: 32,
               table:  { emoji: '🏆', titre: 'Les Rapides l’emportent', sous: '2 points d’écart — ça s’est joué à trois cartes' },
-              gagne:  { emoji: '😮‍💨', titre: 'Vous l’emportez, de justesse', sous: '2 points d’avance — il s’en est fallu de peu' },
+              gagne:  { emoji: '😅', titre: 'Vous l’emportez, de justesse', sous: '2 points d’avance — il s’en est fallu de peu' },
               perd:   { emoji: '🥲', titre: 'Battus de peu', sous: '2 points, soit trois cartes. La revanche ?' } },
-  net:      { gagnant: 34, perdant: 25,
-              table:  { emoji: '🏆', titre: 'Les Rapides l’emportent', sous: '9 points d’écart' },
-              gagne:  { emoji: '🎉', titre: 'Vous l’emportez !', sous: '9 points d’avance' },
-              perd:   { emoji: '🥲', titre: 'C’est passé pour eux', sous: '9 points d’écart — rattrapable en une manche' } },
-  ecrasant: { gagnant: 41, perdant: 20,
-              table:  { emoji: '🏆', titre: 'Démonstration des Rapides', sous: '21 points d’écart' },
-              gagne:  { emoji: '🔥', titre: 'Démonstration !', sous: '21 points d’avance — personne n’a rien pu faire' },
-              perd:   { emoji: '😅', titre: 'On efface et on recommence', sous: '21 points. Il y a des soirs comme ça.' } }
+  net:      { gagnant: 34, perdant: 27,
+              table:  { emoji: '🏆', titre: 'Les Rapides l’emportent', sous: '7 points d’écart' },
+              gagne:  { emoji: '🎉', titre: 'Vous l’emportez !', sous: '7 points d’avance' },
+              perd:   { emoji: '🥲', titre: 'C’est passé pour eux', sous: '7 points d’écart — rattrapable en une manche' } },
+  ecrasant: { gagnant: 41, perdant: 27,
+              table:  { emoji: '🏆', titre: 'Démonstration des Rapides', sous: '14 points d’écart' },
+              gagne:  { emoji: '🔥', titre: 'Démonstration !', sous: '14 points d’avance — personne n’a rien pu faire' },
+              perd:   { emoji: '🙈', titre: 'On efface et on recommence', sous: '14 points. Il y a des soirs comme ça.' } }
 };
 let ecartChoisi = 'serre';
 function ecart(nom) { ecartChoisi = nom; rejouerFin(); }

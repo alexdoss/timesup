@@ -964,14 +964,190 @@ input[readonly] {
   margin: auto;
 }
 
+/* Le code, en quatre cases. Quatre caractères suffisent à savoir que la saisie
+   est finie : elle part toute seule, sans bouton. Le champ reste un vrai input
+   — il porte le clavier, le focus et le collage — mais il est transparent et
+   posé par-dessus les cases, qui affichent ce qu'il contient. */
+.code-cases {
+  position: relative;
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+  width: 100%;
+  margin: 4px 0 6px;
+}
+
+.code-case {
+  flex: 1;
+  max-width: 68px;
+  aspect-ratio: 4 / 5;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 2rem;
+  font-weight: 800;
+  background: var(--surface);
+  border: 2px solid var(--border);
+  border-radius: var(--r-md);
+  transition: border-color var(--transition), transform var(--transition);
+}
+
+.code-case.pleine { border-color: var(--primary); }
+
+/* La case en attente ne clignote que si le champ a le focus : sinon deux
+   téléphones posés côte à côte semblent tous les deux attendre une frappe. */
+.code-cases:focus-within .code-case.active {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px var(--primary-ring);
+}
+
 .champ-code {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  padding: 0 !important;
+  border: none !important;
+  background: transparent !important;
+  color: transparent !important;
+  caret-color: transparent;
   text-align: center;
   font-size: 2rem !important;
-  font-weight: 800;
-  letter-spacing: 0.3em;
   text-transform: uppercase;
-  padding-left: 0.3em !important;   /* compense l'espacement, qui décale le texte */
+  outline: none;
+  box-shadow: none !important;
 }
+
+/* L'erreur secoue les cases : le regard y est déjà, il n'a pas à descendre
+   chercher une ligne rouge. */
+.code-cases.faux .code-case {
+  border-color: var(--error);
+  animation: code-secousse 0.32s;
+}
+
+@keyframes code-secousse {
+  25% { transform: translateX(-6px); }
+  75% { transform: translateX(6px); }
+}
+
+.code-erreur { min-height: 20px; color: var(--error); }
+
+/* Visible pour le clavier et les lecteurs d'écran, absent de l'image.
+   Sert au bouton de validation du code, que la saisie rend inutile à la souris. */
+.hors-vue {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.hors-vue:focus { clip-path: none; position: static; width: auto; height: auto; margin: 0; }
+
+/* Qui est déjà arrivé. Sans cette liste, l'invité donne son prénom puis ses
+   cinq cartes sans jamais savoir s'il est dans la bonne partie. */
+.deja-la {
+  width: 100%;
+  margin-top: 22px;
+  text-align: left;
+}
+
+.deja-la-titre {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 8px;
+}
+
+.deja-la-gens {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.deja-un {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 12px 5px 5px;
+  border-radius: 100px;
+  background: var(--surface);
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.deja-un.moi { background: var(--primary-ring); color: var(--primary); }
+
+.deja-un.neuf { animation: deja-arrive 0.42s cubic-bezier(0.2, 0.9, 0.3, 1.6); }
+
+@keyframes deja-arrive {
+  0% { transform: scale(0.4); opacity: 0; }
+  60% { transform: scale(1.12); }
+}
+
+.deja-pastille {
+  flex: none;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.8rem;
+  font-weight: 800;
+  color: #fff;
+}
+
+/* Le compte des cartes. C'est l'écran le plus long du parcours : le chiffre
+   porte la progression, le reste s'efface. */
+.cartes-compteur {
+  font-size: 0.9rem;
+  color: var(--muted);
+  text-align: center;
+  margin-bottom: 6px;
+}
+
+.cartes-compteur .cpt-n {
+  display: inline-block;
+  font-size: 2.6rem;
+  font-weight: 800;
+  line-height: 1;
+  color: var(--text);
+  vertical-align: -0.12em;
+  margin-right: 2px;
+}
+
+.cartes-compteur .cpt-n.pousse { animation: cpt-pousse 0.26s ease-out; }
+
+@keyframes cpt-pousse {
+  50% { transform: scale(1.18); }
+}
+
+/* Un grain par carte attendue : le but se compte d'un coup d'œil, ce qu'une
+   barre de progression ne permet pas. */
+.grains {
+  display: flex;
+  gap: 6px;
+  justify-content: center;
+  width: 100%;
+  margin-bottom: 14px;
+}
+
+.grain {
+  flex: 1;
+  max-width: 30px;
+  height: 6px;
+  border-radius: 3px;
+  background: var(--surface);
+  transition: background var(--transition);
+}
+
+.grain.plein { background: var(--success); }
 
 .grand-emoji {
   font-size: 3.4rem;

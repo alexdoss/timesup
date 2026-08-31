@@ -23,15 +23,26 @@
         <div class="logo-wrap">
           <h1 class="title">RUSH</h1>
         </div>
-        <p class="subtitle">Rejoindre une partie</p>
+        <p class="subtitle">Le code de la partie</p>
         <div class="config-form">
-          <span class="field-label">Code de la partie</span>
-          <input type="text" id="champ-code" class="champ-code" placeholder="RU4B" maxlength="4"
-                 autocomplete="off" autocapitalize="characters" spellcheck="false">
-          <p id="erreur-code" class="wizard-hint"></p>
-          <button id="btn-code" class="btn btn-primary">Continuer ▶️</button>
+          <!-- Quatre cases, un seul champ : l'input est transparent et posé
+               par-dessus, ce sont les cases qui affichent ce qu'il contient. -->
+          <div class="code-cases" id="code-cases">
+            <span class="code-case"></span>
+            <span class="code-case"></span>
+            <span class="code-case"></span>
+            <span class="code-case"></span>
+            <input type="text" id="champ-code" class="champ-code" maxlength="4"
+                   autocomplete="off" autocapitalize="characters" spellcheck="false"
+                   aria-label="Code de la partie">
+          </div>
+          <p id="erreur-code" class="wizard-hint code-erreur"></p>
+          <!-- Le code part tout seul au quatrième caractère. Le bouton reste pour
+               qui navigue au clavier ou au lecteur d'écran, d'où le masquage
+               visuel plutôt qu'un retrait. -->
+          <button id="btn-code" class="btn btn-primary hors-vue">Continuer ▶️</button>
         </div>
-        <p class="wizard-hint" style="margin-top:18px">Le code est affiché sur le téléphone de l'organisateur.</p>
+        <p class="wizard-hint" style="margin-top:18px">Il est affiché sur le téléphone de l'organisateur.</p>
       </div>
     </div>
 
@@ -39,22 +50,29 @@
     <div id="screen-prenom" class="screen">
       <div class="rejoindre-content">
         <div class="wizard-header">
-          <h2>Rejoindre la partie</h2>
+          <h2 id="titre-prenom">Comment tu t'appelles ?</h2>
           <p class="wizard-hint">Partie <b id="rappel-code"></b></p>
         </div>
         <!-- Liste fermée : on rejoue avec les mêmes joueurs, chacun se reconnaît -->
         <div id="bloc-liste-prenoms" class="config-form" style="display:none">
-          <span class="field-label">Qui es-tu ?</span>
           <div id="liste-prenoms" class="choix-prenoms"></div>
           <p id="erreur-liste" class="wizard-hint"></p>
         </div>
 
         <div id="bloc-saisie-prenom" class="config-form">
-          <span class="field-label">Ton prénom</span>
           <input type="text" id="champ-prenom" placeholder="Ton prénom" maxlength="20" autocomplete="given-name">
           <p id="erreur-prenom" class="wizard-hint"></p>
-          <button id="btn-prenom" class="btn btn-primary">Continuer ▶️</button>
+          <button id="btn-prenom" class="btn btn-primary">Rejoindre la partie</button>
         </div>
+
+        <!-- Qui est déjà arrivé. C'est la seule preuve d'être dans la bonne
+             partie avant d'avoir tout saisi, et elle ne coûte rien : l'état
+             publié porte déjà les prénoms. -->
+        <div id="bloc-deja-la" class="deja-la" style="display:none">
+          <p class="deja-la-titre" id="deja-la-titre"></p>
+          <div class="deja-la-gens" id="deja-la-gens"></div>
+        </div>
+
         <p id="note-prenom" class="wizard-hint" style="margin-top:18px"></p>
       </div>
     </div>
@@ -67,8 +85,10 @@
           <p class="wizard-hint">Personne d'autre ne les verra avant la partie.</p>
         </div>
 
-        <div class="jauge"><div id="jauge-remplie"></div></div>
-        <p id="compteur-cartes" class="wizard-hint" style="margin-bottom:8px"></p>
+        <!-- Le compte est l'affaire de cet écran : c'est le plus long du
+             parcours, et le seul dont on veuille voir la fin approcher. -->
+        <p id="compteur-cartes" class="cartes-compteur"></p>
+        <div class="grains" id="grains-cartes"></div>
 
         <div class="config-form">
           <div class="player-input-row">

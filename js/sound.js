@@ -101,6 +101,19 @@ function vibrate(pattern) {
   }
 }
 
+// Une carte de gagnée : deux notes qui montent, très courtes. Le son arrive dix
+// fois par tour, toutes les quatre secondes environ — la contrainte n'est donc
+// pas sa beauté mais le fait qu'il ne fatigue pas à la dixième écoute.
+// Il sert aussi à la saisie des cartes, où le geste est le même : une de plus.
+export function playFound() {
+  if (soundEnabled) {
+    unlockAudio();
+    tone({ freq: 660, type: 'triangle', dur: 0.06, gain: 0.18 });
+    tone({ freq: 990, type: 'triangle', dur: 0.08, gain: 0.18, when: 0.055 });
+  }
+  vibrate(18);
+}
+
 // Tic sec du décompte, joué à chaque seconde sous les 5 secondes restantes.
 export function playTick() {
   if (soundEnabled) {

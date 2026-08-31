@@ -5,6 +5,7 @@
 // champ de saisie en une seconde, même sur un réseau de salle des fêtes.
 
 import { creerSablier, svgSablier } from './sablier.js';
+import { playFound } from './sound.js';
 
 const ROUTE = '/api/session';
 const STOCKAGE = 'timesup_rejoint';
@@ -73,6 +74,9 @@ function oublier() {
 
 function montrer(id) {
   document.querySelectorAll('.screen').forEach(e => e.classList.toggle('active', e.id === id));
+  // Quitter l'écran du prénom coupe la veille des arrivées : un seul endroit
+  // pour l'arrêter vaut mieux qu'un oubli dans une des sorties.
+  if (id !== 'screen-prenom') arreterLaVeille();
 }
 
 function bloquer(emoji, titre, texte, libelleBouton, action) {
@@ -109,7 +113,33 @@ function repartirDuCode() {
   session = { code: null, idJoueur: null, prenom: '', cartes: [], cartesParJoueur: 5, mode: 'simple', fini: false };
   document.getElementById('champ-code').value = '';
   document.getElementById('erreur-code').textContent = '';
+  codeEnCours = false;
+  dessinerCases();
   montrer('screen-code');
+}
+
+// ===== Étape 1 : le code, en quatre cases =====
+// Les cases ne sont qu'un affichage : le champ reste seul maître de la valeur.
+// C'est ce qui permet au collage, au clavier du téléphone et aux scénarios de
+// test de continuer à s'adresser à lui seul.
+
+let codeEnCours = false;
+
+function dessinerCases() {
+  const valeur = document.getElementById('champ-code').value;
+  const cases = document.querySelectorAll('#code-cases .code-case');
+  cases.forEach((c, i) => {
+    c.textContent = valeur[i] || '';
+    c.classList.toggle('pleine', i < valeur.length);
+    c.classList.toggle('active', i === valeur.length);
+  });
+}
+
+function refuserLeCode(message) {
+  const cases = document.getElementById('code-cases');
+  document.getElementById('erreur-code').textContent = message;
+  cases.classList.add('faux');
+  setTimeout(() => cases.classList.remove('faux'), 400);
 }
 
 // ===== REJOUER DANS LA MÊME SOIRÉE =====
@@ -262,21 +292,113 @@ function entrerEnSpectateur() {
 // une liste quand on rejoue avec les mêmes joueurs. Le choix évite les doublons,
 // les fautes de frappe, et permet à l'organisateur de savoir qui manque.
 
+// Qui a déjà rejoint. C'est la seule confirmation d'être dans la bonne partie
+// avant d'avoir tout saisi — sans elle, l'invité donne son prénom puis cinq
+// cartes sans savoir. L'état publié porte déjà les prénoms : rien de plus n'est
+// demandé au serveur que ce qui l'était déjà.
+
+const COULEURS_PASTILLE = ['#6D28D9', '#EF4444', '#22C55E', '#F59E0B', '#3B82F6', '#EC4899'];
+
+// Une couleur tirée du prénom, pas du rang : elle ne change pas quand
+// quelqu'un d'autre arrive avant.
+function couleurDe(prenom) {
+  let somme = 0;
+  for (const c of prenom) somme += c.codePointAt(0);
+  return COULEURS_PASTILLE[somme % COULEURS_PASTILLE.length];
+}
+
+let dejaVus = new Set();
+
+function afficherLesArrivees(joueurs) {
+  const bloc = document.getElementById('bloc-deja-la');
+  const zone = document.getElementById('deja-la-gens');
+
+  if (!joueurs.length) {
+    bloc.style.display = 'none';
+    zone.innerHTML = '';
+    dejaVus = new Set();
+    return;
+  }
+
+  bloc.style.display = '';
+  document.getElementById('deja-la-titre').textContent =
+    joueurs.length === 1 ? '1 joueur déjà là' : `${joueurs.length} joueurs déjà là`;
+
+  zone.innerHTML = '';
+  joueurs.forEach(j => {
+    const prenom = j.prenom;
+    const un = document.createElement('div');
+    un.className = 'deja-un' + (dejaVus.size && !dejaVus.has(prenom) ? ' neuf' : '');
+
+    const pastille = document.createElement('span');
+    pastille.className = 'deja-pastille';
+    pastille.style.background = couleurDe(prenom);
+    pastille.textContent = prenom[0].toLocaleUpperCase();
+
+    un.appendChild(pastille);
+    un.appendChild(document.createTextNode(prenom));
+    zone.appendChild(un);
+  });
+
+  dejaVus = new Set(joueurs.map(j => j.prenom));
+}
+
+// On regarde qui arrive tant que l'écran du prénom est ouvert. Le rythme est
+// lâche : personne ne remplit ce champ en moins de quelques secondes.
+let veilleArrivees = null;
+
+function veillerAuxArrivees() {
+  arreterLaVeille();
+  veilleArrivees = setInterval(async () => {
+    if (ecranActif() !== 'screen-prenom') return arreterLaVeille();
+    try {
+      const etat = await appeler('etat', { code: session.code });
+      const attendus = etat.attendus || [];
+      if (attendus.length > 0) return majListePrenoms(etat, attendus);
+      afficherLesArrivees(etat.joueurs || []);
+    } catch {
+      // Le réseau qui hoquette ne doit pas vider la liste sous les yeux.
+    }
+  }, 4000);
+}
+
+function arreterLaVeille() {
+  if (veilleArrivees) clearInterval(veilleArrivees);
+  veilleArrivees = null;
+}
+
+function ecranActif() {
+  const actif = document.querySelector('.screen.active');
+  return actif ? actif.id : null;
+}
+
 function afficherChoixPrenom(etat) {
   const attendus = etat.attendus || [];
   const parListe = attendus.length > 0;
 
+  document.getElementById('titre-prenom').textContent = parListe
+    ? 'Qui es-tu ?'
+    : "Comment tu t'appelles ?";
   document.getElementById('bloc-liste-prenoms').style.display = parListe ? '' : 'none';
   document.getElementById('bloc-saisie-prenom').style.display = parListe ? 'none' : '';
   document.getElementById('note-prenom').textContent = parListe
     ? "Cette partie rejoue avec les mêmes joueurs. Touche ton prénom pour saisir tes nouvelles cartes."
     : "Il permet à l'organisateur de savoir qui a fini, et de te placer dans une équipe.";
 
+  // La liste fermée porte déjà les prénoms et coche ceux qui sont arrivés :
+  // afficher les arrivées à côté dirait deux fois la même chose.
+  afficherLesArrivees(parListe ? [] : (etat.joueurs || []));
+
+  veillerAuxArrivees();
+
   if (!parListe) {
     document.getElementById('champ-prenom').focus();
     return;
   }
+  majListePrenoms(etat, attendus);
+}
 
+function majListePrenoms(etat, attendus) {
   const pris = new Set((etat.joueurs || []).map(j => j.prenom.toLocaleLowerCase()));
   const liste = document.getElementById('liste-prenoms');
   liste.innerHTML = '';
@@ -357,6 +479,10 @@ async function rejoindreAvec(prenom) {
 
 // ===== Étape 3 : les cartes =====
 
+// Sert à n'animer le compteur que quand il monte : retirer une carte ne mérite
+// pas la même fête que d'en ajouter une.
+let dernierCompte = 0;
+
 function ouvrirSaisie() {
   document.getElementById('titre-cartes').textContent = `${session.prenom}, tes cartes`;
   rendreCartes();
@@ -391,10 +517,37 @@ function rendreCartes() {
 
   const n = session.cartes.length;
   const cible = session.cartesParJoueur;
-  document.getElementById('compteur-cartes').textContent =
-    n >= cible ? `${n} cartes — c'est bon !` : `${n} / ${cible} cartes`;
-  document.getElementById('jauge-remplie').style.width = Math.min(100, (n / cible) * 100) + '%';
-  document.getElementById('btn-terminer').disabled = n < cible;
+
+  // Le chiffre porte la progression, le reste de la phrase l'accompagne.
+  // Le texte complet ne change pas : « 0 / 5 cartes », puis « 5 cartes — c'est bon ! »
+  const compteur = document.getElementById('compteur-cartes');
+  compteur.innerHTML = '';
+  const chiffre = document.createElement('span');
+  chiffre.className = 'cpt-n';
+  chiffre.textContent = String(n);
+  compteur.append(chiffre, document.createTextNode(
+    n >= cible ? ` cartes — c'est bon !` : ` / ${cible} cartes`));
+  if (n > dernierCompte) chiffre.classList.add('pousse');
+  dernierCompte = n;
+
+  const grains = document.getElementById('grains-cartes');
+  if (grains.children.length !== cible) {
+    grains.innerHTML = '';
+    for (let i = 0; i < cible; i++) {
+      const grain = document.createElement('span');
+      grain.className = 'grain';
+      grains.appendChild(grain);
+    }
+  }
+  [...grains.children].forEach((g, i) => g.classList.toggle('plein', i < n));
+
+  // Le bouton dit ce qu'il reste à faire tant qu'il ne peut rien faire.
+  const bouton = document.getElementById('btn-terminer');
+  const reste = cible - n;
+  bouton.disabled = reste > 0;
+  bouton.textContent = reste > 0
+    ? `Encore ${reste} carte${reste > 1 ? 's' : ''}`
+    : `✅ Envoyer mes ${cible} cartes`;
 
   // Le compte atteint, on ferme l'ajout plutôt que de refuser après coup.
   // Retirer une carte reste possible, et rouvre l'ajout.
@@ -425,6 +578,7 @@ function ajouterCarte() {
   session.cartes.push(mot);
   champ.value = '';
   champ.focus();
+  playFound();
   surChangement();
 }
 
@@ -1486,16 +1640,27 @@ function brancherEvenements() {
   const champCode = document.getElementById('champ-code');
   champCode.addEventListener('input', () => {
     champCode.value = champCode.value.toUpperCase().replace(/[^A-Z0-9]/g, '');
+    document.getElementById('erreur-code').textContent = '';
+    dessinerCases();
+    // Quatre caractères : il n'y a plus rien à attendre du joueur.
+    if (champCode.value.length === 4) lancerLeCode();
   });
 
-  document.getElementById('btn-code').addEventListener('click', () => {
+  // Le clic reste possible — clavier, lecteur d'écran — et sert de garde-fou
+  // au cas où la saisie automatique n'aurait pas eu lieu.
+  document.getElementById('btn-code').addEventListener('click', lancerLeCode);
+
+  function lancerLeCode() {
+    if (codeEnCours) return;
     const code = champCode.value.trim();
     if (code.length !== 4) {
-      document.getElementById('erreur-code').textContent = 'Le code fait 4 caractères.';
+      refuserLeCode('Le code fait 4 caractères.');
       return;
     }
-    validerCode(code);
-  });
+    codeEnCours = true;
+    champCode.blur();
+    validerCode(code).finally(() => { codeEnCours = false; });
+  }
 
   document.getElementById('btn-prenom').addEventListener('click', validerPrenom);
   document.getElementById('champ-prenom').addEventListener('keypress', e => {
@@ -1553,6 +1718,7 @@ async function demarrer() {
   if (code) return validerCode(code);
 
   montrer('screen-code');
+  dessinerCases();
   document.getElementById('champ-code').focus();
 }
 

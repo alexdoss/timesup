@@ -1143,18 +1143,28 @@ input[readonly] {
   color: var(--secondary);
 }
 
-/* Une icône plutôt qu'un bouton pleine largeur : l'action reste joignable
-   sans pousser le contenu vers le bas quand elle apparaît. */
+/* Plus petit qu'un bouton pleine largeur — il ne pousse plus le contenu vers
+   le bas quand il apparaît — mais toujours étiqueté : réduit à sa seule icône,
+   il devenait un carré gris de 31 px que personne ne trouvait. */
 .bandeau-equipes {
-  background: none;
-  border: none;
-  color: var(--muted);
-  font-size: 1.05rem;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 100px;
+  color: var(--muted-strong);
+  font-family: 'Outfit', sans-serif;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
   line-height: 1;
-  padding: 2px 4px;
+  padding: 5px 11px 5px 8px;
   cursor: pointer;
-  transition: transform var(--transition);
+  transition: transform var(--transition), border-color var(--transition);
 }
+
+.bandeau-equipes:hover { border-color: var(--primary); }
 
 .bandeau-equipes:active { transform: scale(0.92); }
 

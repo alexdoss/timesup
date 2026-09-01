@@ -185,10 +185,19 @@
             <button id="btn-voir-equipes" class="bandeau-equipes" style="display:none"
                     title="Voir les équipes">👥 Équipes</button>
           </div>
+          <!-- Comme un tableau d'affichage de gymnase : le nom en petit,
+               le chiffre en grand dessous. Les deux scores s'alignent, donc
+               se comparent d'un coup d'œil. -->
           <div id="suivi-score" class="bandeau-score" style="display:none">
-            <span class="bandeau-eq"><span id="suivi-eq1"></span><b id="suivi-s1">0</b></span>
-            <span class="bandeau-tiret">—</span>
-            <span class="bandeau-eq"><b id="suivi-s2">0</b><span id="suivi-eq2"></span></span>
+            <div class="bandeau-eq">
+              <span id="suivi-eq1" class="bandeau-nom"></span>
+              <b id="suivi-s1">0</b>
+            </div>
+            <span class="bandeau-tiret" aria-hidden="true"></span>
+            <div class="bandeau-eq">
+              <span id="suivi-eq2" class="bandeau-nom"></span>
+              <b id="suivi-s2">0</b>
+            </div>
           </div>
           <p id="suivi-total" class="bandeau-total"></p>
         </div>

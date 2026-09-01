@@ -1168,30 +1168,51 @@ input[readonly] {
 
 .bandeau-equipes:active { transform: scale(0.92); }
 
+/* Le tableau d'affichage : nom au-dessus, chiffre en dessous, les deux scores
+   alignés de part et d'autre d'un filet. Ils se comparent alors sans lecture,
+   ce qu'une ligne « Rapides 14 — 11 Malins » ne permettait pas. */
 .bandeau-score {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 8px;
+  display: grid;
+  grid-template-columns: 1fr 1px 1fr;
+  align-items: center;
+  gap: 10px;
+  padding: 2px 0;
 }
 
 .bandeau-eq {
   display: flex;
-  align-items: baseline;
-  gap: 6px;
-  font-size: 0.85rem;
-  font-weight: 600;
-  color: var(--muted-strong);
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+  min-width: 0;
+}
+
+.bandeau-nom {
+  font-size: 0.66rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .bandeau-eq b {
-  font-size: 1.35rem;
+  font-size: 1.85rem;
   font-weight: 800;
+  line-height: 1.05;
   color: var(--text);
   font-variant-numeric: tabular-nums;
 }
 
-.bandeau-tiret { color: var(--muted-2); font-size: 0.8rem; }
+/* Un filet plutôt qu'un tiret : entre deux colonnes, un tiret se lit comme un
+   signe « moins » posé au milieu de nulle part. */
+.bandeau-tiret {
+  align-self: stretch;
+  background: var(--line);
+}
 
 .bandeau-total {
   font-size: 0.72rem;

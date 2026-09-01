@@ -58,13 +58,39 @@ h2 { font-size: var(--t1); text-transform: uppercase; letter-spacing: .1em;
   background: none; border: none; color: var(--doux); cursor: pointer;
   font-size: var(--t3); padding: 0 2px; line-height: 1;
 }
-.bandeau-score { display: flex; align-items: baseline; justify-content: space-between; gap: var(--e2); }
-.bandeau-score .eq { display: flex; align-items: baseline; gap: 6px; font-size: var(--t2); font-weight: 600; }
-.bandeau-score .eq b { font-size: var(--t4); font-weight: 800; font-variant-numeric: tabular-nums; }
+/* Le tableau d'affichage : nom au-dessus, chiffre en dessous, de part et
+   d'autre d'un filet. Les deux scores s'alignent, donc se comparent sans
+   lecture — ce qu'une ligne « Rapides 14 — 11 Malins » ne permettait pas. */
+.bandeau-score {
+  display: grid; grid-template-columns: 1fr 1px 1fr;
+  align-items: center; gap: 10px; padding: 2px 0;
+}
+.bandeau-score .eq { display: flex; flex-direction: column; align-items: center; gap: 1px; min-width: 0; }
+.bandeau-score .eq .nom {
+  font-size: .66rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase;
+  color: var(--doux); max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.bandeau-score .eq b {
+  font-size: 1.85rem; font-weight: 800; line-height: 1.05; font-variant-numeric: tabular-nums;
+}
 .bandeau-score .eq.mene b { color: var(--ambre); }
-.bandeau-score .tiret { color: var(--doux); font-size: var(--t2); }
+.bandeau-score .tiret { align-self: stretch; background: var(--bord); }
 .bandeau-score b.monte { animation: pousse 260ms ease-out; display: inline-block; }
 @keyframes pousse { 50% { transform: scale(1.2) } }
+
+/* Pour comparer avec ce qu'on remplace */
+.avant .bandeau-score {
+  display: flex; align-items: baseline; justify-content: space-between; gap: var(--e2);
+}
+.avant .bandeau-score .eq { flex-direction: row; align-items: baseline; gap: 6px; font-size: var(--t2); }
+.avant .bandeau-score .eq .nom { font-size: var(--t2); text-transform: none; letter-spacing: 0; color: var(--texte); font-weight: 600; }
+.avant .bandeau-score .eq b { font-size: var(--t4); }
+.avant .bandeau-score .tiret { align-self: auto; background: none; color: var(--doux); font-size: var(--t2); }
+.avant .bandeau-score .tiret::after { content: '—'; }
+.duo { display: flex; gap: var(--e4); flex-wrap: wrap; align-items: flex-start; }
+.duo > div { width: 300px; display: flex; flex-direction: column; gap: var(--e2); }
+.duo .etiq { font-size: var(--t1); font-weight: 700; letter-spacing: .1em; text-transform: uppercase; }
+.duo .avant .etiq { color: var(--doux); }
 
 /* ─── La scène : ce qui change ─── */
 .scene {
@@ -181,6 +207,45 @@ h2 { font-size: var(--t1); text-transform: uppercase; letter-spacing: .1em;
   boutons : c'est lui qui fait que ces six écrans sont le même.
 </p>
 
+<h2>Le score : la ligne, ou le tableau d'affichage</h2>
+<p class="intro">
+  Les noms d'équipe montent jusqu'à 15 caractères — c'est la limite de l'app, et donc le cas
+  qu'il faut tenir. Le bandeau ci-dessous les porte tous les deux à leur longueur maximale.
+</p>
+<div class="duo" style="margin-top:var(--e3)">
+  <div class="avant">
+    <span class="etiq">Avant — une ligne</span>
+    <div class="bandeau">
+      <div class="bandeau-haut"><span class="manche">Manche 2 / 3</span><button class="equipes">👥</button></div>
+      <div class="bandeau-score">
+        <div class="eq mene"><span class="nom">Les Fantastiqu</span><b>18</b></div>
+        <span class="tiret"></span>
+        <div class="eq"><span class="nom">Les Invincible</span><b>21</b></div>
+      </div>
+    </div>
+  </div>
+  <div>
+    <span class="etiq" style="color:var(--ambre)">Après — le tableau d'affichage</span>
+    <div class="bandeau">
+      <div class="bandeau-haut"><span class="manche">Manche 2 / 3</span><button class="equipes">👥</button></div>
+      <div class="bandeau-score">
+        <div class="eq"><span class="nom">Les Fantastiqu</span><b>18</b></div>
+        <span class="tiret"></span>
+        <div class="eq mene"><span class="nom">Les Invincible</span><b>21</b></div>
+      </div>
+    </div>
+  </div>
+  <div class="avis" style="width:340px;border:none;padding:0">
+    <p>Les deux chiffres se posent l'un en face de l'autre&nbsp;: l'écart se voit sans être lu.
+      Sur une ligne, il fallait sauter par-dessus deux noms pour comparer.</p>
+    <p>Les chiffres passent de 1,375 à 1,85 rem, et c'est là qu'ils monteront à chaque point.</p>
+    <p>Un filet remplace le tiret&nbsp;: entre deux colonnes, un tiret se lit comme un signe
+      « moins » posé au milieu de nulle part.</p>
+    <p>Le bandeau gagne 14 px de haut. Mesuré sur un écran de 320 px avec les noms les plus
+      longs possibles&nbsp;: rien n'est tronqué, rien ne déborde.</p>
+  </div>
+</div>
+
 <div class="rangee" style="margin-top:var(--e4)">
 
   <div style="display:flex;flex-direction:column;gap:var(--e2)">
@@ -192,9 +257,9 @@ h2 { font-size: var(--t1); text-transform: uppercase; letter-spacing: .1em;
           <button class="equipes" title="Voir les équipes">👥</button>
         </div>
         <div class="bandeau-score">
-          <span class="eq mene" id="b-eq1">Les Rapides <b id="b-s1">14</b></span>
-          <span class="tiret">—</span>
-          <span class="eq" id="b-eq2"><b id="b-s2">11</b> Les Malins</span>
+          <div class="eq mene" id="b-eq1"><span class="nom">Les Rapides</span><b id="b-s1">14</b></div>
+          <span class="tiret"></span>
+          <div class="eq" id="b-eq2"><span class="nom">Les Malins</span><b id="b-s2">11</b></div>
         </div>
       </div>
 

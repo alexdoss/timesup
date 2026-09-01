@@ -258,6 +258,21 @@ async function validerCode(code) {
     montrer('screen-prenom');
     afficherChoixPrenom(etat);
   } catch (err) {
+    // Se tromper de code est l'erreur la plus courante de tout le parcours, et
+    // c'est un caractère à corriger : on refuse sur place, on vide les cases et
+    // on rend la main. Un écran bloquant pour une faute de frappe forçait un
+    // aller-retour pour rien.
+    if (err.statut === 404 && ecranActif() === 'screen-code') {
+      session.code = null;
+      refuserLeCode('Aucune partie ne porte ce code.');
+      const champ = document.getElementById('champ-code');
+      setTimeout(() => {
+        champ.value = '';
+        dessinerCases();
+        champ.focus();
+      }, 420);
+      return;
+    }
     surErreur(err);
   }
 }

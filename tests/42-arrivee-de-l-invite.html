@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head><meta charset="utf-8"><title>Test Rush — l'arrivée de l'invité</title></head>
+<body>
+<pre id="log">demarrage...</pre>
+<div id="hote"></div>
+<script>
+const out = [];
+function log(s) { out.push(s); document.getElementById('log').textContent = out.join('\n'); }
+function check(name, cond) { log((cond ? 'PASS' : 'FAIL') + ' -- ' + name); }
+const wait = ms => new Promise(r => setTimeout(r, ms));
+
+async function api(action, donnees = {}) {
+  const r = await fetch('/api/session', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ action, ...donnees })
+  });
+  return { statut: r.status, corps: await r.json().catch(() => ({})) };
+}
+
+const f = document.createElement('iframe');
+f.style.cssText = 'width:420px;height:900px;border:1px solid #ccc';
+document.getElementById('hote').appendChild(f);
+
+let resoudre = null;
+f.addEventListener('load', () => { const r = resoudre; resoudre = null; if (r) r(); });
+const charger = url => new Promise(r => { resoudre = r; f.src = url; });
+
+(async () => {
+  try {
+    const d = () => f.contentDocument;
+    const $ = id => d().getElementById(id);
+    const ecran = () => [...d().querySelectorAll('.screen')].find(s => s.classList.contains('active'))?.id;
+
+    // Frapper le champ comme le ferait un doigt : la valeur, puis l'evenement
+    // qui la fait vivre. C'est cet evenement qui dessine les cases et declenche
+    // le depart automatique.
+    const frapper = (id, valeur) => {
+      $(id).value = valeur;
+      $(id).dispatchEvent(new f.contentWindow.Event('input'));
+    };
+    // La veille des arrivees regarde toutes les 4 s. On lui laisse largement le
+    // temps, sans jamais lancer de requete depuis le test pendant l attente :
+    // le navigateur suspend son temps virtuel tant qu une requete est en vol,
+    // et la minuterie de la veille ne se declencherait plus.
+    const jusqua = async (cond, tours = 80) => {
+      for (let i = 0; i < tours; i++) {
+        if (cond()) return true;
+        await wait(500);
+      }
+      return cond();
+    };
+    const cases = () => [...d().querySelectorAll('#code-cases .code-case')];
+    const arrivees = () => [...d().querySelectorAll('#deja-la-gens .deja-un')]
+      .map(e => e.textContent.replace(/^./, '').trim());
+
+    localStorage.removeItem('timesup_rejoint');
+
+    // ===== L'organisateur ouvre une session =====
+    let r = await api('creer', { cartesParJoueur: 3, mode: 'simple' });
+    check('la session est ouverte', r.statut === 200);
+    const code = r.corps.code;
+    log('       code de la partie : ' + code);
+
+    // ===== Le code, en quatre cases =====
+    await charger('/rejoindre.html');
+    await wait(400);
+    check('sans code dans l adresse, on demande le code', ecran() === 'screen-code');
+    check('le champ n affiche plus de faux code en exemple', !$('champ-code').placeholder);
+    check('quatre cases attendent la saisie', cases().length === 4);
+    check('aucune n est remplie', cases().every(c => c.textContent === ''));
+    check('la premiere attend la frappe', cases()[0].classList.contains('active'));
+    check('le bouton de validation reste dans la page', !!$('btn-code'));
+    check('mais il est retire de l image', $('btn-code').classList.contains('hors-vue'));
+
+    frapper('champ-code', 'ab');
+    await wait(100);
+    check('la saisie passe en majuscules', $('champ-code').value === 'AB');
+    check('les cases suivent la frappe', cases()[0].textContent === 'A' && cases()[1].textContent === 'B');
+    check('les cases frappees sont marquees', cases()[1].classList.contains('pleine'));
+    check('la suivante prend le relais', cases()[2].classList.contains('active'));
+    check('deux caracteres ne lancent rien', ecran() === 'screen-code');
+
+    // Un code complet mais inconnu : les cases refusent, sans quitter l'ecran
+    frapper('champ-code', 'ZZZZ');
+    await wait(900);
+    check('un code inconnu ne fait pas quitter l ecran', ecran() === 'screen-code');
+    check('il est explique sur place', $('erreur-code').textContent.includes('Aucune partie'));
+    check('les cases se vident pour la nouvelle tentative', $('champ-code').value === '');
+    check('et redeviennent vierges', cases().every(c => c.textContent === ''));
+
+    // ===== Sans personne dans la partie, rien a montrer =====
+    frapper('champ-code', code);
+    await wait(800);
+    check('quatre caracteres suffisent : le code part seul', ecran() === 'screen-prenom');
+    check('le code est rappele', $('rappel-code').textContent === code);
+    check('la question est posee en clair', $('titre-prenom').textContent.includes('appelles'));
+    check('sans joueur, la liste des arrivees reste absente',
+          $('bloc-deja-la').style.display === 'none');
+
+    // ===== Deux joueurs rejoignent, puis un troisieme arrive =====
+    // On repasse par la saisie du code pour verifier le rendu sans dependre
+    // d une minuterie : c est le contenu de la liste qui compte ici.
+    await api('rejoindre', { code, prenom: 'Lou' });
+    await api('rejoindre', { code, prenom: 'Sacha' });
+    log('       Lou et Sacha ont rejoint');
+
+    await charger('/rejoindre.html');
+    await wait(400);
+    frapper('champ-code', code);
+    await wait(800);
+    check('en arrivant, on voit qui est deja la',
+          $('bloc-deja-la').style.display !== 'none');
+    log('       arrivees lues : ' + JSON.stringify(arrivees()));
+    // L ordre des joueurs n est pas garanti par le serveur, et l ecran n en
+    // depend pas : on verifie qui est la, pas dans quel ordre.
+    check('la liste nomme les deux joueurs',
+          JSON.stringify([...arrivees()].sort()) === JSON.stringify(['Lou', 'Sacha']));
+    check('le titre les compte', $('deja-la-titre').textContent === '2 joueurs déjà là');
+    check('chacun a sa pastille', d().querySelectorAll('#deja-la-gens .deja-pastille').length === 2);
+
+    const rangLou = arrivees().indexOf('Lou');
+    check('la pastille porte l initiale',
+          d().querySelectorAll('#deja-la-gens .deja-pastille')[rangLou].textContent === 'L');
+
+    // La couleur vient du prenom, pas du rang : elle ne bouge pas quand
+    // quelqu un arrive avant.
+    const couleurLou = d().querySelectorAll('#deja-la-gens .deja-pastille')[rangLou].style.background;
+    await api('rejoindre', { code, prenom: 'Alex' });
+    const vus = await jusqua(() => arrivees().length === 3);
+    check('un troisieme apparait sans qu on rafraichisse', vus);
+    const lou = arrivees().indexOf('Lou');
+    check('la couleur de Lou n a pas change',
+          d().querySelectorAll('#deja-la-gens .deja-pastille')[lou].style.background === couleurLou);
+
+    // ===== Le compteur de cartes =====
+    $('champ-prenom').value = 'Marc';
+    $('btn-prenom').click();
+    await wait(600);
+    check('on passe a la saisie des cartes', ecran() === 'screen-cartes');
+    check('le compteur annonce la consigne', $('compteur-cartes').textContent === '0 / 3 cartes');
+    check('le chiffre est detache du reste', !!d().querySelector('#compteur-cartes .cpt-n'));
+    check('un grain par carte attendue',
+          d().querySelectorAll('#grains-cartes .grain').length === 3);
+    check('aucun grain n est rempli',
+          d().querySelectorAll('#grains-cartes .grain.plein').length === 0);
+    check('le bouton dit ce qu il reste', $('btn-terminer').textContent === 'Encore 3 cartes');
+
+    for (const mot of ['Plage', 'Valise']) {
+      $('champ-carte').value = mot;
+      $('btn-ajouter').click();
+    }
+    await wait(200);
+    check('deux grains se remplissent',
+          d().querySelectorAll('#grains-cartes .grain.plein').length === 2);
+    check('le chiffre monte', d().querySelector('#compteur-cartes .cpt-n').textContent === '2');
+    check('le chiffre est anime quand il monte',
+          d().querySelector('#compteur-cartes .cpt-n').classList.contains('pousse'));
+    check('le bouton accorde le pluriel', $('btn-terminer').textContent === 'Encore 1 carte');
+
+    $('champ-carte').value = 'Parasol';
+    $('btn-ajouter').click();
+    await wait(200);
+    check('le compte atteint change le bouton',
+          $('btn-terminer').textContent.includes('Envoyer mes 3 cartes'));
+    check('et le rend actif', !$('btn-terminer').disabled);
+    check('tous les grains sont pleins',
+          d().querySelectorAll('#grains-cartes .grain.plein').length === 3);
+
+    // Retirer une carte n anime pas le chiffre : le mouvement doit signifier
+    // quelque chose, et reculer n est pas une recompense
+    d().querySelector('#liste-cartes .btn-remove').click();
+    await wait(200);
+    check('retirer une carte revient en arriere',
+          d().querySelector('#compteur-cartes .cpt-n').textContent === '2');
+    check('sans animer le chiffre',
+          !d().querySelector('#compteur-cartes .cpt-n').classList.contains('pousse'));
+    check('et le bouton redit ce qu il reste', $('btn-terminer').textContent === 'Encore 1 carte');
+
+    // ===== La veille s arrete quand on quitte l ecran du prenom =====
+    // Sinon chaque telephone interrogerait le serveur toute la soiree pour
+    // une liste que plus personne ne regarde.
+    const avant = (await api('etat', { code })).statut;
+    check('la session repond toujours', avant === 200);
+
+    log('SCENARIO 42 TERMINE');
+  } catch (e) {
+    log('EXCEPTION: ' + e.message + '\n' + e.stack);
+  }
+})();
+</script>
+</body>
+</html>

@@ -69,6 +69,7 @@ $SCENARIOS = @(
   @{ f = '39-reprise-apres-rafraichissement.html';   b = 220000; p = 'am' }
   @{ f = '40-report-du-temps.html';                 b = 200000; p = 'an' }
   @{ f = '41-report-du-temps-a-distance.html';    b = 360000; p = 'ao' }
+  @{ f = '42-arrivee-de-l-invite.html';           b = 240000; p = 'ap' }
 )
 
 function Resolve-Chrome {

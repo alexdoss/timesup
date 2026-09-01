@@ -126,10 +126,10 @@
          Le paquet est déjà là : plus rien ne transite pendant le tour. -->
     <div id="screen-mon-tour" class="screen">
       <button id="btn-mon-pause" class="btn-pause" title="Mettre en pause">⏸</button>
-      <div class="game-header">
-        <span id="mon-round-label" class="round-label">Manche 1</span>
-        <span id="mon-team-label" class="team-label">Équipe 1</span>
-      </div>
+      <!-- Pas d'en-tête « Manche 1 · Équipe 1 » : pendant son tour, le joueur
+           sait déjà les deux. L'écran de lancement, qu'il vient de quitter, les
+           lui a annoncées — les répéter ici encombre la carte, qui est la seule
+           chose qu'il doit lire. -->
       <!-- Le chrono reste un nombre nu, comme chez l'organisateur : celui qui
            fait deviner doit lire sa carte, et tout objet animé au-dessus d'elle
            lui prend de l'attention au pire moment. L'urgence, elle, est portée

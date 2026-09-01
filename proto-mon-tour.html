@@ -77,6 +77,10 @@ h2 { font-size: var(--t1); text-transform: uppercase; letter-spacing: .1em;
   padding: var(--e4) var(--e3);
   font-size: var(--t5); font-weight: 800; text-wrap: balance;
 }
+/* Celle qui part passe DEVANT : elle quitte le dessus du paquet, la suivante
+   monte de dessous. L'empilement est écrit, pas déduit de l'ordre du DOM. */
+.carte { z-index: 1; }
+.carte.trouvee, .carte.passee { z-index: 2; }
 .carte.trouvee { animation: sort-droite 340ms cubic-bezier(.4,0,.9,.4) forwards; }
 .carte.passee  { animation: sort-gauche 340ms cubic-bezier(.4,0,.9,.4) forwards; }
 .carte.arrive  { animation: monte 300ms cubic-bezier(.2,.9,.3,1.1); }
@@ -105,6 +109,9 @@ h2 { font-size: var(--t1); text-transform: uppercase; letter-spacing: .1em;
 
 .fini { flex: 1; display: flex; flex-direction: column; align-items: center;
         justify-content: center; text-align: center; gap: var(--e3); }
+/* .btn porte flex:1 pour que « Passer » et « Trouvé » se partagent la largeur ;
+   dans cette colonne, le même flex:1 l'étirerait sur toute la hauteur. */
+.fini .btn { flex: none; }
 .fini .grand { font-size: var(--t6); }
 .fini .titre { font-size: var(--t4); font-weight: 800; }
 .fini .sous { font-size: var(--t2); color: var(--doux); }
@@ -142,11 +149,6 @@ h2 { font-size: var(--t1); text-transform: uppercase; letter-spacing: .1em;
 <div class="rangee" style="margin-top:var(--e4)">
   <div style="display:flex;flex-direction:column;gap:var(--e2)">
     <div class="tel" id="tel">
-      <div class="entete">
-        <span>Manche 2 · Un seul mot</span>
-        <span class="equipe">Les Rapides</span>
-      </div>
-
       <div class="chrono" id="chrono"><span id="n">40</span></div>
 
       <div class="zone-carte" id="zone"></div>
@@ -165,7 +167,18 @@ h2 { font-size: var(--t1); text-transform: uppercase; letter-spacing: .1em;
   </div>
 
   <div class="avis">
-    <h4>Le mouvement de la carte</h4>
+    <h4>Ce qu'il n'y a plus autour de la carte</h4>
+    <p>
+      L'en-tête « Manche 1 · Équipe 1 » a été retiré. Pendant son tour, le joueur sait les deux :
+      <b>l'écran de lancement qu'il vient de quitter les lui a annoncées</b>, en grand. Les
+      répéter au-dessus de la carte lui prenait de la place et de l'attention.
+    </p>
+    <p>
+      Il ne reste donc que ce qui sert pendant les quarante secondes : <b>le chrono, la carte,
+      le compte, les deux gestes</b>.
+    </p>
+
+    <h4 style="margin-top:var(--e4)">Le mouvement de la carte</h4>
     <p>
       <b>Elle sort dans le sens du geste</b> : à droite quand on la gagne, à gauche quand on la
       repousse. La suivante monte depuis le bas du paquet. C'est ce qui distingue les deux
@@ -299,7 +312,6 @@ function finir(emoji, titre) {
   clearInterval(minuterie);
   sonFin();
   document.getElementById('tel').innerHTML = `
-    <div class="entete"><span>Manche 2 · Un seul mot</span><span class="equipe">Les Rapides</span></div>
     <div class="fini">
       <div class="grand">${emoji}</div>
       <div class="titre">${titre}</div>

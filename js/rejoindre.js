@@ -1134,13 +1134,9 @@ function lancerMonTour() {
     minuterie: null
   };
 
-  const m = monTour.manche || {};
-  document.getElementById('mon-round-label').textContent =
-    m.numero ? `Manche ${m.numero}` : (m.nom || '');
-  const equipes = equipesConnues || [];
-  const mienne = equipes.find(e => (e.joueurs || []).includes(session.prenom));
-  document.getElementById('mon-team-label').textContent = mienne ? mienne.nom : '';
-
+  // Ni manche ni équipe à écrire : l'écran de jeu ne porte plus que la carte,
+  // le chrono et les deux gestes. Le joueur vient de lire les deux sur l'écran
+  // de lancement qu'il quitte à l'instant.
   montrer('screen-mon-tour');
   peindreMonTour();
   demarrerMonChrono();

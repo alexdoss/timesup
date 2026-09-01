@@ -1867,9 +1867,15 @@ input[readonly] {
 
 #screen-mon-tour .card { width: 100%; }
 
+/* Celle qui s'en va passe DEVANT celle qui arrive : elle quitte le dessus du
+   paquet, la suivante monte de dessous. L'empilement est écrit plutôt que
+   déduit de l'ordre du DOM, qui se casserait au premier remaniement. */
+#screen-mon-tour .card { position: relative; z-index: 1; }
+
 .carte-fantome {
   position: absolute;
   inset: 0;
+  z-index: 2;
   pointer-events: none;
 }
 

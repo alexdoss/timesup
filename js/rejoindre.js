@@ -396,9 +396,13 @@ function afficherChoixPrenom(etat) {
     : "Comment tu t'appelles ?";
   document.getElementById('bloc-liste-prenoms').style.display = parListe ? '' : 'none';
   document.getElementById('bloc-saisie-prenom').style.display = parListe ? 'none' : '';
+  // Rien à expliquer sur une saisie libre : la liste des arrivées montre déjà
+  // que les prénoms se voient, et l'équipe n'est pas le choix du joueur.
+  // La liste fermée, elle, a besoin qu'on dise pourquoi on touche un prénom
+  // au lieu d'écrire le sien.
   document.getElementById('note-prenom').textContent = parListe
     ? "Cette partie rejoue avec les mêmes joueurs. Touche ton prénom pour saisir tes nouvelles cartes."
-    : "Il permet à l'organisateur de savoir qui a fini, et de te placer dans une équipe.";
+    : '';
 
   // La liste fermée porte déjà les prénoms et coche ceux qui sont arrivés :
   // afficher les arrivées à côté dirait deux fois la même chose.

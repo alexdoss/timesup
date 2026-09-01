@@ -214,7 +214,9 @@ const recharger = () => new Promise(r => { resoudre = r; f.contentWindow.locatio
     $('btn-code').click();
     await wait(600);
     check('le code saisi a la main fonctionne', ecran() === 'screen-prenom');
-    check('en mode nominatif, le prenom sert aussi aux equipes', $('note-prenom').textContent.includes('équipe'));
+    // La saisie libre ne s explique pas : la liste des arrivees montre deja que
+    // les prenoms se voient, et l equipe n est pas le choix du joueur.
+    check('l ecran du prenom ne porte pas d explication superflue', $('note-prenom').textContent === '');
 
     log('SCENARIO 19 TERMINE');
   } catch (e) {

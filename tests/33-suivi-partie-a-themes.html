@@ -159,7 +159,7 @@ localStorage.removeItem('timesup_rejoint');
           I('bloc-lancement').style.display !== 'none');
     check('l en-tete « configuration » a cede la place',
           I('attente-titre').parentElement.style.display === 'none');
-    check('la manche est annoncee', L('lancement-titre').includes('Manche'));
+    check('la manche est annoncee par le bandeau', L('suivi-manche').includes('Manche'));
     check('on sait quelle equipe joue', L('lancement-tour').length > 0);
     // Sans prenoms, il n y a ni joueur a nommer ni composition a consulter
     check('aucun joueur nomme en mode simple', L('lancement-joueur') === '');

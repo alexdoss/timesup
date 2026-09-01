@@ -108,9 +108,20 @@ async function sonder(adresse) {
     check('la liste est rangee par ordre alphabetique',
           lignes().map(l => l.textContent.match(/[A-Za-zÀ-ÿ]+/)[0]).join(',') === 'Ana,Bob,Cleo');
 
-    const texte = $('attente-joueurs').textContent;
-    check('celui qui a fini est marque', texte.includes('Ana') && texte.includes('3 cartes ✓'));
-    check('celui qui saisit encore montre sa progression', texte.includes('1/3'));
+    // La progression se lit aux grains, les memes que sur son propre ecran de
+    // saisie : trois pleins pour qui a fini, un seul pour qui commence.
+    const grainsDe = prenom => {
+      const ligne = lignes().find(l => l.textContent.includes(prenom));
+      return {
+        total: ligne.querySelectorAll('.grain').length,
+        pleins: ligne.querySelectorAll('.grain.plein').length
+      };
+    };
+    check('celui qui a fini est marque',
+          lignes().some(l => l.textContent.includes('Ana') && l.classList.contains('fini')));
+    check('ses trois grains sont pleins', grainsDe('Ana').pleins === 3);
+    check('un grain par carte demandee', grainsDe('Ana').total === 3);
+    check('celui qui saisit encore montre sa progression', grainsDe('Bob').pleins === 1);
     check('l invite se reconnait', lignes().some(l => l.textContent.includes('Cleo')
           && l.textContent.includes('toi')));
     check('aucun bouton de retrait, reserve a l organisateur',
@@ -122,8 +133,7 @@ async function sonder(adresse) {
     await api('deposer', { code, idJoueur: bob.corps.idJoueur, cartes: ['B1', 'B2', 'B3'], fini: true });
     await wait(2600);
     check('la progression des autres arrive sans rien toucher',
-          $('attente-joueurs').textContent.includes('3 cartes ✓')
-          && !$('attente-joueurs').textContent.includes('1/3'));
+          grainsDe('Bob').pleins === 3 && lignes().every(l => l.classList.contains('fini')));
     check('le compte suit', $('attente-total').textContent.includes('3 joueur(s) sur 3'));
 
     // ===== L ecran s eteint, puis se rallume =====

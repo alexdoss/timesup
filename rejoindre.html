@@ -174,6 +174,24 @@
     <!-- SALLE D'ATTENTE — la même vue que celle de l'organisateur, en lecture seule -->
     <div id="screen-attente" class="screen">
       <div class="rejoindre-content">
+        <!-- LE BANDEAU — il ne quitte jamais cet écran. C'est lui qui fait que
+             les six états qui s'y succèdent sont le même écran, et il répond à
+             la question qu'on se pose en attrapant son téléphone : où en est la
+             partie ? Il porte aussi le score, qui n'a donc plus à être redit
+             par chacun des états. -->
+        <div id="suivi-bandeau" class="suivi-bandeau">
+          <div class="bandeau-haut">
+            <span id="suivi-manche" class="bandeau-manche"></span>
+            <button id="btn-voir-equipes" class="bandeau-equipes" style="display:none"
+                    title="Voir les équipes" aria-label="Voir les équipes">👥</button>
+          </div>
+          <div id="suivi-score" class="bandeau-score" style="display:none">
+            <span class="bandeau-eq"><span id="suivi-eq1"></span><b id="suivi-s1">0</b></span>
+            <span class="bandeau-tiret">—</span>
+            <span class="bandeau-eq"><b id="suivi-s2">0</b><span id="suivi-eq2"></span></span>
+          </div>
+          <p id="suivi-total" class="bandeau-total"></p>
+        </div>
         <!-- Ce que l'invité a envoyé, et le seul geste qui lui reste tant que
              la saisie est ouverte. Il n'y a plus d'écran de confirmation à part :
              cet écran est celui où l'on atterrit, et il se met à jour tout seul. -->
@@ -224,25 +242,12 @@
           <!-- Le tour précédent a été coupé, pas terminé : sans ce mot, la table
                voit un tour disparaître et le même joueur annoncé à nouveau -->
           <p id="lancement-interruption" class="ruban-interruption"></p>
+          <!-- La manche et le score sont dans le bandeau : cet écran ne redit
+               ni l'un ni l'autre, il décrit la manche qu'on va jouer. -->
           <div class="aire">
-            <h2 id="lancement-titre">Manche 1/3</h2>
             <p id="lancement-nom" class="round-name-label"></p>
             <div id="lancement-icone" class="round-icon"></div>
             <p id="lancement-regle" class="round-desc"></p>
-          </div>
-          <div class="bloc-score aire">
-            <p class="score-cap">Score de la manche</p>
-            <div class="score-board">
-              <div class="score-team">
-                <span id="lancement-eq1">Équipe 1</span>
-                <span id="lancement-s1" class="score">0</span>
-              </div>
-              <div class="score-team">
-                <span id="lancement-eq2">Équipe 2</span>
-                <span id="lancement-s2" class="score">0</span>
-              </div>
-            </div>
-            <p id="lancement-total" class="score-rappel"></p>
           </div>
           <!-- Ce qui décrit le tour qui va s'ouvrir : qui joue, avec combien de
                temps et combien de cartes. Même agencement que sur l'écran de
@@ -273,25 +278,10 @@
              suivant, celui qui a fait deviner arbitre son comptage. Le sablier
              n'a plus rien à décompter : il cède la place. -->
         <div id="bloc-comptage" style="display:none">
-          <p id="comptage-manche" class="score-cap"></p>
           <div id="comptage-emoji" class="grand-emoji">🃏</div>
           <h2 id="comptage-titre">Fin du tour !</h2>
           <p id="comptage-qui" class="wizard-hint"></p>
           <div class="points-attente"><i></i><i></i><i></i></div>
-          <div class="bloc-score">
-            <p class="score-cap">Score de la manche</p>
-            <div class="score-board">
-              <div class="score-team">
-                <span id="comptage-eq1">Équipe 1</span>
-                <span id="comptage-s1" class="score">0</span>
-              </div>
-              <div class="score-team">
-                <span id="comptage-eq2">Équipe 2</span>
-                <span id="comptage-s2" class="score">0</span>
-              </div>
-            </div>
-            <p id="comptage-rappel" class="score-rappel"></p>
-          </div>
         </div>
 
         <!-- RÉSULTATS — fin de manche et fin de partie, comme chez l'organisateur -->
@@ -306,10 +296,6 @@
           <div id="resultats-joueurs" class="player-stats"></div>
         </div>
 
-        <!-- Détaché de ce qui précède : collé au « fait deviner », il se lisait
-             comme une suite de l'annonce plutôt que comme une action à part -->
-        <button id="btn-voir-equipes" class="btn btn-secondary btn-equipes-invite"
-                style="display:none">👥 Voir les équipes</button>
         <div id="attente-joueurs" class="connectes"></div>
         <p id="attente-total" class="wizard-hint"></p>
       </div>

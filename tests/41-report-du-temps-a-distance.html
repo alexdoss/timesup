@@ -211,10 +211,13 @@ localStorage.removeItem('timesup_rejoint');
     check('et les cartes restantes juste en dessous',
           zoneInvite.indexOf('lancement-report') < zoneInvite.indexOf('lancement-restantes'));
 
+    // Deux zones et non trois : le score a rejoint le bandeau permanent du
+    // suivi, qui ne quitte jamais cet ecran. L organisateur en a encore trois —
+    // son ecran de lancement n est pas refait (lot 5 du chantier design).
     const zones = [...S('bloc-lancement').children].filter(e => e.classList.contains('aire'));
     log('       zones grises : ' + zones.length);
-    check('son ecran est decoupe en trois zones, comme celui de l organisateur',
-          zones.length === 3);
+    check('son ecran est decoupe en deux zones, le score etant dans le bandeau',
+          zones.length === 2);
     check('elles ont bien un fond',
           temoin.contentWindow.getComputedStyle(zones[0]).backgroundColor
           !== 'rgba(0, 0, 0, 0)');

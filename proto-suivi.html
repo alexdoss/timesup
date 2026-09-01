@@ -1,0 +1,449 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Rush — le suivi de la partie</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root {
+  --fond: #14102B; --fond-halo: #2A1F5C; --surface: #1E1846; --bord: #2E2660;
+  --texte: #FFF6F0; --doux: #A79BD6;
+  --violet: #7C3AED; --violet-clair: #B14BFF; --ambre: #FFB020;
+  --vert: #22C55E; --rouge: #EF4444;
+  --e1: 4px; --e2: 8px; --e3: 16px; --e4: 24px; --e5: 32px; --e6: 48px;
+  --t1: .75rem; --t2: .875rem; --t3: 1rem; --t4: 1.375rem; --t5: 2rem; --t6: 3rem;
+  --r-bloc: 20px; --r-pastille: 100px; --ombre: 0 10px 30px rgba(0,0,0,.35);
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  font-family: 'Outfit', sans-serif;
+  background: radial-gradient(120% 45% at 50% 0%, var(--fond-halo) 0%, var(--fond) 58%);
+  color: var(--texte); padding: var(--e4); line-height: 1.5;
+}
+h1 { font-size: var(--t4); margin-bottom: var(--e1); }
+h2 { font-size: var(--t1); text-transform: uppercase; letter-spacing: .1em;
+     color: var(--ambre); margin: var(--e6) 0 var(--e3); font-weight: 700; }
+.intro { color: var(--doux); font-size: var(--t2); max-width: 880px; }
+.intro strong { color: var(--texte); }
+.intro + .intro { margin-top: var(--e2); }
+.rangee { display: flex; gap: var(--e4); flex-wrap: wrap; align-items: flex-start; }
+
+/* ═══════ LE TÉLÉPHONE ═══════ */
+.tel {
+  width: 320px; height: 600px; position: relative; overflow: hidden;
+  background: radial-gradient(120% 34% at 50% 0%, var(--fond-halo) 0%, var(--fond) 62%);
+  border: 1px solid var(--bord); border-radius: 28px; box-shadow: var(--ombre);
+  display: flex; flex-direction: column; padding: var(--e3);
+}
+
+/* ─── Le bandeau permanent ───
+   Il ne disparaît jamais. C'est lui qui fait que les six états sont le même
+   écran, et il répond à la question qu'on se pose en attrapant son téléphone :
+   où en est la partie ? */
+.bandeau {
+  flex: none; background: rgba(0,0,0,.26); border: 1px solid var(--bord);
+  border-radius: var(--r-bloc); padding: 10px var(--e3);
+  display: flex; flex-direction: column; gap: 6px;
+}
+.bandeau-haut {
+  display: flex; align-items: center; justify-content: space-between; gap: var(--e2);
+  font-size: var(--t1); font-weight: 700; letter-spacing: .1em; text-transform: uppercase;
+  color: var(--doux);
+}
+.bandeau-haut .manche { color: var(--ambre); }
+.bandeau-haut .equipes {
+  background: none; border: none; color: var(--doux); cursor: pointer;
+  font-size: var(--t3); padding: 0 2px; line-height: 1;
+}
+.bandeau-score { display: flex; align-items: baseline; justify-content: space-between; gap: var(--e2); }
+.bandeau-score .eq { display: flex; align-items: baseline; gap: 6px; font-size: var(--t2); font-weight: 600; }
+.bandeau-score .eq b { font-size: var(--t4); font-weight: 800; font-variant-numeric: tabular-nums; }
+.bandeau-score .eq.mene b { color: var(--ambre); }
+.bandeau-score .tiret { color: var(--doux); font-size: var(--t2); }
+.bandeau-score b.monte { animation: pousse 260ms ease-out; display: inline-block; }
+@keyframes pousse { 50% { transform: scale(1.2) } }
+
+/* ─── La scène : ce qui change ─── */
+.scene {
+  flex: 1; display: flex; flex-direction: column; align-items: center;
+  justify-content: center; text-align: center; gap: var(--e3); padding: var(--e3) 0;
+}
+.grand { font-size: var(--t6); line-height: 1; }
+.titre { font-size: var(--t4); font-weight: 800; text-wrap: balance; }
+.sous { font-size: var(--t2); color: var(--doux); text-wrap: balance; }
+.etiquette {
+  font-size: var(--t1); font-weight: 700; letter-spacing: .1em;
+  text-transform: uppercase; color: var(--ambre);
+}
+.btn { font-family: inherit; font-size: var(--t3); font-weight: 700; border: none;
+       border-radius: var(--r-pastille); padding: 15px; cursor: pointer; width: 100%;
+       background: linear-gradient(135deg, var(--violet), var(--violet-clair)); color: #fff;
+       box-shadow: 0 8px 22px rgba(124,58,237,.45); transition: transform 120ms; }
+.btn:active { transform: scale(.97); }
+.btn.plat { background: transparent; border: 1px solid var(--bord); box-shadow: none;
+            color: var(--texte); font-size: var(--t2); font-weight: 600; padding: 11px; }
+
+/* Le sablier du tour en cours */
+.chrono { font-size: 4rem; font-weight: 800; line-height: 1; font-variant-numeric: tabular-nums; }
+.chrono.chaud { color: var(--rouge); }
+.anneau { position: relative; width: 150px; height: 150px; }
+.anneau svg { transform: rotate(-90deg); }
+.anneau .dedans {
+  position: absolute; inset: 0; display: flex; flex-direction: column;
+  align-items: center; justify-content: center; gap: 2px;
+}
+.anneau .unite { font-size: var(--t1); color: var(--doux); text-transform: uppercase; letter-spacing: .1em; }
+
+/* Les gens qui saisissent, pendant l'attente. Les grains sont ceux de l'écran
+   de saisie : l'invité vient d'en remplir cinq, il les reconnaît. */
+.gens { display: flex; flex-direction: column; gap: 6px; width: 100%; }
+.gens .un {
+  display: flex; align-items: center; gap: var(--e2); background: rgba(0,0,0,.22);
+  border-radius: 12px; padding: 7px 12px 7px 7px; font-size: var(--t2); font-weight: 600;
+}
+.gens .un .nom { flex: 1; text-align: left; }
+.gens .un .nom small { color: var(--doux); font-weight: 500; }
+.pastille { width: 26px; height: 26px; border-radius: 50%; flex: none; display: flex;
+            align-items: center; justify-content: center; font-size: .72rem;
+            font-weight: 800; color: #fff; }
+.un.pret .pastille { background: var(--vert) !important; }
+.grains { display: flex; gap: 4px; flex: none; }
+.grain { width: 14px; height: 6px; border-radius: 3px; background: var(--bord); }
+.grain.plein { background: var(--ambre); }
+.un.pret .grain.plein { background: var(--vert); }
+.total-paquet {
+  font-size: var(--t2); color: var(--doux);
+}
+.total-paquet b { color: var(--ambre); font-size: var(--t4); font-weight: 800;
+                  font-variant-numeric: tabular-nums; }
+
+/* Les points d'attente du comptage */
+.points { display: flex; gap: 6px; }
+.points i { width: 7px; height: 7px; border-radius: 50%; background: var(--doux); opacity: .35;
+            animation: respire 1.2s infinite; }
+.points i:nth-child(2) { animation-delay: .2s }
+.points i:nth-child(3) { animation-delay: .4s }
+@keyframes respire { 50% { opacity: 1; transform: translateY(-3px) } }
+
+/* Le récapitulatif de fin */
+.recap { width: 100%; border-collapse: collapse; font-size: var(--t2); }
+.recap th, .recap td { padding: 7px 8px; border-bottom: 1px solid var(--bord); }
+.recap th { font-size: var(--t1); text-transform: uppercase; letter-spacing: .08em;
+            color: var(--doux); font-weight: 700; }
+.recap td { font-variant-numeric: tabular-nums; font-weight: 600; }
+.recap td:first-child, .recap th:first-child { text-align: left; }
+.recap td:not(:first-child), .recap th:not(:first-child) { text-align: center; width: 64px; }
+.recap tr.total td { border-bottom: none; font-size: var(--t3); font-weight: 800; padding-top: 10px; }
+.recap tr.total td.gagne { color: var(--ambre); }
+
+/* La manche annoncée */
+.manche-carte {
+  width: 100%; background: rgba(0,0,0,.22); border-radius: var(--r-bloc);
+  padding: var(--e3); display: flex; flex-direction: column; align-items: center; gap: 4px;
+}
+.manche-carte .icone { font-size: var(--t5); }
+.manche-carte .nom { font-size: var(--t3); font-weight: 700; }
+.manche-carte .regle { font-size: var(--t2); color: var(--doux); }
+.faits { display: flex; gap: var(--e3); font-size: var(--t2); color: var(--doux); }
+.faits b { color: var(--texte); }
+
+/* ─── Le sélecteur d'état, hors maquette ─── */
+.commandes { display: flex; flex-wrap: wrap; gap: 6px; width: 320px; }
+.commandes button {
+  font-family: inherit; font-size: var(--t2); font-weight: 600; cursor: pointer;
+  background: var(--surface); border: 1px solid var(--bord); color: var(--texte);
+  border-radius: 10px; padding: 8px 11px;
+}
+.commandes button.on { background: var(--ambre); color: var(--fond); border-color: var(--ambre); font-weight: 800; }
+
+.avis { border-left: 3px solid var(--ambre); padding-left: var(--e3); max-width: 440px; }
+.avis h4 { font-size: var(--t3); margin-bottom: var(--e2); }
+.avis p { font-size: var(--t2); color: var(--doux); }
+.avis p + p { margin-top: var(--e2); }
+.avis b { color: var(--texte); }
+.ecarte { border-left-color: var(--bord); max-width: 880px; margin-top: var(--e4); }
+.ecarte h4 { color: var(--doux); }
+</style>
+</head>
+<body>
+
+<h1>Le suivi de la partie</h1>
+<p class="intro">
+  L'écran que l'invité garde ouvert toute la soirée. <strong>Six états s'y succèdent</strong> —
+  attente, à toi de jouer, lancement, tour en cours, comptage, résultats — et jusqu'ici chacun
+  refaisait la page entière.
+</p>
+<p class="intro">
+  Ici, <strong>le bandeau du haut ne bouge jamais</strong>. Passe d'un état à l'autre avec les
+  boutons : c'est lui qui fait que ces six écrans sont le même.
+</p>
+
+<div class="rangee" style="margin-top:var(--e4)">
+
+  <div style="display:flex;flex-direction:column;gap:var(--e2)">
+    <div class="tel">
+      <!-- LE BANDEAU, toujours là -->
+      <div class="bandeau">
+        <div class="bandeau-haut">
+          <span class="manche" id="b-manche">Manche 2 / 3</span>
+          <button class="equipes" title="Voir les équipes">👥</button>
+        </div>
+        <div class="bandeau-score">
+          <span class="eq mene" id="b-eq1">Les Rapides <b id="b-s1">14</b></span>
+          <span class="tiret">—</span>
+          <span class="eq" id="b-eq2"><b id="b-s2">11</b> Les Malins</span>
+        </div>
+      </div>
+
+      <div class="scene" id="scene"></div>
+    </div>
+
+    <div class="commandes" id="commandes"></div>
+  </div>
+
+  <div class="avis">
+    <h4>Ce que le bandeau permet</h4>
+    <p>
+      <b>Il répond sans qu'on lise l'écran.</b> On attrape son téléphone pour savoir où en est
+      la partie : manche et score sont là, au même endroit, dans les six états.
+    </p>
+    <p>
+      <b>Il supprime deux tableaux de score.</b> « Lancement » et « comptage » affichaient
+      chacun le leur, identiques, à des places différentes. Le récapitulatif de fin garde le
+      sien : ce n'est pas le même objet — il détaille manche par manche.
+    </p>
+    <p>
+      <b>Il donne un domicile aux chiffres qui montent.</b> Le score de la manche grimpe
+      toujours au même endroit, quel que soit l'état affiché au moment où le point tombe.
+      Essaie le bouton « Un point tombe ».
+    </p>
+    <p>
+      <b>Il rend « Voir les équipes » permanent.</b> Le bouton apparaissait et disparaissait
+      selon cinq conditions, et poussait le contenu vers le bas quand il revenait. Devenu une
+      icône dans le bandeau, il est toujours joignable et ne déplace plus rien.
+    </p>
+    <h4 style="margin-top:var(--e4)">L'attente nomme qui on attend</h4>
+    <p>
+      « En attente du départ · 2 joueurs sur 4 ont terminé » laissait chercher lesquels.
+      <b>« On attend Inès et Marc »</b> répond directement, et c'est ce qui permet de les
+      relancer à voix haute — la seule action utile à ce moment-là.
+    </p>
+    <p>
+      Cette liste n'est <b>pas celle de l'écran du prénom</b>. Là-bas elle dit qui a rejoint ;
+      ici, qui a <b>fini ses cartes</b>. C'est la seule information qui explique pourquoi la
+      partie ne démarre pas.
+    </p>
+    <p>
+      <b>Les grains reprennent ceux de la saisie.</b> L'invité vient d'en remplir cinq sur son
+      propre écran : les voir se remplir chez les autres se lit sans explication, et rend
+      l'attente vivante au lieu de la faire compter. Le serveur publie déjà ce compte —
+      l'écran actuel l'affichait en « 3/5… », ce qui disait la même chose sans se voir.
+    </p>
+    <p>
+      Le <b>total du paquet</b> monte à chaque carte de chacun. C'est le seul chiffre collectif
+      de la soirée avant le score, et le seul intérêt qu'a un joueur déjà prêt à regarder son
+      téléphone pendant que les autres tapent.
+    </p>
+  </div>
+</div>
+
+<div class="avis ecarte">
+  <h4>Écarté</h4>
+  <p><b>Garder le nom de la manche dans le bandeau</b> (« Un seul mot »). Il fallait choisir :
+    le numéro de manche répond à « où en est-on », le nom à « qu'est-ce qu'on fait ». Le premier
+    est utile en permanence, le second seulement au moment de jouer — il reste donc sur la carte
+    de manche, en grand, là où il sert.</p>
+  <p><b>Un bandeau collant en haut de l'écran</b> pendant que le reste défile. Aucun des six
+    états ne dépasse la hauteur d'un téléphone : rien ne défile, la complexité serait gratuite.</p>
+</div>
+
+<script>
+/* ═══════ Son, repris du moteur de Rush ═══════ */
+let ac = null;
+const ctx = () => ac || (ac = new (window.AudioContext || window.webkitAudioContext)());
+function note(freq, duree, depart = 0, gain = .18) {
+  const a = ctx(), o = a.createOscillator(), g = a.createGain();
+  const t = a.currentTime + depart;
+  o.type = 'triangle'; o.frequency.setValueAtTime(freq, t);
+  g.gain.setValueAtTime(0.0001, t);
+  g.gain.exponentialRampToValueAtTime(gain, t + 0.012);
+  g.gain.exponentialRampToValueAtTime(0.0001, t + duree);
+  o.connect(g); g.connect(a.destination); o.start(t); o.stop(t + duree + 0.03);
+}
+
+/* ═══════ Le bandeau ═══════ */
+let score = { eq1: 14, eq2: 11 };
+
+function majBandeau(anime) {
+  const s1 = document.getElementById('b-s1'), s2 = document.getElementById('b-s2');
+  s1.textContent = score.eq1;
+  s2.textContent = score.eq2;
+  document.getElementById('b-eq1').classList.toggle('mene', score.eq1 >= score.eq2);
+  document.getElementById('b-eq2').classList.toggle('mene', score.eq2 > score.eq1);
+  if (anime) {
+    const cible = anime === 1 ? s1 : s2;
+    cible.classList.remove('monte'); void cible.offsetWidth; cible.classList.add('monte');
+  }
+}
+
+function unPointTombe() {
+  score.eq1++;
+  majBandeau(1);
+  note(660, .06); note(990, .08, .055);
+}
+
+/* Une ligne par joueur : sa pastille, son prénom, et ses grains qui se
+   remplissent. Le même dessin que sur l'écran où l'invité a saisi les siens. */
+function saisisseurs(gens, cible) {
+  const lignes = gens.map(g => {
+    const fini = g.f >= cible;
+    const grains = Array.from({ length: cible }, (_, i) =>
+      `<span class="grain${i < g.f ? ' plein' : ''}"></span>`).join('');
+    return `<div class="un${fini ? ' pret' : ''}">
+      <span class="pastille" style="background:${g.c}">${fini ? '✓' : g.n[0]}</span>
+      <span class="nom">${g.n}${g.moi ? ' <small>· toi</small>' : ''}</span>
+      <span class="grains">${grains}</span>
+    </div>`;
+  }).join('');
+  return `<div class="gens">${lignes}</div>`;
+}
+
+/* ═══════ Les six états ═══════ */
+const ETATS = {
+  attente: {
+    nom: 'Attente',
+    html: `
+      <div class="titre">On attend Inès et Marc</div>
+      <div class="sous">Ils saisissent encore leurs cartes.</div>
+      ${saisisseurs([
+        { n: 'Lou',   c: '#7C3AED', f: 5, moi: true },
+        { n: 'Sacha', c: '#EF4444', f: 5 },
+        { n: 'Inès',  c: '#3B82F6', f: 3 },
+        { n: 'Marc',  c: '#F59E0B', f: 1 }
+      ], 5)}
+      <p class="total-paquet"><b id="paquet">14</b> cartes dans le paquet</p>`,
+    note: 'Les grains sont ceux de ta saisie. La coche marque qui a fini — pas qui a rejoint.'
+  },
+
+  prets: {
+    nom: 'Attente · tous prêts',
+    html: `
+      <div class="grand">✅</div>
+      <div class="titre">Tout le monde est prêt</div>
+      <div class="sous">La partie démarre quand l'organisateur la lance.</div>
+      ${saisisseurs([
+        { n: 'Lou',   c: '#7C3AED', f: 5, moi: true },
+        { n: 'Sacha', c: '#EF4444', f: 5 },
+        { n: 'Inès',  c: '#3B82F6', f: 5 },
+        { n: 'Marc',  c: '#F59E0B', f: 5 }
+      ], 5)}
+      <p class="total-paquet"><b>20</b> cartes dans le paquet</p>`
+  },
+
+  atoi: {
+    nom: 'À toi de jouer',
+    html: `
+      <div class="etiquette">C'est à toi</div>
+      <div class="grand">🎯</div>
+      <div class="titre">À toi, Lou !</div>
+      <div class="manche-carte">
+        <span class="icone">💬</span>
+        <span class="nom">Un seul mot</span>
+        <span class="regle">Un mot, un seul, pour faire deviner.</span>
+      </div>
+      <div class="faits"><span><b>28 s</b> au chrono</span><span><b>17</b> cartes</span></div>
+      <button class="btn">🚀 Je me lance</button>`,
+    note: 'Le chrono est plus court : son équipe a vidé le paquet à la manche précédente.'
+  },
+
+  lancement: {
+    nom: 'Lancement',
+    html: `
+      <div class="etiquette">Au tour des Malins</div>
+      <div class="manche-carte">
+        <span class="icone">💬</span>
+        <span class="nom">Un seul mot</span>
+        <span class="regle">Un mot, un seul, pour faire deviner.</span>
+      </div>
+      <div class="titre">Sacha fait deviner</div>
+      <div class="faits"><span><b>40 s</b> au chrono</span><span><b>17</b> cartes</span></div>
+      <div class="sous">Le tour part quand Sacha est prêt.</div>`
+  },
+
+  tour: {
+    nom: 'Tour en cours',
+    html: `
+      <div class="etiquette">Sacha fait deviner</div>
+      <div class="anneau">
+        <svg width="150" height="150" viewBox="0 0 150 150">
+          <circle cx="75" cy="75" r="66" fill="none" stroke="#2E2660" stroke-width="10"></circle>
+          <circle cx="75" cy="75" r="66" fill="none" stroke="#FFB020" stroke-width="10"
+                  stroke-linecap="round" stroke-dasharray="414.7" stroke-dashoffset="145"></circle>
+        </svg>
+        <div class="dedans">
+          <span class="chrono" style="font-size:2.6rem">27</span>
+          <span class="unite">secondes</span>
+        </div>
+      </div>
+      <div class="titre" style="font-size:var(--t3)">12 cartes restantes</div>
+      <div class="sous">Tu joues dans l'équipe des Malins.</div>`
+  },
+
+  comptage: {
+    nom: 'Comptage',
+    html: `
+      <div class="grand">🃏</div>
+      <div class="titre">Fin du tour</div>
+      <div class="sous">Sacha compte ses cartes.</div>
+      <div class="points"><i></i><i></i><i></i></div>`
+  },
+
+  resultats: {
+    nom: 'Fin de manche',
+    html: `
+      <div class="grand">🏁</div>
+      <div class="titre">Fin de la manche 2</div>
+      <table class="recap">
+        <thead><tr><th></th><th>Rapides</th><th>Malins</th></tr></thead>
+        <tbody>
+          <tr><td>Description</td><td>8</td><td>6</td></tr>
+          <tr><td>Un seul mot</td><td>7</td><td>5</td></tr>
+          <tr class="total"><td>Total</td><td class="gagne">15</td><td>11</td></tr>
+        </tbody>
+      </table>
+      <div class="sous">La manche 3 arrive : le mime.</div>`
+  }
+};
+
+const scene = document.getElementById('scene');
+const commandes = document.getElementById('commandes');
+let courant = 'attente';
+
+function montrer(cle) {
+  courant = cle;
+  const e = ETATS[cle];
+  scene.innerHTML = e.html + (e.note ? `<div class="sous" style="font-size:var(--t1)">${e.note}</div>` : '');
+  [...commandes.children].forEach(b => b.classList.toggle('on', b.dataset.cle === cle));
+  document.getElementById('b-manche').textContent =
+    cle === 'resultats' ? 'Manche 2 / 3 — finie' : 'Manche 2 / 3';
+}
+
+Object.entries(ETATS).forEach(([cle, e]) => {
+  const b = document.createElement('button');
+  b.textContent = e.nom; b.dataset.cle = cle;
+  b.onclick = () => montrer(cle);
+  commandes.appendChild(b);
+});
+const bPoint = document.createElement('button');
+bPoint.textContent = '＋ Un point tombe';
+bPoint.onclick = unPointTombe;
+commandes.appendChild(bPoint);
+
+majBandeau();
+montrer('attente');
+</script>
+</body>
+</html>

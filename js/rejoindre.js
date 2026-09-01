@@ -829,6 +829,9 @@ function rendreConfiguration(suivi, heureServeur) {
   document.getElementById('bloc-tour').style.display = enTour ? '' : 'none';
   document.getElementById('bloc-comptage').style.display = enComptage ? '' : 'none';
   document.getElementById('bloc-resultats').style.display = enResultat ? '' : 'none';
+  // Le bandeau se met à jour à chaque lecture, quel que soit l'état montré en
+  // dessous : c'est ce qui lui permet de ne jamais mentir.
+  rendreBandeau(etat);
   if (enLancement) rendreLancement(etat);
   if (enComptage) rendreComptage(etat);
   if (enResultat) rendreResultats(etat);
@@ -1405,20 +1408,43 @@ async function validerMonComptage() {
 // score de la manche, en prévenant qu'il ne comprend pas encore ce tour-ci.
 function rendreComptage(etat) {
   const T = (id, texte) => { document.getElementById(id).textContent = texte; };
-  const m = etat.manche;
   const surLePaquet = etat.tour.raison === 'paquet';
 
-  T('comptage-manche', m ? `Manche ${m.numero}/${m.sur} · ${m.icone} ${m.nom}` : '');
+  // La manche et le score sont dans le bandeau : cet écran dit seulement ce
+  // qu'on attend, et de qui.
   T('comptage-emoji', surLePaquet ? '🃏' : '⏰');
   T('comptage-titre', surLePaquet ? 'Fin du tour !' : 'Temps écoulé !');
   T('comptage-qui', `${etat.tour.joueur} compte ses cartes`);
+}
 
-  const [e1, e2] = etat.equipes;
-  T('comptage-eq1', e1.nom);
-  T('comptage-eq2', e2.nom);
-  T('comptage-s1', e1.manche);
-  T('comptage-s2', e2.manche);
-  T('comptage-rappel', `Le tour de ${etat.tour.joueur} n'est pas encore compté`);
+// ===== LE BANDEAU =====
+// Le seul endroit de l'écran de suivi qui affiche la manche et le score. Il
+// est rendu à chaque lecture, quel que soit l'état montré en dessous : c'est
+// ce qui permet aux six états de ne plus répéter la même chose.
+
+function rendreBandeau(etat) {
+  const T = (id, texte) => { document.getElementById(id).textContent = texte; };
+  const m = etat?.manche;
+  const equipes = etat?.equipes || [];
+  const score = document.getElementById('suivi-score');
+
+  if (!m || equipes.length < 2) {
+    // Avant que la partie tourne, il n'y a pas de manche ni de score : le
+    // bandeau se contente de rappeler dans quelle partie on est.
+    T('suivi-manche', session.code ? `Partie ${session.code}` : '');
+    score.style.display = 'none';
+    T('suivi-total', '');
+    return;
+  }
+
+  const [e1, e2] = equipes;
+  T('suivi-manche', `Manche ${m.numero}/${m.sur}`);
+  T('suivi-eq1', e1.nom);
+  T('suivi-eq2', e2.nom);
+  T('suivi-s1', e1.manche);
+  T('suivi-s2', e2.manche);
+  T('suivi-total', `Total de la partie : ${e1.partie} – ${e2.partie}`);
+  score.style.display = '';
 }
 
 // Le même écran que celui de l'organisateur au début d'un tour. On ne reprend
@@ -1433,17 +1459,12 @@ function rendreLancement(etat) {
     ? "⏸️ Tour interrompu — il reprend sur le téléphone de l'organisateur"
     : '');
 
-  T('lancement-titre', `Manche ${m.numero}/${m.sur}`);
+  // Le numéro de manche et le score sont dans le bandeau, au-dessus : ici on
+  // décrit seulement la manche qu'on s'apprête à jouer.
   T('lancement-nom', `${m.icone} ${m.nom}`);
   T('lancement-icone', m.icone);
   T('lancement-regle', m.regle || '');
 
-  const [e1, e2] = etat.equipes;
-  T('lancement-eq1', e1.nom);
-  T('lancement-eq2', e2.nom);
-  T('lancement-s1', e1.manche);
-  T('lancement-s2', e2.manche);
-  T('lancement-total', `Total de la partie : ${e1.partie} – ${e2.partie}`);
   // Le temps repris d'abord, les cartes ensuite : le même ordre et les mêmes
   // mots que sur l'écran de l'organisateur, dont celui-ci est le miroir.
   T('lancement-report', etat.report > 0 ? `⏱️ Temps restant : ${etat.report} s` : '');
@@ -1498,6 +1519,21 @@ function masquerEquipes() {
   document.getElementById('equipes-overlay').style.display = 'none';
 }
 
+// Au-delà de trois prénoms la phrase devient une liste qu'on ne lit plus :
+// on repasse au compte, qui dit la même chose en un coup d'œil.
+function titreDeLAttente(enRetard, inscriptionSeule) {
+  if (!enRetard.length) return 'Tout le monde est prêt';
+  if (enRetard.length > 3) {
+    return inscriptionSeule
+      ? `En attente de ${enRetard.length} joueurs`
+      : `On attend ${enRetard.length} joueurs`;
+  }
+  const noms = enRetard.length === 1
+    ? enRetard[0]
+    : `${enRetard.slice(0, -1).join(', ')} et ${enRetard[enRetard.length - 1]}`;
+  return `On attend ${noms}`;
+}
+
 function rendreAttente(etat) {
   // Une session fermée veut dire que le paquet est figé — pas que la partie a
   // commencé : l'organisateur enchaîne sur les équipes, les manches et les
@@ -1507,13 +1543,26 @@ function rendreAttente(etat) {
   // Sur une partie à thèmes, personne ne saisit de cartes : on attend seulement
   // que les derniers joueurs se soient inscrits.
   const inscriptionSeule = etat.inscription === true;
+
+  // Le bandeau n'a encore ni manche ni score : il rappelle le code de la partie.
+  rendreBandeau(null);
+
+  // Nommer ceux qu'on attend plutôt que les compter : c'est ce qui permet de
+  // les relancer à voix haute, la seule action utile à ce moment-là. Et les
+  // grains montrent où chacun en est, donc nommer ne revient pas à accuser.
+  const enRetard = (etat.joueurs || []).filter(j => !j.fini).map(j => j.prenom);
   document.getElementById('attente-titre').textContent =
-    configEnCours ? 'Configuration de la partie en cours' : 'En attente du départ';
+    configEnCours ? 'Configuration de la partie en cours'
+                  : titreDeLAttente(enRetard, inscriptionSeule);
   document.getElementById('attente-sous').textContent = configEnCours
     ? "L'organisateur prépare la partie. Elle démarre juste après."
-    : (inscriptionSeule
-        ? "On attend que tout le monde se soit inscrit."
-        : "On attend que tout le monde ait saisi ses cartes.");
+    : (!enRetard.length
+        ? "La partie démarre quand l'organisateur la lance."
+        : (inscriptionSeule
+            ? "On attend que tout le monde se soit inscrit."
+            : (enRetard.length === 1
+                ? 'Il saisit encore ses cartes.'
+                : 'Ils saisissent encore leurs cartes.')));
   document.getElementById('attente-roue').style.display = configEnCours ? '' : 'none';
 
   // Le ruban ne concerne que celui qui a saisi des cartes, et seulement tant
@@ -1569,13 +1618,18 @@ function rendreAttente(etat) {
 
     ligne.appendChild(qui);
     // Sans cartes à saisir, il n'y a rien à décompter : le prénom suffit.
+    // Sinon, les grains de l'écran de saisie : l'invité vient d'en remplir
+    // autant sur son propre téléphone, il n'y a rien à lui expliquer.
     if (!inscriptionSeule) {
-      const compte = document.createElement('span');
-      compte.className = 'etat';
-      compte.textContent = joueur.fini
-        ? `${joueur.nbCartes} cartes ✓`
-        : `${joueur.nbCartes}/${etat.cartesParJoueur}…`;
-      ligne.appendChild(compte);
+      const grains = document.createElement('span');
+      grains.className = 'grains';
+      const cible = etat.cartesParJoueur || 0;
+      for (let i = 0; i < cible; i++) {
+        const grain = document.createElement('span');
+        grain.className = 'grain' + (i < joueur.nbCartes ? ' plein' : '');
+        grains.appendChild(grain);
+      }
+      ligne.appendChild(grains);
     }
     liste.appendChild(ligne);
   });

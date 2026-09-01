@@ -214,22 +214,25 @@ localStorage.removeItem('timesup_rejoint');
     }
     check('l invite est bien spectatrice du lancement', spectatrice);
     const L = id => I(id).textContent.trim();
-    log('       invite voit : "' + L('lancement-titre') + '" · "' + L('lancement-nom')
+    log('       invite voit : "' + L('suivi-manche') + '" · "' + L('lancement-nom')
         + '" · "' + L('lancement-tour') + '" · "' + L('lancement-joueur') + '"');
 
     check('le bloc de lancement s affiche',
           I('bloc-lancement').style.display !== 'none');
     check('l en-tete de configuration a cede la place',
           I('attente-roue').style.display === 'none');
-    check('la manche est annoncee', L('lancement-titre') === 'Manche 1/3');
+    check('la manche est annoncee par le bandeau', L('suivi-manche') === 'Manche 1/3');
     check('elle est nommee', L('lancement-nom').length > 3);
     check('sa consigne est rappelee', L('lancement-regle').length > 20);
     check('l equipe qui joue est annoncee', L('lancement-tour').includes('Équipe'));
     check('le joueur qui fait deviner aussi', L('lancement-joueur').includes('fait deviner'));
+    // Le score vit dans le bandeau, qui ne quitte jamais l ecran de suivi :
+    // les etats qui defilent en dessous ne le repetent plus.
     check('les scores de manche sont a zero',
-          L('lancement-s1') === '0' && L('lancement-s2') === '0');
+          L('suivi-s1') === '0' && L('suivi-s2') === '0');
     check('le total de la partie est rappele',
-          L('lancement-total').includes('Total de la partie'));
+          L('suivi-total').includes('Total de la partie'));
+    check('le bandeau annonce la manche', L('suivi-manche').includes('Manche'));
     check('les equipes restent consultables',
           I('btn-voir-equipes').style.display !== 'none');
 
@@ -313,7 +316,7 @@ localStorage.removeItem('timesup_rejoint');
     check('la main passe a l autre equipe', L('lancement-tour') !== premiereEquipe);
     check('et a un autre joueur', L('lancement-joueur') !== premierJoueur);
     check('le score du tour precedent est reporte',
-          Number(L('lancement-s1')) + Number(L('lancement-s2')) === 2);
+          Number(L('suivi-s1')) + Number(L('suivi-s2')) === 2);
 
     // ===== Fin de manche : le detail, comme chez l organisateur =====
     // On vide le paquet d une traite pour achever la manche
@@ -483,8 +486,9 @@ localStorage.removeItem('timesup_rejoint');
           I('attente-joueurs').style.display !== 'none'
           && di.querySelectorAll('#attente-joueurs .connecte').length === 4);
     log('       invite voit : "' + L('attente-titre') + '" — ' + L('attente-total'));
+    // L attente nomme desormais ceux qu on attend, au lieu de les compter
     check('on attend a nouveau les autres',
-          L('attente-titre').includes('En attente'));
+          /^On attend /.test(L('attente-titre')));
     check('et non les resultats de la partie precedente',
           I('bloc-resultats').style.display === 'none');
     check('ni le sablier', I('bloc-tour').style.display === 'none');

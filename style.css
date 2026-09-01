@@ -881,6 +881,13 @@ input[readonly] {
 .connecte .etat { font-size: 0.78rem; color: var(--muted); }
 .connecte.fini { border-color: rgba(34, 197, 94, 0.4); }
 .connecte.fini .etat { color: var(--success); }
+
+/* La progression de chacun, dessinée avec les grains que l'invité vient de
+   remplir sur son propre écran de saisie. Il n'y a rien à expliquer : c'est
+   le même objet, vu de l'extérieur. */
+.connecte .grains { display: flex; gap: 4px; flex: none; margin-bottom: 0; width: auto; }
+.connecte .grain { width: 13px; height: 6px; max-width: none; }
+.connecte.fini .grain.plein { background: var(--success); }
 .connecte.vide { color: var(--muted-2); font-style: italic; justify-content: center; }
 .connecte .sans-tel { font-size: 0.7rem; color: var(--secondary); }
 
@@ -1102,6 +1109,87 @@ input[readonly] {
   font-weight: 800;
   color: #fff;
 }
+
+/* ===== LE BANDEAU DU SUIVI =====
+   Il ne quitte jamais l'écran de suivi. Six états s'y succèdent pendant une
+   soirée ; c'est lui qui fait qu'ils sont le même écran, et il répond seul à
+   « où en est la partie ». Il porte donc le score, que les états n'ont plus à
+   redire — deux tableaux identiques ont disparu avec lui. */
+.suivi-bandeau {
+  width: 100%;
+  background: rgba(0, 0, 0, 0.24);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  padding: 10px 14px;
+  margin-bottom: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.bandeau-haut {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-height: 22px;
+}
+
+.bandeau-manche {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--secondary);
+}
+
+/* Une icône plutôt qu'un bouton pleine largeur : l'action reste joignable
+   sans pousser le contenu vers le bas quand elle apparaît. */
+.bandeau-equipes {
+  background: none;
+  border: none;
+  color: var(--muted);
+  font-size: 1.05rem;
+  line-height: 1;
+  padding: 2px 4px;
+  cursor: pointer;
+  transition: transform var(--transition);
+}
+
+.bandeau-equipes:active { transform: scale(0.92); }
+
+.bandeau-score {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.bandeau-eq {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--muted-strong);
+}
+
+.bandeau-eq b {
+  font-size: 1.35rem;
+  font-weight: 800;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+
+.bandeau-tiret { color: var(--muted-2); font-size: 0.8rem; }
+
+.bandeau-total {
+  font-size: 0.72rem;
+  color: var(--muted-2);
+  text-align: center;
+}
+
+.bandeau-total:empty { display: none; }
 
 /* Le compte des cartes. C'est l'écran le plus long du parcours : le chiffre
    porte la progression, le reste s'efface. */

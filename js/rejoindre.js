@@ -1090,7 +1090,9 @@ function rendreMonTour(tour) {
   const m = tour.manche || {};
   T('atoi-titre', `À toi, ${session.prenom} !`);
   T('atoi-icone', m.icone || '🎯');
-  T('atoi-manche', m.numero ? `Manche ${m.numero}/${m.sur} — ${m.nom}` : (m.nom || ''));
+  // Le numéro de manche est dans le bandeau, juste au-dessus : ici on nomme
+  // seulement ce qu'on va devoir faire.
+  T('atoi-manche', m.nom || '');
   T('atoi-regle', m.regle || '');
   T('atoi-reste', libelleRestantes(tour.mots.length));
   // Son équipe a vidé le paquet à la manche précédente : ce tour reprend les
@@ -1106,8 +1108,7 @@ function rendreMonTour(tour) {
   if (mienne?.couleur) {
     document.getElementById('atoi-equipe').style.color = mienne.couleur;
   }
-  T('atoi-eq1', equipes[0] ? `${equipes[0].nom} ${equipes[0].manche}` : '');
-  T('atoi-eq2', equipes[1] ? `${equipes[1].manche} ${equipes[1].nom}` : '');
+  // Le score des deux équipes est dans le bandeau du haut : plus rien à redire ici.
 }
 
 // ===== JOUER SON TOUR =====
@@ -1461,7 +1462,9 @@ function rendreLancement(etat) {
 
   // Le numéro de manche et le score sont dans le bandeau, au-dessus : ici on
   // décrit seulement la manche qu'on s'apprête à jouer.
-  T('lancement-nom', `${m.icone} ${m.nom}`);
+  // Le nom sans son icône : elle est déjà dessinée en grand juste en dessous,
+  // et l'afficher deux fois dans le même bloc n'ajoutait rien.
+  T('lancement-nom', m.nom);
   T('lancement-icone', m.icone);
   T('lancement-regle', m.regle || '');
 

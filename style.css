@@ -1845,28 +1845,9 @@ input[readonly] {
 }
 
 /* ===== MON TOUR — l'écran de lancement, sur le téléphone du joueur ===== */
-/* Le score de la manche tient sur une ligne : il informe sans prendre la place
-   du « à toi », qui est ce que le joueur doit saisir d'un coup d'œil. */
-.bandeau-manche {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 100px;
-  padding: 7px 14px;
-  font-size: 0.82rem;
-  font-weight: 600;
-  color: var(--muted-strong);
-}
-
-.bandeau-manche .milieu {
-  font-size: 0.6rem;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  color: var(--muted);
-  font-weight: 700;
-}
+/* Le score de la manche vivait ici sur une ligne. Il est passé dans le bandeau
+   permanent du suivi, qui surplombe cet écran : la règle en place portait le
+   même nom de classe, et l'écrasait sans bruit. */
 
 .a-toi-entete {
   text-align: center;

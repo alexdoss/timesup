@@ -169,7 +169,11 @@ localStorage.removeItem('timesup_rejoint');
     check('son ecran annonce que c est a lui',
           J('bloc-a-toi').style.display !== 'none');
     check('avec son prenom', LJ('atoi-titre') === `À toi, ${prenomQuiJoue} !`);
-    check('la manche est rappelee', LJ('atoi-manche').includes('Manche 1'));
+    // Le numero de manche vit dans le bandeau permanent, qui surplombe cet
+    // ecran ; le bloc « a toi » nomme seulement ce qu il va falloir faire.
+    check('le bandeau rappelle la manche', LJ('suivi-manche').includes('Manche 1'));
+    check('et le bloc nomme ce qu il faut faire', LJ('atoi-manche').length > 3);
+    check('sans redire le numero', !LJ('atoi-manche').includes('Manche'));
     check('et le nombre de cartes', LJ('atoi-reste').includes('Cartes restantes'));
     check('il ne voit pas l ecran de lancement des autres',
           J('bloc-lancement').style.display === 'none');

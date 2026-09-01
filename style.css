@@ -1844,6 +1844,59 @@ input[readonly] {
   .points-attente i { animation: none; opacity: 0.6; }
 }
 
+/* ===== MON TOUR — l'écran de jeu, sur le téléphone du joueur =====
+   Tout est cadré sur #screen-mon-tour : les classes .card et .timer servent
+   aussi à l'écran de l'organisateur, qui n'est pas encore refait. */
+
+/* Le chrono garde la forme qu'il a chez l'organisateur : un nombre nu, qui
+   passe en `warning` puis en `danger`. Rien d'autre au-dessus de la carte —
+   celui qui fait deviner doit la lire, et l'urgence lui arrive par le son. */
+
+/* La carte sort dans le sens du geste : à droite quand on la gagne, à gauche
+   quand on la repousse. C'est ce qui distingue les deux actions sans qu'on
+   lise les boutons — et ce qui donne au « trouvé » sa récompense. */
+.zone-carte {
+  position: relative;
+  width: 100%;
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 130px;
+}
+
+#screen-mon-tour .card { width: 100%; }
+
+.carte-fantome {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.carte-fantome.vers-droite { animation: carte-sort-droite 340ms cubic-bezier(0.4, 0, 0.9, 0.4) forwards; }
+.carte-fantome.vers-gauche { animation: carte-sort-gauche 340ms cubic-bezier(0.4, 0, 0.9, 0.4) forwards; }
+
+@keyframes carte-sort-droite {
+  to { transform: translateX(150%) rotate(14deg); opacity: 0; }
+}
+
+@keyframes carte-sort-gauche {
+  to { transform: translateX(-150%) rotate(-14deg); opacity: 0; }
+}
+
+#screen-mon-tour .card.arrive { animation: carte-monte 300ms cubic-bezier(0.2, 0.9, 0.3, 1.1); }
+
+@keyframes carte-monte {
+  from { transform: translateY(42px) scale(0.94); opacity: 0; }
+}
+
+/* Un téléphone réglé sur « moins d'animations » n'en reçoit aucune : le jeu
+   reste entier, seul le mouvement disparaît. */
+@media (prefers-reduced-motion: reduce) {
+  .carte-fantome,
+  #screen-mon-tour .card.arrive { animation: none; }
+}
+
 /* ===== MON TOUR — l'écran de lancement, sur le téléphone du joueur ===== */
 /* Le score de la manche vivait ici sur une ligne. Il est passé dans le bandeau
    permanent du suivi, qui surplombe cet écran : la règle en place portait le

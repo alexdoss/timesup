@@ -130,9 +130,19 @@
         <span id="mon-round-label" class="round-label">Manche 1</span>
         <span id="mon-team-label" class="team-label">Équipe 1</span>
       </div>
+      <!-- Le chrono reste un nombre nu, comme chez l'organisateur : celui qui
+           fait deviner doit lire sa carte, et tout objet animé au-dessus d'elle
+           lui prend de l'attention au pire moment. L'urgence, elle, est portée
+           par le tic des cinq dernières secondes, qui arrive même quand on ne
+           regarde pas — ce qu'aucun dessin ne sait faire. -->
       <div id="mon-timer" class="timer">40</div>
-      <div id="mon-card" class="card">
-        <span id="mon-card-word">Mot</span>
+
+      <!-- La carte sort dans le sens du geste. Le fantôme qui s'en va est une
+           copie : la carte vivante, elle, garde son identité et son mot. -->
+      <div id="mon-zone-carte" class="zone-carte">
+        <div id="mon-card" class="card">
+          <span id="mon-card-word">Mot</span>
+        </div>
       </div>
       <div class="cards-remaining">
         Cartes restantes : <span id="mon-cards-left">0</span>

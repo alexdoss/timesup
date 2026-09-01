@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Rush — mon tour sur mon téléphone</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root {
+  --fond: #14102B; --fond-halo: #2A1F5C; --surface: #1E1846; --bord: #2E2660;
+  --texte: #FFF6F0; --doux: #A79BD6;
+  --violet: #7C3AED; --violet-clair: #B14BFF; --ambre: #FFB020;
+  --vert: #22C55E; --rouge: #EF4444;
+  --e1: 4px; --e2: 8px; --e3: 16px; --e4: 24px; --e5: 32px; --e6: 48px;
+  --t1: .75rem; --t2: .875rem; --t3: 1rem; --t4: 1.375rem; --t5: 2rem; --t6: 3rem;
+  --r-bloc: 20px; --r-pastille: 100px; --ombre: 0 10px 30px rgba(0,0,0,.35);
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  font-family: 'Outfit', sans-serif;
+  background: radial-gradient(120% 45% at 50% 0%, var(--fond-halo) 0%, var(--fond) 58%);
+  color: var(--texte); padding: var(--e4); line-height: 1.5;
+}
+h1 { font-size: var(--t4); margin-bottom: var(--e1); }
+h2 { font-size: var(--t1); text-transform: uppercase; letter-spacing: .1em;
+     color: var(--ambre); margin: var(--e6) 0 var(--e3); font-weight: 700; }
+.intro { color: var(--doux); font-size: var(--t2); max-width: 880px; }
+.intro strong { color: var(--texte); }
+.intro + .intro { margin-top: var(--e2); }
+.rangee { display: flex; gap: var(--e4); flex-wrap: wrap; align-items: flex-start; }
+
+/* ═══════ LE TÉLÉPHONE ═══════ */
+.tel {
+  width: 320px; height: 620px; position: relative; overflow: hidden;
+  background: radial-gradient(120% 34% at 50% 0%, var(--fond-halo) 0%, var(--fond) 62%);
+  border: 1px solid var(--bord); border-radius: 28px; box-shadow: var(--ombre);
+  display: flex; flex-direction: column; padding: var(--e3);
+}
+
+.entete {
+  display: flex; align-items: center; justify-content: space-between;
+  font-size: var(--t1); font-weight: 700; letter-spacing: .1em;
+  text-transform: uppercase; color: var(--doux); flex: none;
+}
+.entete .equipe { color: var(--ambre); }
+.pause {
+  background: none; border: 1px solid var(--bord); border-radius: 50%;
+  width: 30px; height: 30px; color: var(--doux); cursor: pointer; font-size: .8rem;
+}
+
+/* ─── Le chrono, un nombre nu ───
+   Rien d'autre au-dessus de la carte : celui qui fait deviner doit la lire, et
+   tout objet animé juste au-dessus lui prend de l'attention au pire moment.
+   L'urgence lui arrive par le tic des cinq dernières secondes, qui ne demande
+   pas qu'on regarde. Mêmes seuils que chez l'organisateur : 10 s puis 5 s. */
+.chrono {
+  text-align: center; margin: var(--e2) 0; flex: none;
+  font-size: 3.4rem; font-weight: 800; line-height: 1;
+  letter-spacing: -.03em; color: var(--ambre); transition: color .3s;
+}
+.chrono.warning { color: #F59E0B; }
+.chrono.danger { color: var(--rouge); animation: battement .5s infinite; }
+@keyframes battement { 50% { transform: scale(1.05) } }
+
+/* ─── La carte ───
+   Elle sort dans le sens du geste : à droite quand on la gagne, à gauche
+   quand on la repousse. La suivante monte depuis le bas du paquet. */
+.zone-carte { position: relative; flex: 1; display: flex; align-items: center; justify-content: center; }
+.carte {
+  position: absolute; width: 100%; min-height: 130px;
+  background: linear-gradient(160deg, #241C55, var(--surface));
+  border: 1px solid var(--bord); border-radius: var(--r-bloc);
+  box-shadow: var(--ombre);
+  display: flex; align-items: center; justify-content: center; text-align: center;
+  padding: var(--e4) var(--e3);
+  font-size: var(--t5); font-weight: 800; text-wrap: balance;
+}
+.carte.trouvee { animation: sort-droite 340ms cubic-bezier(.4,0,.9,.4) forwards; }
+.carte.passee  { animation: sort-gauche 340ms cubic-bezier(.4,0,.9,.4) forwards; }
+.carte.arrive  { animation: monte 300ms cubic-bezier(.2,.9,.3,1.1); }
+@keyframes sort-droite {
+  to { transform: translateX(150%) rotate(14deg); opacity: 0; }
+}
+@keyframes sort-gauche {
+  to { transform: translateX(-150%) rotate(-14deg); opacity: 0; }
+}
+@keyframes monte {
+  from { transform: translateY(42px) scale(.94); opacity: 0; }
+}
+
+.reste { text-align: center; font-size: var(--t2); color: var(--doux); flex: none; margin-bottom: var(--e2); }
+.reste b { color: var(--texte); font-weight: 700; font-variant-numeric: tabular-nums; }
+
+.actions { display: flex; gap: var(--e2); flex: none; }
+.btn {
+  font-family: inherit; font-size: var(--t3); font-weight: 700; border: none;
+  border-radius: var(--r-pastille); padding: 16px; cursor: pointer; flex: 1;
+  transition: transform 120ms;
+}
+.btn:active { transform: scale(.96); }
+.btn-passe { background: transparent; border: 1px solid var(--bord); color: var(--texte); }
+.btn-trouve { background: var(--vert); color: #06280f; box-shadow: 0 8px 22px rgba(34,197,94,.32); }
+
+.fini { flex: 1; display: flex; flex-direction: column; align-items: center;
+        justify-content: center; text-align: center; gap: var(--e3); }
+.fini .grand { font-size: var(--t6); }
+.fini .titre { font-size: var(--t4); font-weight: 800; }
+.fini .sous { font-size: var(--t2); color: var(--doux); }
+.fini .bilan { display: flex; gap: var(--e4); }
+.fini .bilan div { display: flex; flex-direction: column; }
+.fini .bilan b { font-size: var(--t5); font-weight: 800; font-variant-numeric: tabular-nums; }
+.fini .bilan .lab { font-size: var(--t1); color: var(--doux); text-transform: uppercase; letter-spacing: .08em; }
+
+.commandes { display: flex; flex-wrap: wrap; gap: 6px; width: 320px; }
+.commandes button {
+  font-family: inherit; font-size: var(--t2); font-weight: 600; cursor: pointer;
+  background: var(--surface); border: 1px solid var(--bord); color: var(--texte);
+  border-radius: 10px; padding: 8px 11px;
+}
+
+.avis { border-left: 3px solid var(--ambre); padding-left: var(--e3); max-width: 420px; }
+.avis h4 { font-size: var(--t3); margin-bottom: var(--e2); }
+.avis p { font-size: var(--t2); color: var(--doux); }
+.avis p + p { margin-top: var(--e2); }
+.avis b { color: var(--texte); }
+.ecarte { border-left-color: var(--bord); max-width: 880px; margin-top: var(--e4); }
+.ecarte h4 { color: var(--doux); }
+</style>
+</head>
+<body>
+
+<h1>Mon tour, sur mon téléphone</h1>
+<p class="intro">
+  L'écran de celui qui fait deviner, quand le tour lui est confié. Il tient l'appareil tourné
+  vers lui et <strong>regarde ses coéquipiers</strong> : tout ce que cet écran doit faire, il
+  doit le faire sans être regardé.
+</p>
+<p class="intro"><strong>Mets le son</strong>, et appuie sur Trouvé et Passer pour sentir le mouvement.</p>
+
+<div class="rangee" style="margin-top:var(--e4)">
+  <div style="display:flex;flex-direction:column;gap:var(--e2)">
+    <div class="tel" id="tel">
+      <div class="entete">
+        <span>Manche 2 · Un seul mot</span>
+        <span class="equipe">Les Rapides</span>
+      </div>
+
+      <div class="chrono" id="chrono"><span id="n">40</span></div>
+
+      <div class="zone-carte" id="zone"></div>
+
+      <p class="reste"><b id="reste">8</b> cartes restantes</p>
+      <div class="actions">
+        <button class="btn btn-passe" id="btn-passe">Passer ✗</button>
+        <button class="btn btn-trouve" id="btn-trouve">Trouvé ✓</button>
+      </div>
+    </div>
+
+    <div class="commandes">
+      <button onclick="relancer()">↻ Relancer le tour</button>
+      <button onclick="filerAuBout()">⏩ Aller aux 5 dernières secondes</button>
+    </div>
+  </div>
+
+  <div class="avis">
+    <h4>Le mouvement de la carte</h4>
+    <p>
+      <b>Elle sort dans le sens du geste</b> : à droite quand on la gagne, à gauche quand on la
+      repousse. La suivante monte depuis le bas du paquet. C'est ce qui distingue les deux
+      actions <b>sans qu'on lise les boutons</b> — et ce qui donne au « trouvé » sa récompense.
+    </p>
+    <p>
+      Ce n'est pas un glissement au doigt : on appuie, la carte part. Le geste reste un appui,
+      seul le départ de la carte raconte lequel des deux on a fait.
+    </p>
+
+    <h4 style="margin-top:var(--e4)">Le chrono reste un nombre nu</h4>
+    <p>
+      <b>Un anneau de progression a été essayé, puis écarté.</b> L'argument pour était que le
+      joueur ne regarde pas son écran — mais quand il le regarde, c'est <b>la carte</b> qu'il
+      doit lire. Un objet coloré, animé chaque seconde et battant en fin de tour, juste
+      au-dessus d'elle, lui prend de l'attention au pire moment.
+    </p>
+    <p>Et il doublait un signal déjà meilleur : <b>le tic des cinq dernières secondes</b>
+      atteint quelqu'un qui ne regarde pas, ce qu'aucun dessin ne sait faire. Le nombre reprend
+      donc la forme qu'il a chez l'organisateur, avec les mêmes seuils — orange à 10 s,
+      rouge à 5 s.</p>
+
+    <h4 style="margin-top:var(--e4)">Le son, qui manquait entièrement</h4>
+    <p>
+      Cet écran <b>n'émettait aucun son</b> — ni note sur une carte trouvée, ni tic des dernières
+      secondes, ni buzzer de fin — alors que l'écran de l'organisateur a les trois depuis
+      toujours. C'est le manque le plus lourd des deux écrans : le son est le seul retour qui
+      fonctionne quand on ne regarde pas.
+    </p>
+
+    <h4 style="margin-top:var(--e4)">Et la vibration avec</h4>
+    <p>
+      Chaque son porte la sienne, dans la même fonction : <b>18 ms</b> sur une carte trouvée,
+      <b>20 ms</b> par tic des cinq dernières secondes, <b>trois impulsions</b> à la fin du tour.
+      Elle part <b>même quand le son est coupé</b> — dans une pièce bruyante, ou chez quelqu'un
+      qui a mis son téléphone en silencieux, c'est le seul retour qui arrive encore.
+    </p>
+    <p>
+      <b>« Passer » ne vibre pas et ne sonne pas.</b> Seule la récompense se sent : si les deux
+      gestes rendaient la même chose, aucun des deux ne dirait plus rien.
+      <em>(Rien à sentir sur un ordinateur — ouvre cette page sur un Android.)</em>
+    </p>
+  </div>
+</div>
+
+<div class="avis ecarte">
+  <h4>Écarté</h4>
+  <p><b>Faire glisser la carte au doigt.</b> La main qui tient le téléphone est aussi celle qui
+    mime ou qui compte sur ses doigts : un geste précis à réussir sous chrono est une punition,
+    pas une facilité. Deux grands boutons restent plus sûrs.</p>
+  <p><b>Afficher la carte suivante en transparence derrière.</b> Elle donnerait une avance à
+    celui qui fait deviner — il préparerait sa phrase pendant que l'équipe cherche encore.</p>
+</div>
+
+<script>
+/* ═══════ Son, repris du moteur de Rush ═══════ */
+let ac = null;
+const ctx = () => ac || (ac = new (window.AudioContext || window.webkitAudioContext)());
+function note(freq, duree, depart = 0, gain = .18, type = 'triangle') {
+  const a = ctx(), o = a.createOscillator(), g = a.createGain();
+  const t = a.currentTime + depart;
+  o.type = type; o.frequency.setValueAtTime(freq, t);
+  g.gain.setValueAtTime(0.0001, t);
+  g.gain.exponentialRampToValueAtTime(gain, t + 0.012);
+  g.gain.exponentialRampToValueAtTime(0.0001, t + duree);
+  o.connect(g); g.connect(a.destination); o.start(t); o.stop(t + duree + 0.03);
+}
+/* La vibration accompagne chaque son, et part même quand le son est coupé :
+   dans une pièce bruyante, c'est le seul retour qui arrive encore.
+   « Passer » n'en a pas — seule la récompense se sent. */
+const vibrer = motif => { try { navigator.vibrate?.(motif); } catch {} };
+
+const sonTrouve = () => { note(660, .06); note(990, .08, .055); vibrer(18); };
+const sonTic    = () => { note(1250, .045, 0, .22); vibrer(20); };
+const sonFin    = () => {
+  [0, .26, .52].forEach(d => {
+    [[1, 1], [2.0, .55], [2.41, .4], [2.98, .28]].forEach(([r, p]) =>
+      note(760 * r, .85 * (1 - (r - 1) * .13), d, .16 * p, 'sine'));
+  });
+  vibrer([180, 80, 180, 80, 180]);
+};
+
+/* ═══════ Le tour ═══════ */
+const PAQUET = ['Montgolfière', 'Tire-bouchon', 'Karaoké', 'Trampoline',
+                'Aspirateur', 'Hamac', 'Chorale', 'Perroquet'];
+const DUREE = 40;
+
+let mots, index, restant, minuterie, fini;
+
+function peindre(mouvement) {
+  document.getElementById('n').textContent = restant;
+  document.getElementById('reste').textContent = mots.length - index;
+  const chrono = document.getElementById('chrono');
+  chrono.classList.remove('warning', 'danger');
+  if (restant <= 5) chrono.classList.add('danger');
+  else if (restant <= 10) chrono.classList.add('warning');
+
+  const zone = document.getElementById('zone');
+  const ancienne = zone.querySelector('.carte:not(.trouvee):not(.passee)');
+  if (mouvement && ancienne) {
+    ancienne.classList.add(mouvement);
+    ancienne.addEventListener('animationend', () => ancienne.remove(), { once: true });
+  } else if (ancienne) {
+    ancienne.remove();
+  }
+  if (index >= mots.length) return;
+
+  const carte = document.createElement('div');
+  carte.className = 'carte' + (mouvement ? ' arrive' : '');
+  carte.textContent = mots[index];
+  zone.appendChild(carte);
+}
+
+function trouve() {
+  if (fini || index >= mots.length) return;
+  index++;
+  sonTrouve();
+  if (index >= mots.length) { peindre('trouvee'); return finir('🃏', 'Paquet vidé !'); }
+  peindre('trouvee');
+}
+
+function passe() {
+  if (fini || index >= mots.length) return;
+  const carte = mots.splice(index, 1)[0];
+  mots.push(carte);
+  peindre('passee');
+}
+
+function finir(emoji, titre) {
+  fini = true;
+  clearInterval(minuterie);
+  sonFin();
+  document.getElementById('tel').innerHTML = `
+    <div class="entete"><span>Manche 2 · Un seul mot</span><span class="equipe">Les Rapides</span></div>
+    <div class="fini">
+      <div class="grand">${emoji}</div>
+      <div class="titre">${titre}</div>
+      <div class="bilan">
+        <div><b style="color:var(--vert)">${index}</b><span class="lab">trouvées</span></div>
+        <div><b>${mots.length - index}</b><span class="lab">restantes</span></div>
+      </div>
+      <div class="sous">${restant > 0 ? restant + ' s reportées sur la manche suivante' : 'Le temps est écoulé.'}</div>
+      <button class="btn btn-trouve" style="width:100%" onclick="relancer()">Vérifier mon comptage ▶️</button>
+    </div>`;
+}
+
+function relancer() {
+  location.reload();
+}
+
+function filerAuBout() {
+  restant = 6;
+  peindre();
+}
+
+function demarrer() {
+  mots = [...PAQUET]; index = 0; restant = DUREE; fini = false;
+  peindre();
+  minuterie = setInterval(() => {
+    if (fini) return;
+    restant -= 1;
+    if (restant <= 5 && restant > 0) sonTic();
+    if (restant <= 0) { restant = 0; peindre(); return finir('⏰', 'Temps écoulé !'); }
+    peindre();
+  }, 1000);
+}
+
+document.getElementById('btn-trouve').onclick = trouve;
+document.getElementById('btn-passe').onclick = passe;
+demarrer();
+</script>
+</body>
+</html>

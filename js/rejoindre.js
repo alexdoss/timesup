@@ -5,7 +5,7 @@
 // champ de saisie en une seconde, même sur un réseau de salle des fêtes.
 
 import { creerSablier, svgSablier } from './sablier.js';
-import { playFound } from './sound.js';
+import { playFound, playTick, playBuzzer } from './sound.js';
 
 const ROUTE = '/api/session';
 const STOCKAGE = 'timesup_rejoint';
@@ -1254,11 +1254,42 @@ function publierMonDepart() {
   return publierMonEtat('tour');
 }
 
-function peindreMonTour() {
+// `sens` vaut 'vers-droite' pour une carte trouvée, 'vers-gauche' pour une
+// carte passée. Le mouvement est purement décoratif : la logique du tour a
+// déjà avancé quand on arrive ici, et rien n'attend la fin de l'animation.
+function peindreMonTour(sens) {
   const p = partieEnCours;
-  document.getElementById('mon-timer').textContent = p.restant;
-  document.getElementById('mon-card-word').textContent = p.mots[p.index] ?? '';
+  const carte = document.getElementById('mon-card');
+  const mot = document.getElementById('mon-card-word');
+
+  if (sens) {
+    // Une copie s'en va avec l'ancien mot ; la vraie carte garde son identité.
+    // On n'en laisse jamais plus d'une : sur des appuis très rapides, elles
+    // s'empileraient sans que personne ne les voie.
+    const zone = document.getElementById('mon-zone-carte');
+    zone.querySelectorAll('.carte-fantome').forEach(f => f.remove());
+    const fantome = carte.cloneNode(true);
+    fantome.removeAttribute('id');
+    fantome.querySelector('#mon-card-word')?.removeAttribute('id');
+    fantome.classList.add('carte-fantome', sens);
+    zone.appendChild(fantome);
+    fantome.addEventListener('animationend', () => fantome.remove(), { once: true });
+
+    carte.classList.remove('arrive');
+    void carte.offsetWidth;   // redémarre l'animation même sur deux appuis de suite
+    carte.classList.add('arrive');
+  }
+
+  mot.textContent = p.mots[p.index] ?? '';
   document.getElementById('mon-cards-left').textContent = p.mots.length - p.index;
+
+  // Les mêmes seuils que chez l'organisateur — 10 s puis 5 s — pour que les
+  // deux écrans changent de couleur au même moment de la partie.
+  const chrono = document.getElementById('mon-timer');
+  chrono.textContent = p.restant;
+  chrono.classList.remove('warning', 'danger');
+  if (p.restant <= 5) chrono.classList.add('danger');
+  else if (p.restant <= 10) chrono.classList.add('warning');
 }
 
 function demarrerMonChrono() {
@@ -1273,6 +1304,9 @@ function demarrerMonChrono() {
       finirMonTour();
       return;
     }
+    // Le tic des cinq dernières secondes, comme chez l'organisateur. C'est le
+    // seul avertissement qui atteigne quelqu'un qui ne regarde pas son écran.
+    if (p.restant <= 5) playTick();
     peindreMonTour();
   }, 1000);
 }
@@ -1286,8 +1320,11 @@ function monTourTrouve() {
   if (!p || p.enPause || p.index >= p.mots.length) return;
   p.trouvees.push(monMotCourant());
   p.index += 1;
+  // La récompense part avant tout le reste : c'est elle qu'on attend, et le
+  // son est le seul retour qui arrive quand on ne regarde pas l'écran.
+  playFound();
   if (p.index >= p.mots.length) return finirMonTour();
-  peindreMonTour();
+  peindreMonTour('vers-droite');
   // Le paquet qui fond est la seule autre chose que les spectateurs voient
   // bouger : sans cette publication, leur compteur resterait figé tout le tour.
   publierMonEtat('tour');
@@ -1295,12 +1332,14 @@ function monTourTrouve() {
 
 // Passer remet la carte plus loin : le paquet ne rétrécit pas, contrairement
 // à « Trouvé ». C'est la règle du jeu, appliquée ici en local.
+// Ni son ni vibration : seule la récompense se sent. Si les deux gestes
+// rendaient la même chose, aucun des deux ne dirait plus rien.
 function monTourPasse() {
   const p = partieEnCours;
   if (!p || p.enPause || p.index >= p.mots.length) return;
   const carte = p.mots.splice(p.index, 1)[0];
   p.mots.push(carte);
-  peindreMonTour();
+  peindreMonTour('vers-gauche');
 }
 
 function basculerMaPause() {
@@ -1323,6 +1362,9 @@ function finirMonTour() {
   p.minuterie = null;
   p.manquees = p.mots.slice(p.index);
   p.paquetVide = p.index >= p.mots.length;
+  // Les trois coups de cloche de la fin de tour, comme chez l'organisateur.
+  // Ils doivent couper la parole dans une pièce bruyante.
+  playBuzzer();
   // Le dire aux autres : sans ça leur sablier continue de couler alors que le
   // tour est fini, et ils finissent par lire « temps écoulé » à tort.
   publierMonEtat('comptage');

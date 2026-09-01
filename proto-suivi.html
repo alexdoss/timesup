@@ -112,16 +112,15 @@ h2 { font-size: var(--t1); text-transform: uppercase; letter-spacing: .1em;
 .btn.plat { background: transparent; border: 1px solid var(--bord); box-shadow: none;
             color: var(--texte); font-size: var(--t2); font-weight: 600; padding: 11px; }
 
-/* Le sablier du tour en cours */
-.chrono { font-size: 4rem; font-weight: 800; line-height: 1; font-variant-numeric: tabular-nums; }
-.chrono.chaud { color: var(--rouge); }
-.anneau { position: relative; width: 150px; height: 150px; }
-.anneau svg { transform: rotate(-90deg); }
-.anneau .dedans {
-  position: absolute; inset: 0; display: flex; flex-direction: column;
-  align-items: center; justify-content: center; gap: 2px;
+/* Le sablier du tour en cours, repris tel quel de l'app : c'est ce que voit
+   le spectateur pendant qu'un autre fait deviner, et ça ne change pas. */
+.sablier { width: 96px; height: 139px; flex-shrink: 0; }
+.sablier .sable { fill: var(--ambre); transition: y .25s linear, height .25s linear; }
+.sablier .verre { fill: none; stroke: var(--doux); stroke-width: 3; stroke-linejoin: round; }
+.sablier .socle { fill: var(--doux); }
+.chrono-sablier {
+  font-size: var(--t5); font-weight: 800; line-height: 1; font-variant-numeric: tabular-nums;
 }
-.anneau .unite { font-size: var(--t1); color: var(--doux); text-transform: uppercase; letter-spacing: .1em; }
 
 /* Les gens qui saisissent, pendant l'attente. Les grains sont ceux de l'écran
    de saisie : l'invité vient d'en remplir cinq, il les reconnaît. */
@@ -140,6 +139,23 @@ h2 { font-size: var(--t1); text-transform: uppercase; letter-spacing: .1em;
 .grain { width: 14px; height: 6px; border-radius: 3px; background: var(--bord); }
 .grain.plein { background: var(--ambre); }
 .un.pret .grain.plein { background: var(--vert); }
+/* L'essai du son, proposé pendant que l'organisateur configure. On ne demande
+   pas d'activer quoi que ce soit — c'est déjà actif — on propose d'entendre,
+   ce qui vaut mieux qu'une consigne : le joueur découvre ce que son appareil
+   sait faire, et le geste débloque au passage l'audio du navigateur. */
+.essai {
+  width: 100%; background: rgba(0,0,0,.22); border: 1px solid var(--bord);
+  border-radius: var(--r-bloc); padding: var(--e3);
+  display: flex; flex-direction: column; gap: var(--e2); text-align: left;
+}
+.essai-titre {
+  font-size: var(--t1); font-weight: 700; letter-spacing: .1em;
+  text-transform: uppercase; color: var(--ambre);
+}
+.essai-texte { font-size: var(--t2); color: var(--doux); }
+.essai-texte b { color: var(--texte); }
+.essai .btn { margin-top: var(--e1); }
+
 .total-paquet {
   font-size: var(--t2); color: var(--doux);
 }
@@ -290,6 +306,34 @@ h2 { font-size: var(--t1); text-transform: uppercase; letter-spacing: .1em;
       selon cinq conditions, et poussait le contenu vers le bas quand il revenait. Devenu une
       icône dans le bandeau, il est toujours joignable et ne déplace plus rien.
     </p>
+    <h4 style="margin-top:var(--e4)">Essayer le son, pendant la configuration</h4>
+    <p>
+      <b>On ne propose pas de l'activer : il l'est déjà.</b> Le réglage est à « oui » par défaut,
+      et attirer l'attention sur un interrupteur qui n'a pas de problème n'aide personne.
+    </p>
+    <p>
+      Ce qui bloque vraiment est <b>l'appareil</b> : sur iPhone, l'interrupteur latéral coupe le
+      son quoi qu'on fasse, et la vibration n'existe pas du tout. D'où un bouton qui <b>essaie</b>
+      plutôt qu'une phrase qui promet — le joueur découvre ce que son téléphone sait faire, et
+      le bouton ne dit « senti » que si l'appareil a réellement vibré.
+    </p>
+    <p>
+      Le geste rend un troisième service, invisible : les navigateurs refusent de démarrer
+      l'audio sans interaction. Appuyer ici <b>débloque le son pour tout le reste de la soirée</b>.
+    </p>
+    <p>
+      <b>Ce qu'on peut détecter, et ce qu'on ne peut pas.</b> L'absence de vibration se teste
+      pour de bon (<code>navigator.vibrate</code> n'existe pas sur Safari iOS) : le bloc ne parle
+      alors que du son — bouton 🍎 pour le voir. Mais <b>le mode silencieux est indétectable</b>,
+      sur iOS comme sur Android : aucune API ne le dit à une page web. D'où la seule phrase
+      affirmative du bloc, qui vise l'appareil et non l'app.
+    </p>
+    <p>
+      <b>Et il ne s'affiche qu'une fois par téléphone.</b> Une fois l'essai fait, il disparaît
+      pour toutes les parties suivantes — c'est la meilleure réponse au « seulement si ce n'est
+      pas déjà réglé », puisque le réglage lui-même n'est pas lisible. Bouton ↺ pour le rappeler.
+    </p>
+
     <h4 style="margin-top:var(--e4)">L'attente nomme qui on attend</h4>
     <p>
       « En attente du départ · 2 joueurs sur 4 ont terminé » laissait chercher lesquels.
@@ -354,6 +398,26 @@ function majBandeau(anime) {
   }
 }
 
+/* Essayer, plutôt qu'activer. Le bouton rend compte de ce qui s'est réellement
+   passé : la vibration n'existe pas sur iPhone, et le son y reste muet si
+   l'interrupteur latéral est en silencieux. Promettre l'un ou l'autre serait
+   faux pour la moitié d'une table. */
+let essaiFait = false;
+let faireSemblantDEtreUnIPhone = false;
+
+function essayerLeSon(bouton) {
+  note(660, .06); note(990, .08, .055);
+  let aVibre = false;
+  if (!faireSemblantDEtreUnIPhone) {
+    try { aVibre = navigator.vibrate ? navigator.vibrate(18) : false; } catch { aVibre = false; }
+  }
+  bouton.textContent = aVibre ? 'Entendu et senti ✓' : 'Entendu ✓';
+  bouton.disabled = true;
+  bouton.style.opacity = '.6';
+  // Une fois fait, c'est fait : on ne le repropose pas à chaque partie.
+  essaiFait = true;
+}
+
 function unPointTombe() {
   score.eq1++;
   majBandeau(1);
@@ -408,6 +472,31 @@ const ETATS = {
       <p class="total-paquet"><b>20</b> cartes dans le paquet</p>`
   },
 
+  config: {
+    nom: 'Configuration',
+    // Le bloc s'adapte à l'appareil, et disparaît une fois essayé.
+    html: () => {
+      const peutVibrer = !faireSemblantDEtreUnIPhone && typeof navigator.vibrate === 'function';
+      const dejaEssaye = essaiFait;
+      const tete = `
+        <div class="grand">⚙️</div>
+        <div class="titre">L'organisateur prépare la partie</div>
+        <div class="sous">Elle démarre juste après.</div>`;
+      if (dejaEssaye) {
+        return tete + `<p class="sous" style="font-size:var(--t1);opacity:.6">
+          (le bloc d'essai a disparu : ce téléphone l'a déjà fait)</p>`;
+      }
+      return tete + `
+      <div class="essai">
+        <p class="essai-titre">${peutVibrer ? 'Le son et la vibration' : 'Le son'}</p>
+        <p class="essai-texte">Ton téléphone te préviendra quand ce sera à toi de faire deviner,
+          et à chaque carte trouvée. <b>Vérifie qu'il n'est pas en silencieux.</b></p>
+        <button class="btn plat" onclick="essayerLeSon(this)">Essayer</button>
+      </div>`;
+    },
+    note: "Le seul temps mort du parcours, et le seul moment où on peut encore régler ça."
+  },
+
   atoi: {
     nom: 'À toi de jouer',
     html: `
@@ -440,21 +529,30 @@ const ETATS = {
 
   tour: {
     nom: 'Tour en cours',
+    // Le sablier de js/sablier.js, tel quel : c'est ce que voit le spectateur
+    // aujourd'hui, et ce qu'il continuera de voir. Le sable descend vraiment.
     html: `
       <div class="etiquette">Sacha fait deviner</div>
-      <div class="anneau">
-        <svg width="150" height="150" viewBox="0 0 150 150">
-          <circle cx="75" cy="75" r="66" fill="none" stroke="#2E2660" stroke-width="10"></circle>
-          <circle cx="75" cy="75" r="66" fill="none" stroke="#FFB020" stroke-width="10"
-                  stroke-linecap="round" stroke-dasharray="414.7" stroke-dashoffset="145"></circle>
-        </svg>
-        <div class="dedans">
-          <span class="chrono" style="font-size:2.6rem">27</span>
-          <span class="unite">secondes</span>
-        </div>
-      </div>
+      <svg class="sablier" viewBox="0 0 100 145" aria-hidden="true">
+        <defs>
+          <clipPath id="p-clip-haut"><path d="M14,12 H86 L54,70 H46 Z"/></clipPath>
+          <clipPath id="p-clip-bas"><path d="M46,70 H54 L86,128 H14 Z"/></clipPath>
+        </defs>
+        <g clip-path="url(#p-clip-haut)">
+          <rect id="p-sable-haut" class="sable" x="0" width="100" y="12" height="58"/>
+        </g>
+        <rect id="p-sable-filet" class="sable" x="48.6" width="2.8" y="70" height="0"/>
+        <g clip-path="url(#p-clip-bas)">
+          <rect id="p-sable-bas" class="sable" x="0" width="100" y="128" height="0"/>
+        </g>
+        <path class="verre" d="M14,12 H86 L54,70 L86,128 H14 L46,70 Z"/>
+        <rect class="socle" x="8" y="6" width="84" height="6" rx="3"/>
+        <rect class="socle" x="8" y="128" width="84" height="6" rx="3"/>
+      </svg>
+      <div class="chrono-sablier" id="p-chrono">27</div>
       <div class="titre" style="font-size:var(--t3)">12 cartes restantes</div>
-      <div class="sous">Tu joues dans l'équipe des Malins.</div>`
+      <div class="sous">Tu joues dans l'équipe des Malins.</div>`,
+    note: "Inchangé : le sablier reste l'illustration du temps pour ceux qui regardent."
   },
 
   comptage: {
@@ -487,10 +585,47 @@ const scene = document.getElementById('scene');
 const commandes = document.getElementById('commandes');
 let courant = 'attente';
 
+/* Le sable qui descend, avec les mêmes repères de verrerie que js/sablier.js :
+   le bulbe du haut va de 12 au col (70), celui du bas du col à 128, et le tas
+   accumulé fait 42 de haut une fois tout écoulé. */
+const SABLE_HAUT = 12, SABLE_COL = 70, SABLE_BAS = 128, SABLE_TAS = 42;
+let minuterieSable = null;
+
+function coulerLeSable() {
+  clearInterval(minuterieSable);
+  let restant = 27;
+  const duree = 40;
+  const poser = (id, y, hauteur) => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.setAttribute('y', y.toFixed(2));
+    el.setAttribute('height', Math.max(0, hauteur).toFixed(2));
+  };
+  const peindre = () => {
+    const chrono = document.getElementById('p-chrono');
+    if (!chrono) return clearInterval(minuterieSable);
+    chrono.textContent = restant;
+    const part = Math.max(0, restant) / duree;
+    const surface = SABLE_HAUT + (1 - part) * (SABLE_COL - SABLE_HAUT);
+    const niveau = SABLE_BAS - (1 - part) * SABLE_TAS;
+    poser('p-sable-haut', surface, SABLE_COL - surface);
+    poser('p-sable-bas', niveau, SABLE_BAS - niveau);
+    poser('p-sable-filet', SABLE_COL, restant > 0 ? SABLE_BAS - SABLE_COL : 0);
+  };
+  peindre();
+  minuterieSable = setInterval(() => {
+    restant = restant > 0 ? restant - 1 : 40;
+    peindre();
+  }, 1000);
+}
+
 function montrer(cle) {
   courant = cle;
+  clearInterval(minuterieSable);
   const e = ETATS[cle];
-  scene.innerHTML = e.html + (e.note ? `<div class="sous" style="font-size:var(--t1)">${e.note}</div>` : '');
+  const corps = typeof e.html === 'function' ? e.html() : e.html;
+  scene.innerHTML = corps + (e.note ? `<div class="sous" style="font-size:var(--t1)">${e.note}</div>` : '');
+  if (cle === 'tour') coulerLeSable();
   [...commandes.children].forEach(b => b.classList.toggle('on', b.dataset.cle === cle));
   document.getElementById('b-manche').textContent =
     cle === 'resultats' ? 'Manche 2 / 3 — finie' : 'Manche 2 / 3';
@@ -506,6 +641,23 @@ const bPoint = document.createElement('button');
 bPoint.textContent = '＋ Un point tombe';
 bPoint.onclick = unPointTombe;
 commandes.appendChild(bPoint);
+
+// Deux interrupteurs qui n'existent que dans la maquette, pour voir les
+// variantes sans avoir un iPhone sous la main.
+const bPomme = document.createElement('button');
+bPomme.textContent = '🍎 Faire comme un iPhone';
+bPomme.onclick = () => {
+  faireSemblantDEtreUnIPhone = !faireSemblantDEtreUnIPhone;
+  bPomme.classList.toggle('on', faireSemblantDEtreUnIPhone);
+  bPomme.textContent = faireSemblantDEtreUnIPhone ? '🍎 iPhone (sans vibration)' : '🍎 Faire comme un iPhone';
+  if (courant === 'config') montrer('config');
+};
+commandes.appendChild(bPomme);
+
+const bOubli = document.createElement('button');
+bOubli.textContent = '↺ Oublier l\'essai';
+bOubli.onclick = () => { essaiFait = false; if (courant === 'config') montrer('config'); };
+commandes.appendChild(bOubli);
 
 majBandeau();
 montrer('attente');

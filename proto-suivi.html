@@ -139,23 +139,6 @@ h2 { font-size: var(--t1); text-transform: uppercase; letter-spacing: .1em;
 .grain { width: 14px; height: 6px; border-radius: 3px; background: var(--bord); }
 .grain.plein { background: var(--ambre); }
 .un.pret .grain.plein { background: var(--vert); }
-/* L'essai du son, proposé pendant que l'organisateur configure. On ne demande
-   pas d'activer quoi que ce soit — c'est déjà actif — on propose d'entendre,
-   ce qui vaut mieux qu'une consigne : le joueur découvre ce que son appareil
-   sait faire, et le geste débloque au passage l'audio du navigateur. */
-.essai {
-  width: 100%; background: rgba(0,0,0,.22); border: 1px solid var(--bord);
-  border-radius: var(--r-bloc); padding: var(--e3);
-  display: flex; flex-direction: column; gap: var(--e2); text-align: left;
-}
-.essai-titre {
-  font-size: var(--t1); font-weight: 700; letter-spacing: .1em;
-  text-transform: uppercase; color: var(--ambre);
-}
-.essai-texte { font-size: var(--t2); color: var(--doux); }
-.essai-texte b { color: var(--texte); }
-.essai .btn { margin-top: var(--e1); }
-
 .total-paquet {
   font-size: var(--t2); color: var(--doux);
 }
@@ -306,34 +289,6 @@ h2 { font-size: var(--t1); text-transform: uppercase; letter-spacing: .1em;
       selon cinq conditions, et poussait le contenu vers le bas quand il revenait. Devenu une
       icône dans le bandeau, il est toujours joignable et ne déplace plus rien.
     </p>
-    <h4 style="margin-top:var(--e4)">Essayer le son, pendant la configuration</h4>
-    <p>
-      <b>On ne propose pas de l'activer : il l'est déjà.</b> Le réglage est à « oui » par défaut,
-      et attirer l'attention sur un interrupteur qui n'a pas de problème n'aide personne.
-    </p>
-    <p>
-      Ce qui bloque vraiment est <b>l'appareil</b> : sur iPhone, l'interrupteur latéral coupe le
-      son quoi qu'on fasse, et la vibration n'existe pas du tout. D'où un bouton qui <b>essaie</b>
-      plutôt qu'une phrase qui promet — le joueur découvre ce que son téléphone sait faire, et
-      le bouton ne dit « senti » que si l'appareil a réellement vibré.
-    </p>
-    <p>
-      Le geste rend un troisième service, invisible : les navigateurs refusent de démarrer
-      l'audio sans interaction. Appuyer ici <b>débloque le son pour tout le reste de la soirée</b>.
-    </p>
-    <p>
-      <b>Ce qu'on peut détecter, et ce qu'on ne peut pas.</b> L'absence de vibration se teste
-      pour de bon (<code>navigator.vibrate</code> n'existe pas sur Safari iOS) : le bloc ne parle
-      alors que du son — bouton 🍎 pour le voir. Mais <b>le mode silencieux est indétectable</b>,
-      sur iOS comme sur Android : aucune API ne le dit à une page web. D'où la seule phrase
-      affirmative du bloc, qui vise l'appareil et non l'app.
-    </p>
-    <p>
-      <b>Et il ne s'affiche qu'une fois par téléphone.</b> Une fois l'essai fait, il disparaît
-      pour toutes les parties suivantes — c'est la meilleure réponse au « seulement si ce n'est
-      pas déjà réglé », puisque le réglage lui-même n'est pas lisible. Bouton ↺ pour le rappeler.
-    </p>
-
     <h4 style="margin-top:var(--e4)">L'attente nomme qui on attend</h4>
     <p>
       « En attente du départ · 2 joueurs sur 4 ont terminé » laissait chercher lesquels.
@@ -398,26 +353,6 @@ function majBandeau(anime) {
   }
 }
 
-/* Essayer, plutôt qu'activer. Le bouton rend compte de ce qui s'est réellement
-   passé : la vibration n'existe pas sur iPhone, et le son y reste muet si
-   l'interrupteur latéral est en silencieux. Promettre l'un ou l'autre serait
-   faux pour la moitié d'une table. */
-let essaiFait = false;
-let faireSemblantDEtreUnIPhone = false;
-
-function essayerLeSon(bouton) {
-  note(660, .06); note(990, .08, .055);
-  let aVibre = false;
-  if (!faireSemblantDEtreUnIPhone) {
-    try { aVibre = navigator.vibrate ? navigator.vibrate(18) : false; } catch { aVibre = false; }
-  }
-  bouton.textContent = aVibre ? 'Entendu et senti ✓' : 'Entendu ✓';
-  bouton.disabled = true;
-  bouton.style.opacity = '.6';
-  // Une fois fait, c'est fait : on ne le repropose pas à chaque partie.
-  essaiFait = true;
-}
-
 function unPointTombe() {
   score.eq1++;
   majBandeau(1);
@@ -470,31 +405,6 @@ const ETATS = {
         { n: 'Marc',  c: '#F59E0B', f: 5 }
       ], 5)}
       <p class="total-paquet"><b>20</b> cartes dans le paquet</p>`
-  },
-
-  config: {
-    nom: 'Configuration',
-    // Le bloc s'adapte à l'appareil, et disparaît une fois essayé.
-    html: () => {
-      const peutVibrer = !faireSemblantDEtreUnIPhone && typeof navigator.vibrate === 'function';
-      const dejaEssaye = essaiFait;
-      const tete = `
-        <div class="grand">⚙️</div>
-        <div class="titre">L'organisateur prépare la partie</div>
-        <div class="sous">Elle démarre juste après.</div>`;
-      if (dejaEssaye) {
-        return tete + `<p class="sous" style="font-size:var(--t1);opacity:.6">
-          (le bloc d'essai a disparu : ce téléphone l'a déjà fait)</p>`;
-      }
-      return tete + `
-      <div class="essai">
-        <p class="essai-titre">${peutVibrer ? 'Le son et la vibration' : 'Le son'}</p>
-        <p class="essai-texte">Ton téléphone te préviendra quand ce sera à toi de faire deviner,
-          et à chaque carte trouvée. <b>Vérifie qu'il n'est pas en silencieux.</b></p>
-        <button class="btn plat" onclick="essayerLeSon(this)">Essayer</button>
-      </div>`;
-    },
-    note: "Le seul temps mort du parcours, et le seul moment où on peut encore régler ça."
   },
 
   atoi: {
@@ -641,23 +551,6 @@ const bPoint = document.createElement('button');
 bPoint.textContent = '＋ Un point tombe';
 bPoint.onclick = unPointTombe;
 commandes.appendChild(bPoint);
-
-// Deux interrupteurs qui n'existent que dans la maquette, pour voir les
-// variantes sans avoir un iPhone sous la main.
-const bPomme = document.createElement('button');
-bPomme.textContent = '🍎 Faire comme un iPhone';
-bPomme.onclick = () => {
-  faireSemblantDEtreUnIPhone = !faireSemblantDEtreUnIPhone;
-  bPomme.classList.toggle('on', faireSemblantDEtreUnIPhone);
-  bPomme.textContent = faireSemblantDEtreUnIPhone ? '🍎 iPhone (sans vibration)' : '🍎 Faire comme un iPhone';
-  if (courant === 'config') montrer('config');
-};
-commandes.appendChild(bPomme);
-
-const bOubli = document.createElement('button');
-bOubli.textContent = '↺ Oublier l\'essai';
-bOubli.onclick = () => { essaiFait = false; if (courant === 'config') montrer('config'); };
-commandes.appendChild(bOubli);
 
 majBandeau();
 montrer('attente');

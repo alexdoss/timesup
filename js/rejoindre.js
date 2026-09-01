@@ -5,7 +5,7 @@
 // champ de saisie en une seconde, même sur un réseau de salle des fêtes.
 
 import { creerSablier, svgSablier } from './sablier.js';
-import { playFound, playTick, playBuzzer } from './sound.js';
+import { playFound, playTick, playBuzzer, unlockAudio } from './sound.js';
 
 const ROUTE = '/api/session';
 const STOCKAGE = 'timesup_rejoint';
@@ -1123,6 +1123,11 @@ let monTourRendu = false;
 
 function lancerMonTour() {
   if (!monTour) return;
+  // Les navigateurs refusent de démarrer l'audio hors d'un geste de
+  // l'utilisateur. Celui-ci en est un, et c'est le dernier avant le tour : sans
+  // lui, un tic des cinq dernières secondes serait muet chez qui n'a encore
+  // trouvé aucune carte. Rien à demander à personne pour autant.
+  unlockAudio();
   arreterAttente();   // plus rien à écouter : c'est moi qui mène
   partieEnCours = {
     mots: [...monTour.mots],
@@ -1361,6 +1366,8 @@ function finirMonTour() {
   // Les trois coups de cloche de la fin de tour, comme chez l'organisateur.
   // Ils doivent couper la parole dans une pièce bruyante.
   playBuzzer();
+  // Le score de départ ne saute pas : il n'a rien gagné, il est le résultat.
+  dernierComptage = p.trouvees.length;
   // Le dire aux autres : sans ça leur sablier continue de couler alors que le
   // tour est fini, et ils finissent par lire « temps écoulé » à tort.
   publierMonEtat('comptage');
@@ -1373,14 +1380,32 @@ function finirMonTour() {
 // l'un à l'autre. Le paquet n'a pas à suivre ici — c'est l'organisateur qui le
 // tient, et il appliquera la liste validée.
 
+// Sert à n'animer le score du tour que quand il monte. Remis à -1 à l'ouverture
+// de l'écran, pour que le premier affichage ne saute pas tout seul.
+let dernierComptage = 0;
+
 function rendreMonComptage() {
   const p = partieEnCours;
   if (!p) return;
   const T = (id, texte) => { document.getElementById(id).textContent = texte; };
 
   T('mon-fin-titre', p.paquetVide ? '🃏 Plus de cartes !' : '⏰ Temps écoulé !');
+
+  // Le score du tour est ce que le joueur est venu voir : le chiffre porte,
+  // le reste de la phrase l'accompagne. Le texte complet ne change pas.
   const n = p.trouvees.length;
-  T('mon-fin-resultat', `${n} carte${n > 1 ? 's' : ''} trouvée${n > 1 ? 's' : ''}`);
+  const resultat = document.getElementById('mon-fin-resultat');
+  resultat.innerHTML = '';
+  const chiffre = document.createElement('span');
+  chiffre.className = 'cpt-n';
+  chiffre.textContent = String(n);
+  resultat.append(chiffre, document.createTextNode(
+    ` carte${n > 1 ? 's' : ''} trouvée${n > 1 ? 's' : ''}`));
+  // On n'anime que ce qui monte : récupérer une carte est une bonne nouvelle,
+  // en retirer une n'en est pas une.
+  if (n > dernierComptage) chiffre.classList.add('pousse');
+  dernierComptage = n;
+
   T('mon-resume-comptees', `✅ Cartes comptées (${p.trouvees.length})`);
   T('mon-resume-manquees', `↩️ Cartes non comptées (${p.manquees.length})`);
 
@@ -1559,6 +1584,13 @@ function afficherEquipes() {
 function masquerEquipes() {
   document.getElementById('equipes-overlay').style.display = 'none';
 }
+
+// On ne demande rien à l'invité au sujet du son. Un bloc « essayer le son » a
+// été essayé pendant la configuration, puis retiré : il promettait un
+// avertissement au début de son tour, que l'app ne joue pas. Ceux dont le
+// téléphone n'est pas en silencieux en profitent, les autres jouent sans.
+// Ce que le geste apportait vraiment — débloquer l'audio du navigateur — est
+// obtenu sans rien demander, dans `lancerMonTour`.
 
 // Au-delà de trois prénoms la phrase devient une liste qu'on ne lit plus :
 // on repasse au compte, qui dit la même chose en un coup d'œil.

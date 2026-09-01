@@ -1231,7 +1231,10 @@ input[readonly] {
   margin-bottom: 6px;
 }
 
-.cartes-compteur .cpt-n {
+
+/* Le grand chiffre d'un compte : la saisie des cartes, le score d'un tour.
+   Partout où un nombre est ce que la personne est venue voir. */
+.cpt-n {
   display: inline-block;
   font-size: 2.6rem;
   font-weight: 800;
@@ -1241,7 +1244,7 @@ input[readonly] {
   margin-right: 2px;
 }
 
-.cartes-compteur .cpt-n.pousse { animation: cpt-pousse 0.26s ease-out; }
+.cpt-n.pousse { animation: cpt-pousse 0.26s ease-out; }
 
 @keyframes cpt-pousse {
   50% { transform: scale(1.18); }

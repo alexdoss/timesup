@@ -190,6 +190,11 @@ async function sonder(adresse) {
           $('ruban-cartes').style.display === 'none');
     check('une roue signale que ca travaille',
           $('attente-roue').style.display !== 'none');
+    // On ne demande rien a l invite au sujet du son : un bloc « essayer le
+    // son » a ete essaye ici, puis retire — il promettait un avertissement au
+    // debut du tour, que l app ne joue pas.
+    check('rien ne lui est demande au sujet du son',
+          !d.getElementById('bloc-essai-son'));
     check('le tableau des joueurs disparait',
           $('attente-joueurs').style.display === 'none');
     check('le decompte des cartes aussi',

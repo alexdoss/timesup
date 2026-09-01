@@ -1,0 +1,456 @@
+<title>Refonte écran par écran</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;800&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+
+<style>
+  :root {
+    --fond: #14102B;
+    --halo: #2A1F5C;
+    --surface: #1E1846;
+    --surface-haut: #262055;
+    --bord: #2E2660;
+    --texte: #FFF6F0;
+    --doux: #A79BD6;
+    --violet: #B14BFF;
+    --ambre: #FFB020;
+    --vert: #22C55E;
+
+    --e1: 4px; --e2: 8px; --e3: 16px; --e4: 24px; --e5: 32px; --e6: 48px;
+    --corps: 'Outfit', system-ui, -apple-system, 'Segoe UI', sans-serif;
+    --mono: 'Space Mono', ui-monospace, 'Cascadia Mono', Consolas, monospace;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: var(--corps);
+    background:
+      radial-gradient(120% 40% at 50% 0%, var(--halo) 0%, var(--fond) 58%),
+      var(--fond);
+    color: var(--texte);
+    line-height: 1.5;
+    padding: var(--e5) var(--e3) var(--e6);
+    -webkit-text-size-adjust: 100%;
+  }
+
+  .page { max-width: 760px; margin: 0 auto; display: flex; flex-direction: column; gap: var(--e5); }
+
+  /* ── En-tête et avancement ── */
+  header { display: flex; flex-direction: column; gap: var(--e3); }
+  .marque {
+    font-size: .75rem; font-weight: 800; letter-spacing: .22em;
+    text-transform: uppercase; color: var(--ambre);
+  }
+  h1 { font-size: 1.75rem; font-weight: 800; line-height: 1.15; }
+  .chapeau { color: var(--doux); font-size: .9375rem; max-width: 54ch; }
+  .chapeau b { color: var(--texte); font-weight: 600; }
+
+  .avancement {
+    background: var(--surface); border: 1px solid var(--bord);
+    border-radius: 18px; padding: var(--e3) var(--e4);
+    display: flex; align-items: center; gap: var(--e4); flex-wrap: wrap;
+  }
+  .fraction { display: flex; align-items: baseline; gap: 2px; }
+  .fraction .n {
+    font-size: 2.75rem; font-weight: 800; line-height: 1; color: var(--vert);
+    font-variant-numeric: tabular-nums;
+  }
+  .fraction .sur { font-size: 1.25rem; font-weight: 700; color: var(--doux); }
+  .fraction .quoi {
+    font-size: .75rem; font-weight: 700; letter-spacing: .12em;
+    text-transform: uppercase; color: var(--doux); margin-left: var(--e2);
+  }
+  .barre {
+    flex: 1; min-width: 180px; height: 10px; border-radius: 100px;
+    background: var(--fond); overflow: hidden; border: 1px solid var(--bord);
+  }
+  .barre span { display: block; height: 100%; background: var(--vert); border-radius: 100px; }
+
+  /* ── Un lot ── */
+  .lot { display: flex; flex-direction: column; gap: var(--e2); }
+  .lot-titre {
+    display: flex; align-items: baseline; gap: var(--e2); flex-wrap: wrap;
+    margin-top: var(--e3);
+  }
+  .lot-titre .num {
+    font-family: var(--mono); font-size: .6875rem; font-weight: 700;
+    color: var(--fond); background: var(--ambre);
+    padding: 2px 7px; border-radius: 6px;
+  }
+  .lot-titre h2 { font-size: 1.0625rem; font-weight: 700; }
+  .lot-titre .compte {
+    font-family: var(--mono); font-size: .6875rem; color: var(--doux);
+    font-variant-numeric: tabular-nums;
+  }
+  .lot-note { font-size: .8125rem; color: var(--doux); max-width: 60ch; }
+
+  /* ── Une ligne d'écran ── */
+  .ecran {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: var(--e1) var(--e3);
+    align-items: center;
+    background: var(--surface); border: 1px solid var(--bord);
+    border-radius: 12px; padding: 10px var(--e3);
+  }
+  .ecran .nom { font-size: .9375rem; font-weight: 600; }
+  .ecran .id {
+    grid-column: 1; font-family: var(--mono); font-size: .6875rem; color: var(--doux);
+    word-break: break-all;
+  }
+  .etat {
+    grid-column: 2; grid-row: 1 / span 2;
+    font-size: .625rem; font-weight: 800; letter-spacing: .1em;
+    text-transform: uppercase; padding: 4px 10px; border-radius: 100px;
+    white-space: nowrap;
+  }
+  .etat.fait    { background: rgba(34, 197, 94, .16); color: #86EFAC; }
+  .etat.encours { background: rgba(255, 176, 32, .18); color: var(--ambre); }
+  .etat.afaire  { background: rgba(167, 155, 214, .12); color: var(--doux); }
+  .ecran.fait { border-color: rgba(34, 197, 94, .34); }
+
+  footer {
+    border-top: 1px solid var(--bord); padding-top: var(--e4);
+    font-size: .8125rem; color: var(--doux);
+    display: flex; flex-direction: column; gap: var(--e2);
+  }
+  footer b { color: var(--texte); }
+  footer code { font-family: var(--mono); font-size: .75rem; color: var(--ambre); }
+</style>
+
+<div class="page">
+
+  <header>
+    <div class="marque">Rush · chantier design</div>
+    <h1>Refonte écran par écran</h1>
+    <p class="chapeau">
+      Les <b>33 écrans</b> de Rush, groupés en dix lots, du plus vu au moins vu. Un lot se
+      termine par une campagne de tests verte avant qu'on passe au suivant.
+    </p>
+
+    <div class="avancement">
+      <div class="fraction">
+        <span class="n">3</span><span class="sur">/33</span>
+        <span class="quoi">écrans refaits</span>
+      </div>
+      <div class="barre"><span style="width:9%"></span></div>
+    </div>
+  </header>
+
+  <!-- ═══════════ PAGE DES INVITÉS ═══════════ -->
+  <section>
+    <div class="lot-titre">
+      <span class="num">LOT 1</span>
+      <h2>L'arrivée de l'invité</h2>
+      <span class="compte">3 / 3 · rejoindre.html</span>
+    </div>
+    <p class="lot-note">
+      Ce que voit un inconnu qui scanne le QR. Code en quatre cases sans bouton, liste de
+      ceux déjà arrivés, compteur de cartes en héros. Livré le 31 août, 1599 tests verts.
+    </p>
+    <div class="lot">
+      <div class="ecran fait">
+        <div class="nom">Le code de la partie</div>
+        <div class="id">screen-code</div>
+        <span class="etat fait">Fait</span>
+      </div>
+      <div class="ecran fait">
+        <div class="nom">Comment tu t'appelles ?</div>
+        <div class="id">screen-prenom</div>
+        <span class="etat fait">Fait</span>
+      </div>
+      <div class="ecran fait">
+        <div class="nom">Tes cartes</div>
+        <div class="id">screen-cartes</div>
+        <span class="etat fait">Fait</span>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="lot-titre">
+      <span class="num">LOT 2</span>
+      <h2>Le suivi de la partie</h2>
+      <span class="compte">0 / 1 · rejoindre.html</span>
+    </div>
+    <p class="lot-note">
+      Un seul écran, mais celui que l'invité garde ouvert toute la soirée : cinq états s'y
+      succèdent — c'est à toi, lancement, tour en cours, comptage, résultats. C'est là que
+      se logeront les chiffres qui montent et les neuf fins de partie.
+    </p>
+    <div class="lot">
+      <div class="ecran">
+        <div class="nom">Le suivi, ses cinq états</div>
+        <div class="id">screen-attente</div>
+        <span class="etat afaire">À faire</span>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="lot-titre">
+      <span class="num">LOT 3</span>
+      <h2>Mon tour sur mon téléphone</h2>
+      <span class="compte">0 / 2 · rejoindre.html</span>
+    </div>
+    <p class="lot-note">
+      Porte le mouvement de carte arrêté : sortie à droite si trouvée, à gauche si passée,
+      la suivante arrive du bas.
+    </p>
+    <div class="lot">
+      <div class="ecran">
+        <div class="nom">La carte en main, le chrono</div>
+        <div class="id">screen-mon-tour</div>
+        <span class="etat afaire">À faire</span>
+      </div>
+      <div class="ecran">
+        <div class="nom">Mon comptage de fin de tour</div>
+        <div class="id">screen-mon-comptage</div>
+        <span class="etat afaire">À faire</span>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="lot-titre">
+      <span class="num">LOT 4</span>
+      <h2>Reprise et messages</h2>
+      <span class="compte">0 / 2 · rejoindre.html</span>
+    </div>
+    <p class="lot-note">Les deux petits écrans qui ferment le parcours invité.</p>
+    <div class="lot">
+      <div class="ecran">
+        <div class="nom">Une nouvelle partie commence</div>
+        <div class="id">screen-rejouer</div>
+        <span class="etat afaire">À faire</span>
+      </div>
+      <div class="ecran">
+        <div class="nom">Message bloquant</div>
+        <div class="id">screen-message</div>
+        <span class="etat afaire">À faire</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════ CŒUR DE PARTIE ═══════════ -->
+  <section>
+    <div class="lot-titre">
+      <span class="num">LOT 5</span>
+      <h2>Lancement de tour et jeu</h2>
+      <span class="compte">0 / 2 · index.html</span>
+    </div>
+    <p class="lot-note">
+      Les deux écrans les plus regardés de l'app. Même mouvement de carte que chez l'invité,
+      et le score de la manche qui monte à l'arrivée sur le lancement.
+    </p>
+    <div class="lot">
+      <div class="ecran">
+        <div class="nom">Lancement de tour</div>
+        <div class="id">screen-round</div>
+        <span class="etat afaire">À faire</span>
+      </div>
+      <div class="ecran">
+        <div class="nom">Le jeu, carte en main</div>
+        <div class="id">screen-game</div>
+        <span class="etat afaire">À faire</span>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="lot-titre">
+      <span class="num">LOT 6</span>
+      <h2>Les fins</h2>
+      <span class="compte">0 / 3 · index.html</span>
+    </div>
+    <p class="lot-note">
+      Fin de tour, fin de manche, fin de partie. Porte les chiffres qui montent — la manche
+      en deux temps, la partie sur le cumul de la soirée — et le tableau des neuf fins.
+    </p>
+    <div class="lot">
+      <div class="ecran">
+        <div class="nom">Correction de fin de tour</div>
+        <div class="id">screen-turn-end</div>
+        <span class="etat afaire">À faire</span>
+      </div>
+      <div class="ecran">
+        <div class="nom">Fin de manche</div>
+        <div class="id">screen-round-end</div>
+        <span class="etat afaire">À faire</span>
+      </div>
+      <div class="ecran">
+        <div class="nom">Fin de partie</div>
+        <div class="id">screen-final</div>
+        <span class="etat afaire">À faire</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════ CONFIGURATION ═══════════ -->
+  <section>
+    <div class="lot-titre">
+      <span class="num">LOT 7</span>
+      <h2>Accueil et parcours de configuration</h2>
+      <span class="compte">0 / 6 · index.html</span>
+    </div>
+    <p class="lot-note">
+      Le début de l'assistant. À refondre autant qu'à raccourcir : c'est l'endroit qui
+      gagnerait surtout à perdre des écrans.
+    </p>
+    <div class="lot">
+      <div class="ecran">
+        <div class="nom">Accueil</div>
+        <div class="id">screen-home</div>
+        <span class="etat afaire">À faire</span>
+      </div>
+      <div class="ecran">
+        <div class="nom">Type de partie</div>
+        <div class="id">screen-mode</div>
+        <span class="etat afaire">À faire</span>
+      </div>
+      <div class="ecran">
+        <div class="nom">Comment on joue ?</div>
+        <div class="id">screen-jeu-mode</div>
+        <span class="etat afaire">À faire</span>
+      </div>
+      <div class="ecran">
+        <div class="nom">Choisis tes thèmes</div>
+        <div class="id">screen-themes</div>
+        <span class="etat afaire">À faire</span>
+      </div>
+      <div class="ecran">
+        <div class="nom">Les joueurs, saisie manuelle</div>
+        <div class="id">screen-players</div>
+        <span class="etat afaire">À faire</span>
+      </div>
+      <div class="ecran">
+        <div class="nom">Les équipes</div>
+        <div class="id">screen-repartition</div>
+        <span class="etat afaire">À faire</span>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="lot-titre">
+      <span class="num">LOT 8</span>
+      <h2>Réglages et saisie séquentielle</h2>
+      <span class="compte">0 / 4 · index.html</span>
+    </div>
+    <p class="lot-note">
+      La fin de l'assistant, et la saisie où le téléphone passe de main en main — celle qui
+      fonctionne hors ligne.
+    </p>
+    <div class="lot">
+      <div class="ecran">
+        <div class="nom">Manches</div>
+        <div class="id">screen-rounds</div>
+        <span class="etat afaire">À faire</span>
+      </div>
+      <div class="ecran">
+        <div class="nom">Déroulement</div>
+        <div class="id">screen-config</div>
+        <span class="etat afaire">À faire</span>
+      </div>
+      <div class="ecran">
+        <div class="nom">Passe le téléphone</div>
+        <div class="id">screen-custom-cards</div>
+        <span class="etat afaire">À faire</span>
+      </div>
+      <div class="ecran">
+        <div class="nom">Tes cartes, saisie masquée</div>
+        <div class="id">screen-saisie-locale</div>
+        <span class="etat afaire">À faire</span>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="lot-titre">
+      <span class="num">LOT 9</span>
+      <h2>Session partagée</h2>
+      <span class="compte">0 / 4 · index.html</span>
+    </div>
+    <p class="lot-note">
+      Ce que l'organisateur pose sur la table pendant que les autres scannent : très regardés,
+      et par plusieurs personnes à la fois.
+    </p>
+    <div class="lot">
+      <div class="ecran">
+        <div class="nom">Le paquet de cartes</div>
+        <div class="id">screen-session-ouvrir</div>
+        <span class="etat afaire">À faire</span>
+      </div>
+      <div class="ecran">
+        <div class="nom">Rejoignez la partie — le QR</div>
+        <div class="id">screen-session</div>
+        <span class="etat afaire">À faire</span>
+      </div>
+      <div class="ecran">
+        <div class="nom">Qui joue ? — inscription</div>
+        <div class="id">screen-inscription</div>
+        <span class="etat afaire">À faire</span>
+      </div>
+      <div class="ecran">
+        <div class="nom">Suivre la partie</div>
+        <div class="id">screen-suivi-partage</div>
+        <span class="etat afaire">À faire</span>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="lot-titre">
+      <span class="num">LOT 10</span>
+      <h2>Bibliothèque, règles et réglages</h2>
+      <span class="compte">0 / 6 · index.html</span>
+    </div>
+    <p class="lot-note">Les écrans annexes, les moins vus. En dernier, et c'est voulu.</p>
+    <div class="lot">
+      <div class="ecran">
+        <div class="nom">Bibliothèque de thèmes</div>
+        <div class="id">screen-library</div>
+        <span class="etat afaire">À faire</span>
+      </div>
+      <div class="ecran">
+        <div class="nom">Création assistée par l'IA</div>
+        <div class="id">screen-ai-create</div>
+        <span class="etat afaire">À faire</span>
+      </div>
+      <div class="ecran">
+        <div class="nom">Nouveau thème à la main</div>
+        <div class="id">screen-manual-create</div>
+        <span class="etat afaire">À faire</span>
+      </div>
+      <div class="ecran">
+        <div class="nom">Modifier un thème</div>
+        <div class="id">screen-theme-edit</div>
+        <span class="etat afaire">À faire</span>
+      </div>
+      <div class="ecran">
+        <div class="nom">Règles du jeu</div>
+        <div class="id">screen-rules</div>
+        <span class="etat afaire">À faire</span>
+      </div>
+      <div class="ecran">
+        <div class="nom">Paramètres</div>
+        <div class="id">screen-settings</div>
+        <span class="etat afaire">À faire</span>
+      </div>
+    </div>
+  </section>
+
+  <footer>
+    <p>
+      <b>Une règle tenue sur tout le chantier :</b> les identifiants ne changent pas. Les 43
+      scénarios de test les visent — les garder stables, c'est garder le filet pendant qu'on
+      refait tout le reste.
+    </p>
+    <p>
+      Le fichier source vit dans le dépôt, en <code>design-system/etat-refonte.html</code>.
+      Cette page est republiée à la même adresse à chaque lot terminé.
+    </p>
+  </footer>
+
+</div>

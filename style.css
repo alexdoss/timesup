@@ -1143,9 +1143,22 @@ input[readonly] {
   color: var(--secondary);
 }
 
-/* Plus petit qu'un bouton pleine largeur — il ne pousse plus le contenu vers
-   le bas quand il apparaît — mais toujours étiqueté : réduit à sa seule icône,
-   il devenait un carré gris de 31 px que personne ne trouvait. */
+/* L'emplacement du bouton des équipes pendant l'attente : en pleine largeur,
+   dans le fil de l'écran. Découvrir avec qui on joue est un moment de la
+   soirée, pas un réglage rangé dans un coin. */
+.place-equipes {
+  display: flex;
+  justify-content: center;
+  width: 100%;
+  margin-top: 18px;
+}
+
+.place-equipes:empty { display: none; }
+
+/* Une fois la partie lancée, le même bouton se range dans le bandeau : il
+   n'est plus une découverte mais un recours, et il ne doit plus rien pousser
+   vers le bas. Toujours étiqueté pour autant — réduit à sa seule icône, il
+   devenait un carré gris de 31 px que personne ne trouvait. */
 .bandeau-equipes {
   display: flex;
   align-items: center;

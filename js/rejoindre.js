@@ -843,6 +843,11 @@ function rendreConfiguration(suivi, heureServeur) {
   const equipes = suivi?.etat?.equipes || [];
   const nommees = equipes.filter(e => (e.joueurs || []).length > 0);
   const bouton = document.getElementById('btn-voir-equipes');
+  // Deux présentations, selon ce que le moment vaut. Pendant l'attente, on
+  // vient d'apprendre avec qui on joue et il n'y a rien d'autre à faire : le
+  // bouton occupe la largeur. Une fois la partie lancée, il redevient un
+  // recours, et se range dans le bandeau pour ne rien pousser vers le bas.
+  placerLeBoutonDesEquipes(enJeu);
   // Masqué pendant le tour, pendant le comptage qui le clôt, sur les résultats,
   // et quand c'est à moi de jouer : l'écran doit rester lisible et ne montrer
   // qu'une chose à la fois.
@@ -1485,6 +1490,16 @@ function rendreComptage(etat) {
 // Le seul endroit de l'écran de suivi qui affiche la manche et le score. Il
 // est rendu à chaque lecture, quel que soit l'état montré en dessous : c'est
 // ce qui permet aux six états de ne plus répéter la même chose.
+
+// Un seul bouton, déplacé — plutôt que deux, qui finiraient par diverger.
+function placerLeBoutonDesEquipes(dansLeBandeau) {
+  const bouton = document.getElementById('btn-voir-equipes');
+  const place = document.getElementById(
+    dansLeBandeau ? 'place-equipes-bandeau' : 'place-equipes-attente');
+  if (bouton.parentElement !== place) place.appendChild(bouton);
+  bouton.className = dansLeBandeau ? 'bandeau-equipes' : 'btn btn-secondary';
+  bouton.textContent = dansLeBandeau ? '👥 Équipes' : '👥 Voir les équipes';
+}
 
 function rendreBandeau(etat) {
   const T = (id, texte) => { document.getElementById(id).textContent = texte; };

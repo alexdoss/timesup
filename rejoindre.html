@@ -192,8 +192,10 @@
         <div id="suivi-bandeau" class="suivi-bandeau">
           <div class="bandeau-haut">
             <span id="suivi-manche" class="bandeau-manche"></span>
-            <button id="btn-voir-equipes" class="bandeau-equipes" style="display:none"
-                    title="Voir les équipes">👥 Équipes</button>
+            <!-- Le bouton des équipes vient se loger ici une fois la partie
+                 lancée. Avant, il est en grand dans le corps de l'écran :
+                 découvrir sa composition est un moment, pas un réglage. -->
+            <span id="place-equipes-bandeau"></span>
           </div>
           <!-- Comme un tableau d'affichage de gymnase : le nom en petit,
                le chiffre en grand dessous. Les deux scores s'alignent, donc
@@ -220,6 +222,14 @@
           <button id="btn-modifier" class="ruban-action">Modifier</button>
         </div>
         <div id="attente-roue" class="roue-config" style="display:none">⚙️</div>
+        <!-- L'emplacement du bouton des équipes pendant l'attente : en pleine
+             largeur, dans le fil de l'écran. C'est le moment où l'on découvre
+             avec qui on joue, et il n'y a rien d'autre à faire. -->
+        <div id="place-equipes-attente" class="place-equipes">
+          <button id="btn-voir-equipes" class="btn btn-secondary" style="display:none">
+            👥 Voir les équipes
+          </button>
+        </div>
 
         <div class="wizard-header">
           <h2 id="attente-titre">En attente du départ</h2>

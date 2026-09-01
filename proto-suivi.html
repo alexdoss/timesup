@@ -284,10 +284,20 @@ h2 { font-size: var(--t1); text-transform: uppercase; letter-spacing: .1em;
       toujours au même endroit, quel que soit l'état affiché au moment où le point tombe.
       Essaie le bouton « Un point tombe ».
     </p>
+    <h4 style="margin-top:var(--e4)">Les équipes : deux emplacements, un seul bouton</h4>
     <p>
-      <b>Il rend « Voir les équipes » permanent.</b> Le bouton apparaissait et disparaissait
-      selon cinq conditions, et poussait le contenu vers le bas quand il revenait. Devenu une
-      icône dans le bandeau, il est toujours joignable et ne déplace plus rien.
+      <b>Pendant la configuration, en pleine largeur</b>, dans le fil de l'écran — bouton
+      « Configuration ». C'est le moment où l'on découvre avec qui on joue, l'écran n'a rien
+      d'autre à proposer, et une icône dans un coin ne serait jamais touchée.
+    </p>
+    <p>
+      <b>Une fois la partie lancée, dans le bandeau</b> — tous les autres boutons d'état. Il
+      n'est plus une découverte mais un recours&nbsp;: il doit rester joignable sans pousser
+      le contenu vers le bas à chaque fois qu'il réapparaît.
+    </p>
+    <p>
+      C'est <b>le même bouton, déplacé</b>, et non deux boutons — deux finiraient par diverger,
+      et il faudrait se souvenir de les changer ensemble.
     </p>
     <h4 style="margin-top:var(--e4)">L'attente nomme qui on attend</h4>
     <p>
@@ -405,6 +415,19 @@ const ETATS = {
         { n: 'Marc',  c: '#F59E0B', f: 5 }
       ], 5)}
       <p class="total-paquet"><b>20</b> cartes dans le paquet</p>`
+  },
+
+  config: {
+    nom: 'Configuration',
+    // Le bouton des équipes est ici en pleine largeur : c'est le moment où on
+    // découvre avec qui on joue, et il n'y a rien d'autre à faire de l'écran.
+    html: `
+      <div class="grand">⚙️</div>
+      <div class="titre">L'organisateur prépare la partie</div>
+      <div class="sous">Elle démarre juste après.</div>
+      <button class="btn plat" style="width:100%;font-size:var(--t3);padding:14px"
+              onclick="alert('La composition des équipes s\\'ouvre ici.')">👥 Voir les équipes</button>`,
+    note: "Le bandeau n'a pas encore de score à porter : son coin droit est vide."
   },
 
   atoi: {
@@ -533,6 +556,10 @@ function montrer(cle) {
   courant = cle;
   clearInterval(minuterieSable);
   const e = ETATS[cle];
+  // Le bouton des équipes n'est dans le bandeau qu'une fois la partie lancée.
+  // Pendant la configuration, il est en pleine largeur dans le corps de l'écran.
+  document.querySelector('.bandeau-haut .equipes').style.visibility =
+    cle === 'config' ? 'hidden' : 'visible';
   const corps = typeof e.html === 'function' ? e.html() : e.html;
   scene.innerHTML = corps + (e.note ? `<div class="sous" style="font-size:var(--t1)">${e.note}</div>` : '');
   if (cle === 'tour') coulerLeSable();

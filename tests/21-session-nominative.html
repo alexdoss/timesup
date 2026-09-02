@@ -182,6 +182,8 @@ f.addEventListener('load', async () => {
 
     $('btn-voir-equipes').click();
     check('la fenetre s ouvre', visible('equipes-overlay'));
+    // Cette fenetre est celle de l organisateur (index.html), pas encore refaite :
+    // ses lignes ne portent que le prenom, sans pastille. Elle passera au lot 5.
     const blocs = [...d.querySelectorAll('#equipes-contenu .equipe-bloc')];
     check('les deux equipes sont affichees', blocs.length === 2);
     const affiches = blocs.flatMap(b => [...b.querySelectorAll('li')].map(li => li.textContent));

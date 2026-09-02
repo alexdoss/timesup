@@ -132,20 +132,20 @@ localStorage.removeItem('timesup_rejoint');
     check('la fenetre s ouvre', I('equipes-overlay').style.display !== 'none');
     const blocs = [...di.querySelectorAll('#equipes-contenu .equipe-bloc')];
     check('les deux equipes sont affichees', blocs.length === 2);
-    const noms = blocs.flatMap(b => [...b.querySelectorAll('li')].map(li => li.textContent));
+    const noms = blocs.flatMap(b => [...b.querySelectorAll('li .equipe-joueur')].map(e => e.textContent));
     log('       equipes vues : ' + blocs.map(b =>
       b.querySelector('h4').textContent + ' = ' +
-      [...b.querySelectorAll('li')].map(li => li.textContent).join(', ')).join('  |  '));
+      [...b.querySelectorAll('li .equipe-joueur')].map(e => e.textContent).join(', ')).join('  |  '));
     check('les quatre joueurs y sont', noms.length === 4);
     check('ce sont ceux de la session',
           ['Ana', 'Bob', 'Cleo', 'Dan'].every(p => noms.includes(p)));
     check('l invite se retrouve en evidence',
-          di.querySelector('#equipes-contenu li.moi')?.textContent === 'Cleo');
+          di.querySelector('#equipes-contenu li.moi .equipe-joueur')?.textContent === 'Cleo');
 
     // ===== L organisateur revient sur les equipes et les modifie =====
     // La fenetre de l invite est restee OUVERTE : elle doit suivre le changement,
     // sinon il lit une composition perimee sans rien qui le lui signale.
-    const avant = blocs.map(b => [...b.querySelectorAll('li')].map(li => li.textContent).join(','));
+    const avant = blocs.map(b => [...b.querySelectorAll('li .equipe-joueur')].map(e => e.textContent).join(','));
 
     da.querySelector('#screen-rounds .btn-back').click();
     await wait(400);
@@ -164,7 +164,7 @@ localStorage.removeItem('timesup_rejoint');
 
     await wait(2600);
     const apres = [...di.querySelectorAll('#equipes-contenu .equipe-bloc')]
-      .map(b => [...b.querySelectorAll('li')].map(li => li.textContent).join(','));
+      .map(b => [...b.querySelectorAll('li .equipe-joueur')].map(e => e.textContent).join(','));
     log('       avant : ' + avant.join(' | ') + '   apres : ' + apres.join(' | '));
     check('la fenetre ouverte chez l invite se met a jour',
           JSON.stringify(apres) !== JSON.stringify(avant));
@@ -186,7 +186,7 @@ localStorage.removeItem('timesup_rejoint');
     I('btn-voir-equipes').click();
     await wait(200);
     const rouvert = [...di.querySelectorAll('#equipes-contenu .equipe-bloc')]
-      .map(b => [...b.querySelectorAll('li')].map(li => li.textContent).join(','));
+      .map(b => [...b.querySelectorAll('li .equipe-joueur')].map(e => e.textContent).join(','));
     check('rouvrir la fenetre donne le meme resultat',
           JSON.stringify(rouvert) === JSON.stringify(apres));
 

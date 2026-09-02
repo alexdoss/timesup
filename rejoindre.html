@@ -40,7 +40,7 @@
           <!-- Le code part tout seul au quatrième caractère. Le bouton reste pour
                qui navigue au clavier ou au lecteur d'écran, d'où le masquage
                visuel plutôt qu'un retrait. -->
-          <button id="btn-code" class="btn btn-primary hors-vue">Continuer ▶️</button>
+          <button id="btn-code" class="btn btn-primary hors-vue">Continuer</button>
         </div>
         <p class="wizard-hint" style="margin-top:18px">Il est affiché sur le téléphone de l'organisateur.</p>
       </div>
@@ -101,7 +101,7 @@
 
         <ul id="liste-cartes" class="player-list"></ul>
         <p id="etat-envoi" class="etat-envoi"></p>
-        <button id="btn-terminer" class="btn btn-primary" disabled>✅ J'ai terminé</button>
+        <button id="btn-terminer" class="btn btn-primary" disabled>J'ai terminé</button>
       </div>
     </div>
 
@@ -109,14 +109,17 @@
          simplement le joueur avant de le renvoyer à ses cartes -->
     <div id="screen-rejouer" class="screen">
       <div class="rejoindre-content">
-        <div class="grand-emoji">🔄</div>
+        <!-- La question porte sur l'identité : c'est elle le titre. « Une
+             nouvelle partie commence » n'est que le contexte, et occupait la
+             place. La pastille est celle que ce prénom porte partout ailleurs
+             dans l'app — on se reconnaît avant de lire. -->
+        <div id="rejouer-pastille" class="pastille-geante"></div>
         <div class="wizard-header">
-          <h2>Une nouvelle partie commence</h2>
-          <p class="wizard-hint">Il te faut de nouvelles cartes — les précédentes sont
-            déjà passées.</p>
+          <h2 id="rejouer-question" class="grosse-question"></h2>
+          <p class="wizard-hint">Une nouvelle partie commence : il te faut de nouvelles
+            cartes, les précédentes sont déjà passées.</p>
         </div>
-        <p id="rejouer-question" class="grosse-question"></p>
-        <button id="btn-rejouer-oui" class="btn btn-primary">✅ Oui, je rejoue</button>
+        <button id="btn-rejouer-oui" class="btn btn-primary">Oui, je rejoue</button>
         <button id="btn-rejouer-autre" class="btn btn-secondary" style="margin-top:10px">Ce n'est pas moi</button>
         <button id="btn-rejouer-quitter" class="btn-link" style="margin-top:16px">Je quitte la partie</button>
       </div>
@@ -156,7 +159,7 @@
         <div class="pause-panel">
           <h2>⏸ Pause</h2>
           <p class="pause-info">La partie reprend quand tu veux.</p>
-          <button id="btn-mon-reprendre" class="btn btn-primary">▶️ Reprendre</button>
+          <button id="btn-mon-reprendre" class="btn btn-primary">Reprendre</button>
         </div>
       </div>
     </div>
@@ -167,17 +170,23 @@
       <div class="turn-end-content">
         <h2 id="mon-fin-titre">⏰ Temps écoulé !</h2>
         <p id="mon-fin-resultat"></p>
-        <p class="wizard-hint">Une erreur de comptage ? Ouvre la liste concernée pour la corriger.</p>
-        <details id="mon-drawer-comptees" class="drawer">
-          <summary id="mon-resume-comptees">✅ Cartes comptées</summary>
+        <!-- Dire ce qu'on peut faire, pas comment se servir de l'écran :
+             « ouvre la liste concernée » était l'aveu qu'il ne se comprenait
+             pas tout seul. -->
+        <p class="wizard-hint">Un oubli ? Déplace la carte d'une liste à l'autre.</p>
+        <!-- Les deux tiroirs sont des contraires — ce qu'on a gagné, ce qu'on
+             n'a pas eu — et ils étaient jumeaux : même fond, même bordure, même
+             gris. Un filet vert d'un côté suffit à les séparer sans lire. -->
+        <details id="mon-drawer-comptees" class="drawer gagnees">
+          <summary id="mon-resume-comptees">✅ Comptées</summary>
           <ul id="mon-liste-comptees" class="player-list"></ul>
         </details>
-        <details id="mon-drawer-manquees" class="drawer">
-          <summary id="mon-resume-manquees">↩️ Cartes non comptées</summary>
-          <p class="wizard-hint">Cartes passées, ou affichée au moment du buzzer.</p>
+        <details id="mon-drawer-manquees" class="drawer perdues">
+          <summary id="mon-resume-manquees">↩️ Non comptées</summary>
+          <p class="wizard-hint">Passées, ou affichée au moment du buzzer.</p>
           <ul id="mon-liste-manquees" class="player-list"></ul>
         </details>
-        <button id="btn-mon-comptage-valider" class="btn btn-primary">C'est bon ▶️</button>
+        <button id="btn-mon-comptage-valider" class="btn btn-primary">C'est bon</button>
       </div>
     </div>
 
@@ -222,18 +231,19 @@
           <button id="btn-modifier" class="ruban-action">Modifier</button>
         </div>
         <div id="attente-roue" class="roue-config" style="display:none">⚙️</div>
-        <!-- L'emplacement du bouton des équipes pendant l'attente : en pleine
-             largeur, dans le fil de l'écran. C'est le moment où l'on découvre
-             avec qui on joue, et il n'y a rien d'autre à faire. -->
-        <div id="place-equipes-attente" class="place-equipes">
-          <button id="btn-voir-equipes" class="btn btn-secondary" style="display:none">
-            👥 Voir les équipes
-          </button>
-        </div>
 
         <div class="wizard-header">
           <h2 id="attente-titre">En attente du départ</h2>
           <p id="attente-sous" class="wizard-hint">On attend que tout le monde ait saisi ses cartes.</p>
+        </div>
+
+        <!-- L'emplacement du bouton des équipes pendant l'attente : en pleine
+             largeur, sous le texte qu'il vient compléter. C'est le moment où
+             l'on découvre avec qui on joue, et il n'y a rien d'autre à faire. -->
+        <div id="place-equipes-attente" class="place-equipes">
+          <button id="btn-voir-equipes" class="btn btn-secondary" style="display:none">
+            👥 Voir les équipes
+          </button>
         </div>
         <!-- À TOI DE JOUER — le tour a été confié à ce téléphone. Le paquet est
              déjà arrivé ; c'est ce joueur qui décide quand le chrono part. -->
@@ -257,7 +267,7 @@
                avant de se lancer. -->
           <p id="atoi-duree" class="cartes-restantes"></p>
           <p id="atoi-reste" class="cartes-restantes"></p>
-          <button id="btn-atoi-lancer" class="btn btn-primary">🚀 Je me lance</button>
+          <button id="btn-atoi-lancer" class="btn btn-primary">Je me lance</button>
         </div>
 
         <!-- LANCEMENT DE TOUR — le même écran que l'organisateur, sans le

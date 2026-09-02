@@ -290,6 +290,8 @@ localStorage.removeItem('timesup_rejoint');
           I('bloc-resultats').style.display === 'none');
     check('il retrouve l ecran de configuration',
           L('attente-titre') === 'Configuration de la partie en cours');
+    log('       ecran invite : ' + ecranInv()
+        + (ecranInv() === 'screen-rejouer' ? ' — "' + L('rejouer-question') + '"' : ''));
     check('on ne lui demande pas de se reinscrire', ecranInv() === 'screen-attente');
 
     // Un autre thème, et la partie repart

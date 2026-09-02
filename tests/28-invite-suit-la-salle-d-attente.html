@@ -222,15 +222,15 @@ async function sonder(adresse) {
     check('la fenetre des equipes s ouvre', $('equipes-overlay').style.display !== 'none');
     const blocs = [...d.querySelectorAll('#equipes-contenu .equipe-bloc')];
     check('les deux equipes sont affichees', blocs.length === 2);
-    const noms = blocs.flatMap(b => [...b.querySelectorAll('li')].map(li => li.textContent));
+    const noms = blocs.flatMap(b => [...b.querySelectorAll('li .equipe-joueur')].map(e => e.textContent));
     log('       equipes : ' + blocs.map(b =>
       b.querySelector('h4').textContent + ' = ' +
-      [...b.querySelectorAll('li')].map(li => li.textContent).join(', ')).join('  |  '));
+      [...b.querySelectorAll('li .equipe-joueur')].map(e => e.textContent).join(', ')).join('  |  '));
     check('les quatre joueurs y figurent', noms.length === 4);
     check('ce sont bien ceux de la partie',
           ['Ana', 'Bob', 'Cleo', 'Dan'].every(p => noms.includes(p)));
     check('l invite retrouve son propre prenom en evidence',
-          d.querySelector('#equipes-contenu li.moi')?.textContent === 'Cleo');
+          d.querySelector('#equipes-contenu li.moi .equipe-joueur')?.textContent === 'Cleo');
     check('rien n est modifiable depuis cette fenetre',
           d.querySelectorAll('#equipes-contenu button').length === 0);
 

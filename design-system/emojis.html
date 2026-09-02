@@ -1,0 +1,148 @@
+<!-- @dsCard group="Fondations" -->
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<title>Rush — les emojis</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root {
+  --fond: #14102B; --fond-halo: #2A1F5C; --surface: #1E1846; --bord: #2E2660;
+  --texte: #FFF6F0; --doux: #A79BD6;
+  --violet: #7C3AED; --violet-clair: #B14BFF; --ambre: #FFB020;
+  --vert: #22C55E; --rouge: #EF4444;
+  --e1: 4px; --e2: 8px; --e3: 16px; --e4: 24px; --e5: 32px; --e6: 48px;
+  --t1: .75rem; --t2: .875rem; --t3: 1rem; --t4: 1.375rem; --t5: 2rem;
+  --r-bloc: 20px; --r-pastille: 100px; --ombre: 0 10px 30px rgba(0,0,0,.35);
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  font-family: 'Outfit', sans-serif;
+  background: radial-gradient(120% 60% at 50% 0%, var(--fond-halo) 0%, var(--fond) 55%);
+  color: var(--texte); padding: var(--e4); line-height: 1.5;
+}
+h1 { font-size: var(--t4); margin-bottom: var(--e1); }
+h2 { font-size: var(--t1); text-transform: uppercase; letter-spacing: .1em;
+     color: var(--ambre); margin: var(--e5) 0 var(--e3); font-weight: 700; }
+.note { color: var(--doux); font-size: var(--t2); max-width: 660px; }
+.note + .note { margin-top: var(--e2); }
+.note b, .note strong { color: var(--texte); }
+table { border-collapse: collapse; width: 100%; max-width: 660px; margin-top: var(--e3); }
+th, td { text-align: left; padding: 10px 12px; font-size: var(--t2);
+         border-bottom: 1px solid var(--bord); vertical-align: top; }
+th { font-size: var(--t1); text-transform: uppercase; letter-spacing: .08em;
+     color: var(--ambre); font-weight: 700; }
+td:first-child { white-space: nowrap; font-weight: 600; }
+.exemples { font-size: 1.15rem; letter-spacing: .12em; }
+.regle { background: var(--surface); border: 1px solid var(--bord);
+         border-radius: var(--r-bloc); padding: var(--e3); margin-top: var(--e3);
+         max-width: 660px; }
+.regle b { color: var(--ambre); }
+.plus-tard { border-left: 3px solid var(--bord); padding-left: var(--e3);
+             margin-top: var(--e3); max-width: 660px; }
+.oui { color: var(--vert); font-weight: 700; }
+.non { color: var(--doux); font-weight: 700; }
+</style>
+</head>
+<body>
+
+<h1>Les emojis</h1>
+<p class="note">
+  Au moment d'écrire cette page, Rush en comptait <b>150</b>, dont <b>107 dans des boutons</b>.
+  La question n'est pas d'en mettre ou non, mais de savoir lesquels travaillent — et de rendre
+  aux survivants la place qui leur permet d'exister.
+</p>
+
+<div class="regle">
+  <b>La règle, en une phrase :</b> un emoji reste s'il porte une information que les mots ne
+  portent pas, ou s'il marque un moment. Il part s'il ne fait que répéter le mot d'à côté.
+</div>
+
+<h2>Trois familles, trois traitements</h2>
+<table>
+  <tr><th>Famille</th><th>Exemples</th><th>Traitement</th></tr>
+  <tr>
+    <td>Commandes</td>
+    <td class="exemples">▶️ ✕ ← ⚙️ ⏸</td>
+    <td><span class="non">Ne doivent pas être des emojis.</span> Ce sont des contrôles, pas des
+      émotions. Chaque téléphone les dessine à sa façon, et ils apportent un air de dessin animé
+      là où il faut de la précision. Des glyphes simples, identiques partout.</td>
+  </tr>
+  <tr>
+    <td>Identité</td>
+    <td class="exemples">💬 🔤 🎭 🗿 🕺 👥</td>
+    <td><span class="oui">Restent</span>, un seul par chose. Ils remplacent un mot au lieu de le
+      doubler : les icônes de manche sont le seul repère qui distingue les cinq.</td>
+  </tr>
+  <tr>
+    <td>Récompense</td>
+    <td class="exemples">🏆 🎉 🔥 🥲 🙈 🃏</td>
+    <td><span class="oui">Restent</span>, et doivent marquer un moment plutôt qu'habiller une
+      ligne. Voir plus bas.</td>
+  </tr>
+  <tr>
+    <td>Le reste</td>
+    <td class="exemples">🚀 💾 ✨ 📚 🎮 🚪 ✅</td>
+    <td><span class="non">Partent.</span> « Continuer ▶️ », « 🚀 Générer », « 💾 Sauvegarder » :
+      la flèche, la fusée et la disquette ne disent rien que le mot ne dise déjà.</td>
+  </tr>
+</table>
+
+<h2>Un emoji posé dans un libellé ne récompense personne</h2>
+<p class="note">
+  C'est le point qui décide du reste. <b>🏆 collé à un titre, à la taille d'une lettre, au
+  milieu d'un écran qui en contient cinq autres, n'est pas une récompense</b> — c'est un
+  caractère de plus. Le même 🏆 seul, grand, qui <b>arrive</b> avec le son et le score qui
+  monte, en est une.
+</p>
+<p class="note">
+  Les deux objectifs n'en font donc qu'un : <b>retirer les superflus est ce qui permet aux
+  autres d'exister</b>. Tant que 🏆 partage l'écran avec 🚀, 💾 et 🎮, personne ne le voit.
+  C'est la même loi que pour le son — la générosité est inversement proportionnelle à la
+  fréquence.
+</p>
+
+<div class="regle">
+  <b>Un emoji ne s'ajoute jamais seul, il s'ajoute dans une famille.</b> Les cinq icônes de
+  manche — 💬 🔤 🎭 🗿 🕺 — sont le seul ensemble de l'app choisi <em>comme un ensemble</em> :
+  même densité de trait, même registre. Tout le reste s'est accumulé un caractère à la fois,
+  et mélange pictogrammes plats et illustrations détaillées. Avant d'en poser un, vérifier
+  qu'il tient à côté de ceux qui l'entourent.
+  <br><br>
+  <b>Aucun emoji postérieur à 2016.</b> Un caractère trop récent n'existe pas dans la police
+  des appareils qui ne reçoivent plus de mises à jour : ils affichent un carré vide, et on ne
+  choisit pas le téléphone des joueurs. Le pari est sans gain et avec perte — quand il réussit,
+  l'emoji décoratif n'apporte rien ; quand il échoue, on lit « ▯ Générer ».
+  <br><br>
+  <b>Un emoji ne sert qu'une fois</b> dans un même jeu de variantes : c'est le seul signal qui
+  distingue les neuf fins de partie avant qu'on lise la phrase.
+</div>
+
+<h2>Les paires opposées, qui échappent à la règle</h2>
+<p class="note">
+  <b>« Trouvé ✓ » et « Passer ✗ »</b> répètent leur mot, et pourtant ils restent. Ils forment
+  une paire lue <b>sous chrono</b>, à un moment où l'on n'a pas le temps de déchiffrer : sans
+  les signes, les deux boutons deviennent typographiquement jumeaux. Même chose pour les deux
+  tiroirs du comptage, ✅ et ↩️.
+</p>
+
+<h2>Comment on l'applique</h2>
+<p class="note">
+  <b>Lot par lot, avec l'écran concerné.</b> Retirer cent emojis d'un seul commit serait
+  illisible et injugeable. Le parcours des invités a été traité le 2 septembre 2026 ; les
+  autres suivent au rythme de la refonte.
+</p>
+
+<div class="plus-tard">
+  <p class="note"><b>Reporté :</b> remplacer les emojis de commande par des glyphes dessinés.
+    C'est le seul point de cette page qui demande du travail plutôt qu'une suppression, et il
+    touche tous les écrans à la fois — donc après, pas pendant.</p>
+  <p class="note"><b>À surveiller :</b> deux libellés sont comparés à l'identique entre l'écran
+    de l'invité et celui de l'organisateur (« ⏱️ Temps restant » et « 🎯 C'est au tour de »).
+    Les nettoyer d'un seul côté créerait une divergence : les deux ensemble, ou aucun.</p>
+</div>
+
+</body>
+</html>

@@ -131,10 +131,10 @@
 
     <div class="avancement">
       <div class="fraction">
-        <span class="n">4</span><span class="sur">/33</span>
+        <span class="n">8</span><span class="sur">/33</span>
         <span class="quoi">écrans refaits</span>
       </div>
-      <div class="barre"><span style="width:12%"></span></div>
+      <div class="barre"><span style="width:24%"></span></div>
     </div>
   </header>
 
@@ -196,45 +196,66 @@
     <div class="lot-titre">
       <span class="num">LOT 3</span>
       <h2>Mon tour sur mon téléphone</h2>
-      <span class="compte">0 / 2 · rejoindre.html</span>
+      <span class="compte">2 / 2 · rejoindre.html</span>
     </div>
     <p class="lot-note">
-      Porte le mouvement de carte arrêté : sortie à droite si trouvée, à gauche si passée,
-      la suivante arrive du bas.
+      La carte sort dans le sens du geste — à droite si trouvée, à gauche si passée — et la
+      suivante monte du bas. Surtout, cet écran <b>n'émettait aucun son</b> : ni note sur une
+      carte trouvée, ni tic des cinq dernières secondes, ni cloche de fin, alors que celui de
+      l'organisateur les avait depuis toujours. La vibration est arrivée avec. Un anneau de
+      chrono a été essayé puis écarté : au-dessus de la carte, tout objet animé prend de
+      l'attention au pire moment.
     </p>
     <div class="lot">
-      <div class="ecran">
+      <div class="ecran fait">
         <div class="nom">La carte en main, le chrono</div>
         <div class="id">screen-mon-tour</div>
-        <span class="etat afaire">À faire</span>
+        <span class="etat fait">Fait</span>
       </div>
-      <div class="ecran">
+      <div class="ecran fait">
         <div class="nom">Mon comptage de fin de tour</div>
         <div class="id">screen-mon-comptage</div>
-        <span class="etat afaire">À faire</span>
+        <span class="etat fait">Fait</span>
       </div>
     </div>
+    <p class="lot-note" style="margin-top:var(--e2)">
+      <b>Proposition en attente sur le comptage :</b> les deux tiroirs — comptées, non comptées —
+      sont encore jumeaux, et les deux gestes opposés (retirer, récupérer) se présentent à
+      l'identique. Maquette : <code>proto-comptage.html</code>. Non tranché parce que
+      l'organisateur a le même écran, qui passera au lot 6.
+    </p>
   </section>
 
   <section>
     <div class="lot-titre">
       <span class="num">LOT 4</span>
       <h2>Reprise et messages</h2>
-      <span class="compte">0 / 2 · rejoindre.html</span>
+      <span class="compte">2 / 2 · rejoindre.html</span>
     </div>
-    <p class="lot-note">Les deux petits écrans qui ferment le parcours invité.</p>
+    <p class="lot-note">
+      Sur l'écran de reprise, la question d'identité est devenue le titre — elle arrivait en
+      second, sous le contexte — et la pastille du joueur remplace un emoji décoratif : on se
+      reconnaît avant de lire. L'écran de message, lui, était déjà au format des autres.
+      Il sert désormais aussi au <b>tour perdu par un rechargement</b>.
+    </p>
     <div class="lot">
-      <div class="ecran">
+      <div class="ecran fait">
         <div class="nom">Une nouvelle partie commence</div>
         <div class="id">screen-rejouer</div>
-        <span class="etat afaire">À faire</span>
+        <span class="etat fait">Fait</span>
       </div>
-      <div class="ecran">
+      <div class="ecran fait">
         <div class="nom">Message bloquant</div>
         <div class="id">screen-message</div>
-        <span class="etat afaire">À faire</span>
+        <span class="etat fait">Fait</span>
       </div>
     </div>
+    <p class="lot-note" style="margin-top:var(--e2)">
+      <b>Le parcours invité est désormais homogène</b> — la pastille identifie une personne
+      partout, les grains disent une progression de cartes des deux côtés, le grand chiffre
+      porte tout compte qui compte, et le bandeau tient manche et score. C'est le critère de
+      publication fixé par le PM.
+    </p>
   </section>
 
   <!-- ═══════════ CŒUR DE PARTIE ═══════════ -->
@@ -247,6 +268,13 @@
     <p class="lot-note">
       Les deux écrans les plus regardés de l'app. Même mouvement de carte que chez l'invité,
       et le score de la manche qui monte à l'arrivée sur le lancement.
+      <br><br>
+      <b>Dette à solder ici :</b> quand un joueur recharge sa page en plein tour, son paquet
+      en mémoire est effacé et les cartes trouvées avec lui. Son téléphone le lui dit déjà et
+      l'envoie prévenir l'organisateur — mais l'organisateur, lui, n'est averti de rien : il
+      voit toujours « X fait deviner ». Il faut que le téléphone marque le tour comme
+      abandonné et que son app y réagisse. Décision du PM : le tour lui est confié, perdre des
+      cartes trouvées étant inacceptable.
     </p>
     <div class="lot">
       <div class="ecran">

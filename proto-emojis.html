@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Rush — les emojis des boutons</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root {
+  --fond: #0F172A; --surface: #1E293B; --surface-2: #273449; --bord: #334155;
+  --texte: #F8FAFC; --doux: #94A3B8; --doux-2: #64748B;
+  --violet: #6D28D9; --ambre: #F59E0B; --vert: #22C55E; --rouge: #EF4444;
+  --r-md: 12px; --r-lg: 16px;
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: 'Outfit', sans-serif; background: var(--fond); color: var(--texte);
+       line-height: 1.5; padding: 24px 24px 56px; }
+h1 { font-size: 1.375rem; margin-bottom: 4px; }
+h2 { font-size: .75rem; text-transform: uppercase; letter-spacing: .1em;
+     color: var(--ambre); margin: 44px 0 6px; font-weight: 700; }
+.intro { color: var(--doux); font-size: .9375rem; max-width: 70ch; }
+.intro b { color: var(--texte); }
+.intro + .intro { margin-top: 8px; }
+
+.duo { display: flex; gap: 20px; flex-wrap: wrap; align-items: flex-start; margin-top: 16px; }
+.colonne { width: 300px; display: flex; flex-direction: column; gap: 8px; }
+.etiq { font-size: .72rem; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; }
+.etiq.a { color: var(--doux); }
+.etiq.b { color: var(--ambre); }
+
+.ecran {
+  background: var(--surface); border: 1px solid var(--bord); border-radius: var(--r-lg);
+  padding: 20px 18px; display: flex; flex-direction: column; gap: 10px;
+}
+.btn {
+  border: none; border-radius: var(--r-md); padding: 15px 18px; width: 100%;
+  font-family: inherit; font-size: 1rem; font-weight: 600; cursor: pointer;
+  background: var(--violet); color: #fff; text-align: center;
+}
+.btn.second { background: transparent; border: 1px solid var(--bord); color: var(--texte); }
+.btn.danger { background: var(--rouge); color: #fff; }
+.btn.lien { background: none; border: none; color: var(--doux); font-size: .85rem;
+            text-decoration: underline; padding: 6px; }
+.titre-ecran { font-size: 1.05rem; font-weight: 800; text-align: center; }
+.sous-ecran { font-size: .85rem; color: var(--doux); text-align: center; margin-bottom: 4px; }
+
+/* Le carré vide d'un emoji que la police ne connaît pas */
+.tofu {
+  display: inline-block; width: .95em; height: 1.15em; vertical-align: -.2em;
+  border: 1px solid var(--doux-2); border-radius: 2px; background: rgba(255,255,255,.04);
+}
+
+.avis { border-left: 3px solid var(--ambre); padding-left: 16px; max-width: 46ch; }
+.avis p { font-size: .875rem; color: var(--doux); }
+.avis p + p { margin-top: 8px; }
+.avis b { color: var(--texte); }
+
+table { border-collapse: collapse; margin-top: 14px; max-width: 720px; width: 100%; }
+th, td { text-align: left; padding: 9px 12px; font-size: .875rem;
+         border-bottom: 1px solid var(--bord); vertical-align: top; }
+th { font-size: .7rem; text-transform: uppercase; letter-spacing: .08em;
+     color: var(--ambre); font-weight: 700; }
+td.avant { color: var(--doux); }
+td.apres { font-weight: 600; }
+.garde { color: var(--vert); font-weight: 700; }
+.retire { color: var(--doux-2); }
+</style>
+</head>
+<body>
+
+<h1>Les emojis des boutons</h1>
+<p class="intro">
+  150 emojis dans les deux pages, dont <b>107 dans des boutons</b>. La question n'est pas
+  d'en mettre ou pas, mais de savoir <b>lesquels travaillent</b>.
+</p>
+<p class="intro">
+  La règle proposée tient en une phrase : <b>un emoji reste s'il porte une information que
+  les mots ne portent pas ; il part s'il ne fait que les répéter.</b>
+</p>
+
+<!-- ════════ ARGUMENT 1 ════════ -->
+<h2>Premier argument — tout ne peut pas être important</h2>
+<p class="intro">
+  C'est ce que je voulais dire par « le même poids ». Regarde l'écran de gauche et cherche
+  l'action dangereuse.
+</p>
+
+<div class="duo">
+  <div class="colonne">
+    <span class="etiq a">Aujourd'hui</span>
+    <div class="ecran">
+      <div class="titre-ecran">Partie en cours</div>
+      <div class="sous-ecran">Manche 2 sur 3</div>
+      <button class="btn">▶️ Reprendre la partie</button>
+      <button class="btn second">👥 Voir les équipes</button>
+      <button class="btn second">📖 Règles du jeu</button>
+      <button class="btn second">⚙️ Paramètres</button>
+      <button class="btn danger">🚪 Abandonner la partie</button>
+    </div>
+  </div>
+
+  <div class="colonne">
+    <span class="etiq b">Sans les emojis qui répètent</span>
+    <div class="ecran">
+      <div class="titre-ecran">Partie en cours</div>
+      <div class="sous-ecran">Manche 2 sur 3</div>
+      <button class="btn">Reprendre la partie</button>
+      <button class="btn second">👥 Voir les équipes</button>
+      <button class="btn second">Règles du jeu</button>
+      <button class="btn second">Paramètres</button>
+      <button class="btn danger">Abandonner la partie</button>
+    </div>
+  </div>
+
+  <div class="avis">
+    <p>
+      À gauche, <b>cinq pastilles colorées</b> se disputent l'œil. « Abandonner la partie »
+      est l'action qui détruit une soirée, et elle a exactement la même parure que
+      « Règles du jeu ».
+    </p>
+    <p>
+      À droite, il ne reste qu'un seul emoji — 👥, qui désigne des personnes et n'est pas
+      dans le mot. Du coup <b>le rouge redevient le signal</b>, et la hiérarchie se lit sans
+      qu'on la cherche.
+    </p>
+    <p>
+      C'est ça, « donner le même poids à tout » : quand chaque bouton crie, plus rien ne
+      s'entend. Décorer les actions banales <b>désarme</b> les actions graves.
+    </p>
+  </div>
+</div>
+
+<!-- ════════ ARGUMENT 2 ════════ -->
+<h2>Second argument — chaque emoji est un pari sur l'appareil</h2>
+<p class="intro">
+  Un emoji n'est pas une image livrée avec l'app : c'est un caractère, dessiné par
+  <b>la police du téléphone</b>. Si l'appareil ne le connaît pas, il affiche un carré vide.
+  C'est ce qui t'est arrivé avec 🥲 sur ton PC.
+</p>
+
+<div class="duo">
+  <div class="colonne">
+    <span class="etiq a">Sur un appareil à jour</span>
+    <div class="ecran">
+      <button class="btn">💾 Sauvegarder ce thème</button>
+      <button class="btn second">✨ Créer un thème avec l'IA</button>
+      <button class="btn">🚀 Générer</button>
+    </div>
+  </div>
+
+  <div class="colonne">
+    <span class="etiq a">Sur un appareil qui ne les connaît pas</span>
+    <div class="ecran">
+      <button class="btn"><span class="tofu"></span> Sauvegarder ce thème</button>
+      <button class="btn second"><span class="tofu"></span> Créer un thème avec l'IA</button>
+      <button class="btn"><span class="tofu"></span> Générer</button>
+    </div>
+  </div>
+
+  <div class="avis">
+    <p>
+      Le pari est <b>sans gain et avec perte</b> : quand il réussit, l'emoji n'apporte rien
+      que le mot ne disait déjà. Quand il échoue, on lit « ▯ Générer » et l'app a l'air cassée.
+    </p>
+    <p>
+      Ça ne vaut que pour les emojis <b>décoratifs</b>. Pour 💬 ou 🏆, qui portent une
+      information, le pari se discute — et c'est pour ça qu'on a écrit dans le système de
+      design de n'utiliser que des emojis antérieurs à 2016.
+    </p>
+  </div>
+</div>
+
+<!-- ════════ LE TRI ════════ -->
+<h2>Ce qui part, ce qui reste</h2>
+<table>
+  <tr><th>Bouton</th><th>Décision</th><th>Pourquoi</th></tr>
+  <tr><td class="avant">Continuer ▶️</td><td class="apres retire">Continuer</td>
+      <td>La flèche redit le mot.</td></tr>
+  <tr><td class="avant">✅ J'ai terminé</td><td class="apres retire">J'ai terminé</td>
+      <td>Idem, et la coche annonce une réussite avant qu'elle ait eu lieu.</td></tr>
+  <tr><td class="avant">🚀 Générer</td><td class="apres retire">Générer</td>
+      <td>La fusée ne décrit rien.</td></tr>
+  <tr><td class="avant">🎮 Nouvelle partie</td><td class="apres retire">Nouvelle partie</td>
+      <td>On est dans un jeu : le dire est superflu.</td></tr>
+  <tr><td class="avant">🚪 Abandonner</td><td class="apres retire">Abandonner la partie</td>
+      <td>Le rouge dit le danger mieux qu'une porte.</td></tr>
+  <tr><td class="avant">Trouvé ✓ / Passer ✗</td><td class="apres garde">Inchangé</td>
+      <td>Une <b>paire opposée</b>, lue sous chrono : sans les signes, les deux boutons
+          deviennent typographiquement jumeaux.</td></tr>
+  <tr><td class="avant">💬 Un seul mot</td><td class="apres garde">Inchangé</td>
+      <td><b>Identifie</b> la manche. C'est le seul repère qui distingue les cinq.</td></tr>
+  <tr><td class="avant">👥 Équipes</td><td class="apres garde">Inchangé</td>
+      <td>Remplace un mot au lieu de le doubler.</td></tr>
+  <tr><td class="avant">🏆 🎉 🔥 🥲 🙈</td><td class="apres garde">Inchangé</td>
+      <td>Ils portent le ton des fins de partie, et ont été choisis un par un.</td></tr>
+  <tr><td class="avant">✕ ← ⏸</td><td class="apres garde">Inchangé</td>
+      <td>Icônes seules : elles économisent un mot.</td></tr>
+</table>
+
+<!-- ════════ LES TROIS FAMILLES ════════ -->
+<h2>Trois familles, trois traitements</h2>
+<p class="intro">
+  La règle « est-ce que ça répète le mot ? » ne suffisait pas : elle ne dit que ce qu'on
+  retire. Voici celle qui dit aussi ce que les survivants doivent faire.
+</p>
+
+<table>
+  <tr><th>Famille</th><th>Exemples</th><th>Traitement</th></tr>
+  <tr>
+    <td class="apres">Commandes</td>
+    <td class="avant">▶️ ✕ ← ⚙️ ⏸</td>
+    <td><b class="retire">Ne doivent plus être des emojis du tout.</b> Ce sont des contrôles,
+        pas des émotions. En emoji, chaque téléphone les dessine à sa façon et leur donne un
+        air de dessin animé. Des glyphes simples, identiques partout.</td>
+  </tr>
+  <tr>
+    <td class="apres">Identité</td>
+    <td class="avant">💬 🔤 🎭 🗿 🕺 · 👥</td>
+    <td><b class="garde">Restent, un seul par chose.</b> Ils remplacent un mot au lieu de le
+        doubler : c'est le seul repère qui distingue les cinq manches.</td>
+  </tr>
+  <tr>
+    <td class="apres">Récompense</td>
+    <td class="avant">🏆 🎉 🔥 🥲 🙈 🃏</td>
+    <td><b class="garde">Restent, et doivent en faire beaucoup plus.</b> Voir ci-dessous.</td>
+  </tr>
+  <tr>
+    <td class="apres">Le reste</td>
+    <td class="avant">🚀 💾 ✨ 📚 📖 🎮 🚪 ✅</td>
+    <td><b class="retire">Partent.</b> Ils répètent le mot qui est à côté.</td>
+  </tr>
+</table>
+
+<!-- ════════ LA RÉCOMPENSE ════════ -->
+<h2>Un emoji posé dans un libellé ne récompense personne</h2>
+<p class="intro">
+  C'est le point le plus important, et celui que ma première proposition ratait complètement.
+  Le même caractère, aux deux endroits :
+</p>
+
+<div class="duo">
+  <div class="colonne">
+    <span class="etiq a">Aujourd'hui — décor</span>
+    <div class="ecran">
+      <div class="titre-ecran" style="font-size:1.05rem">🏆 Fin de la partie !</div>
+      <div class="sous-ecran">Les Rapides l'emportent</div>
+      <button class="btn second">Revanche</button>
+    </div>
+  </div>
+
+  <div class="colonne">
+    <span class="etiq b">Ce qu'il devrait être — événement</span>
+    <div class="ecran" style="align-items:center;text-align:center;padding:28px 18px">
+      <div style="font-size:3.4rem;line-height:1;animation:saute 900ms cubic-bezier(.2,.9,.3,1.6)">🏆</div>
+      <div class="titre-ecran" style="font-size:1.25rem">Les Rapides l'emportent</div>
+      <div class="sous-ecran">Ça s'est joué à trois cartes</div>
+      <button class="btn">Revanche</button>
+    </div>
+  </div>
+
+  <div class="avis">
+    <p>
+      À gauche, 🏆 fait <b>la taille d'une lettre</b>, collé à un titre, au milieu d'un écran
+      qui contient déjà cinq autres emojis. Personne ne le voit.
+    </p>
+    <p>
+      À droite, il est <b>seul, grand, et il arrive</b> — avec le son et le score qui monte.
+      Le caractère est le même ; ce qui change, c'est qu'il marque un moment au lieu
+      d'habiller une ligne.
+    </p>
+    <p>
+      D'où le lien entre tes deux demandes : <b>retirer les superflus est ce qui permet aux
+      autres d'exister</b>. Tant que 🏆 partage l'écran avec 🚀, 💾 et 🎮, il n'est qu'un
+      caractère de plus.
+    </p>
+  </div>
+</div>
+
+<!-- ════════ COHÉRENCE ════════ -->
+<h2>« Plus propres » : une question de registre</h2>
+<p class="intro">
+  Même en ne gardant que les bons, un jeu qui mélange deux styles de dessin a l'air assemblé
+  plutôt que choisi.
+</p>
+
+<div class="duo">
+  <div class="colonne">
+    <span class="etiq a">Registres mélangés</span>
+    <div class="ecran" style="flex-direction:row;justify-content:space-around;font-size:2rem">
+      <span>✅</span><span>🚀</span><span>▶️</span><span>📚</span><span>✨</span>
+    </div>
+    <p style="font-size:.8rem;color:var(--doux)">Pictogrammes plats et illustrations détaillées
+      côte à côte : deux mains différentes.</p>
+  </div>
+
+  <div class="colonne">
+    <span class="etiq b">Les cinq manches — un jeu cohérent</span>
+    <div class="ecran" style="flex-direction:row;justify-content:space-around;font-size:2rem">
+      <span>💬</span><span>🔤</span><span>🎭</span><span>🗿</span><span>🕺</span>
+    </div>
+    <p style="font-size:.8rem;color:var(--doux)">Même densité de trait, même famille.
+      Celui-là tient déjà debout — c'est le modèle à suivre.</p>
+  </div>
+
+  <div class="avis">
+    <p>
+      Les icônes de manche sont <b>déjà cohérentes entre elles</b> : c'est le seul ensemble de
+      l'app qui ait été choisi comme un ensemble. Tout le reste a été ajouté au fil de l'eau.
+    </p>
+    <p>
+      La contrainte à écrire : <b>un emoji ne s'ajoute pas seul, il s'ajoute dans une
+      famille</b> — et on vérifie qu'il tient à côté des autres avant de le poser.
+    </p>
+  </div>
+</div>
+
+<style>
+@keyframes saute { 0% { transform: scale(.4); opacity: 0 } 60% { transform: scale(1.2) } }
+</style>
+
+<h2>Comment on s'y prend</h2>
+<p class="intro">
+  <b>Lot par lot, avec l'écran concerné.</b> Retirer 107 emojis d'un coup ferait un commit
+  illisible et injugeable — et impossible à corriger si un choix te déplaît.
+</p>
+<p class="intro">
+  Ce qu'il faut décider aujourd'hui, c'est seulement <b>d'inscrire la règle dans le système
+  de design</b>. Elle s'appliquera ensuite d'elle-même à chaque lot, sans qu'on ait à
+  rediscuter bouton par bouton.
+</p>
+
+</body>
+</html>

@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Rush — le comptage de fin de tour</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root {
+  --fond: #0F172A; --surface: #1E293B; --surface-2: #273449; --bord: #334155;
+  --texte: #F8FAFC; --doux: #94A3B8; --doux-fort: #CBD5E1; --doux-2: #64748B;
+  --violet: #6D28D9; --ambre: #F59E0B; --vert: #22C55E; --rouge: #EF4444;
+  --r-md: 12px; --r-lg: 16px;
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  font-family: 'Outfit', sans-serif; background: var(--fond); color: var(--texte);
+  line-height: 1.5; padding: 24px;
+}
+h1 { font-size: 1.375rem; margin-bottom: 4px; }
+.intro { color: var(--doux); font-size: .875rem; max-width: 880px; }
+.intro b { color: var(--texte); }
+.rangee { display: flex; gap: 24px; flex-wrap: wrap; align-items: flex-start; margin-top: 24px; }
+.colonne { display: flex; flex-direction: column; gap: 8px; }
+.etiq { font-size: .75rem; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; }
+.etiq.avant { color: var(--doux); }
+.etiq.apres { color: var(--ambre); }
+
+/* ═══════ LE TÉLÉPHONE ═══════ */
+.tel {
+  width: 360px; background: var(--fond); border: 1px solid var(--bord);
+  border-radius: 28px; padding: 24px 22px 28px;
+  display: flex; flex-direction: column; align-items: center; text-align: center;
+}
+.tel h2 { font-size: 1.375rem; font-weight: 800; margin-bottom: 6px; }
+.resultat { font-size: .9rem; color: var(--doux); margin-bottom: 4px; }
+.resultat .n {
+  display: inline-block; font-size: 2.6rem; font-weight: 800; line-height: 1;
+  color: var(--texte); vertical-align: -.12em; margin-right: 2px;
+}
+.aide { font-size: .9rem; color: var(--doux); margin: 10px 0 16px; }
+
+/* ─── Les tiroirs ─── */
+.drawer {
+  width: 100%; background: var(--surface); border: 1px solid var(--bord);
+  border-radius: var(--r-md); margin-bottom: 8px; text-align: left; overflow: hidden;
+}
+.drawer > summary {
+  padding: 13px 16px; font-size: .9rem; font-weight: 600; color: var(--doux-fort);
+  cursor: pointer; list-style: none; display: flex; align-items: center; gap: 8px;
+}
+.drawer > summary::-webkit-details-marker { display: none; }
+.drawer > summary::after {
+  content: '▾'; margin-left: auto; color: var(--doux-2); transition: transform .2s;
+}
+.drawer[open] > summary::after { transform: rotate(180deg); }
+.liste { list-style: none; padding: 0 12px 12px; display: flex; flex-direction: column; gap: 6px; }
+.liste li {
+  display: flex; align-items: center; gap: 10px; padding: 9px 12px;
+  background: var(--surface-2); border-radius: 10px; font-size: .9rem; font-weight: 600;
+}
+.liste .mot { flex: 1; text-align: left; }
+.liste button {
+  background: none; border: 1px solid var(--bord); border-radius: 50%;
+  width: 28px; height: 28px; cursor: pointer; font-size: .85rem; color: var(--doux);
+  display: flex; align-items: center; justify-content: center; flex: none;
+}
+.note-liste { font-size: .8rem; color: var(--doux-2); padding: 0 16px 10px; }
+.btn {
+  width: 100%; margin-top: 12px; border: none; border-radius: var(--r-md);
+  padding: 17px; font-family: inherit; font-size: 1rem; font-weight: 600;
+  background: var(--violet); color: #fff; cursor: pointer;
+}
+
+/* ═══════ CE QUI CHANGE, À DROITE ═══════ */
+.apres .drawer.gagnees { border-left: 3px solid var(--vert); }
+.apres .drawer.gagnees > summary { color: var(--texte); }
+.apres .compte { font-weight: 800; font-variant-numeric: tabular-nums; }
+.apres .drawer.gagnees .compte { color: var(--vert); }
+.apres .drawer.perdues .compte { color: var(--doux); }
+.apres .drawer.perdues { border-left: 3px solid var(--bord); }
+
+.avis { border-left: 3px solid var(--ambre); padding-left: 16px; max-width: 380px; }
+.avis h4 { font-size: 1rem; margin-bottom: 8px; }
+.avis p { font-size: .875rem; color: var(--doux); }
+.avis p + p { margin-top: 8px; }
+.avis b { color: var(--texte); }
+</style>
+</head>
+<body>
+
+<h1>Le comptage, à la fin d'un tour</h1>
+<p class="intro">
+  L'écran de celui qui vient de faire deviner : il arbitre son propre comptage avant de le
+  renvoyer. <b>Le grand chiffre est déjà en place</b> — c'est le reste qui est en question.
+  Les deux tiroirs sont ouverts ici pour qu'on voie leur contenu ; dans l'app ils sont repliés.
+</p>
+
+<div class="rangee">
+
+  <!-- ══════ AVANT ══════ -->
+  <div class="colonne">
+    <span class="etiq avant">Aujourd'hui</span>
+    <div class="tel">
+      <h2>⏰ Temps écoulé !</h2>
+      <p class="resultat"><span class="n">3</span> cartes trouvées</p>
+      <p class="aide">Une erreur de comptage ? Ouvre la liste concernée pour la corriger.</p>
+
+      <details class="drawer" open>
+        <summary>✅ Cartes comptées (3)</summary>
+        <ul class="liste">
+          <li><span class="mot">Montgolfière</span><button>✕</button></li>
+          <li><span class="mot">Karaoké</span><button>✕</button></li>
+          <li><span class="mot">Trampoline</span><button>✕</button></li>
+        </ul>
+      </details>
+
+      <details class="drawer" open>
+        <summary>↩️ Cartes non comptées (2)</summary>
+        <p class="note-liste">Cartes passées, ou affichée au moment du buzzer.</p>
+        <ul class="liste">
+          <li><span class="mot">Tire-bouchon</span><button>✓</button></li>
+          <li><span class="mot">Aspirateur</span><button>✓</button></li>
+        </ul>
+      </details>
+
+      <button class="btn">C'est bon ▶️</button>
+    </div>
+  </div>
+
+  <!-- ══════ APRÈS ══════ -->
+  <div class="colonne apres">
+    <span class="etiq apres">Proposition</span>
+    <div class="tel">
+      <h2>⏰ Temps écoulé !</h2>
+      <p class="resultat"><span class="n">3</span> cartes trouvées</p>
+      <p class="aide">Un oubli ? Déplace la carte d'une liste à l'autre.</p>
+
+      <details class="drawer gagnees" open>
+        <summary>✅ Comptées <span class="compte">3</span></summary>
+        <ul class="liste">
+          <li><span class="mot">Montgolfière</span><button title="Ne pas compter">✕</button></li>
+          <li><span class="mot">Karaoké</span><button title="Ne pas compter">✕</button></li>
+          <li><span class="mot">Trampoline</span><button title="Ne pas compter">✕</button></li>
+        </ul>
+      </details>
+
+      <details class="drawer perdues" open>
+        <summary>↩️ Non comptées <span class="compte">2</span></summary>
+        <p class="note-liste">Passées, ou affichée au moment du buzzer.</p>
+        <ul class="liste">
+          <li><span class="mot">Tire-bouchon</span><button title="Compter celle-ci">✓</button></li>
+          <li><span class="mot">Aspirateur</span><button title="Compter celle-ci">✓</button></li>
+        </ul>
+      </details>
+
+      <button class="btn">C'est bon ▶️</button>
+    </div>
+  </div>
+
+  <div class="avis">
+    <h4>Ce qui change, et pourquoi</h4>
+    <p>
+      <b>Les deux tiroirs cessent d'être jumeaux.</b> Ce sont des contraires — ce qu'on a gagné,
+      ce qu'on n'a pas eu — et ils avaient le même fond, la même bordure, le même gris. Un filet
+      vert et un compte vert d'un côté suffisent à les séparer sans lire.
+    </p>
+    <p>
+      <b>Écarté :</b> colorer le ✕ et le ✓ de chaque ligne. Deux pastilles vives par ligne, sur
+      une liste de dix mots, feraient plus de bruit que de sens — et le tiroir dit déjà de quel
+      côté on se trouve.
+    </p>
+    <p>
+      <b>La phrase d'aide rétrécit.</b> « Ouvre la liste concernée pour la corriger » expliquait
+      comment se servir de l'écran — signe qu'il ne se comprenait pas tout seul. Une fois les
+      tiroirs lisibles, il reste à dire ce qu'on peut faire : déplacer une carte.
+    </p>
+    <p>
+      <b>Le compte sort du texte du titre.</b> « (3) » entre parenthèses se lit après le mot ;
+      un chiffre coloré se voit avant. C'est le même déplacement que sur les autres écrans.
+    </p>
+  </div>
+</div>
+
+<div class="avis" style="border-left-color:var(--bord);max-width:880px;margin-top:24px">
+  <h4 style="color:var(--doux)">À savoir</h4>
+  <p>L'organisateur a le même écran, <b>screen-turn-end</b>, avec les mêmes tiroirs. Le refaire
+    ici seul les fait diverger jusqu'au lot 6 — sans conséquence pratique, les deux ne sont
+    jamais côte à côte, mais c'est une dette de plus à tenir.</p>
+</div>
+
+</body>
+</html>

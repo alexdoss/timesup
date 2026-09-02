@@ -142,6 +142,9 @@ f.addEventListener('load', async () => {
     // ===== Debut de tour =====
     $('btn-start-turn').click();
     const enTour = await attendreEtape('tour');
+    // Retenu ici : c est ce joueur-la que le comptage devra nommer, alors que
+    // la rotation des roles aura deja designe le suivant.
+    const quiVientDeJouer = enTour.etat.tour.joueur;
     log('       etape : ' + enTour.etat.etape + ', v' + enTour.v
         + ', restant ' + enTour.etat.tour?.restant);
     check('le debut de tour est publie', enTour.etat.etape === 'tour');
@@ -185,9 +188,18 @@ f.addEventListener('load', async () => {
           Math.abs(reprise.etat.tour.restant - gele) <= 1);
     let clics = 0;
     while (ecran() === 'screen-game' && clics < 300) { $('btn-found').click(); clics++; }
-    const finTour = await attendreEtape('entre-tours');
-    check('la fin de tour est publiee', finTour.etat.etape === 'entre-tours');
-    check('aucun tour n est plus en cours', finTour.etat.tour === null);
+    // « comptage » et non « entre-tours » : l organisateur arrive sur son ecran
+    // de correction, le tour n est pas fini, il est en train d etre compte.
+    // Annoncer la suite ici montrait aux invites le joueur suivant et un score
+    // d avant correction, qui bougeait ensuite a chaque case cochee.
+    const finTour = await attendreEtape('comptage');
+    check('le comptage est publie', finTour.etat.etape === 'comptage');
+    check('le tour reste nomme pendant qu on le compte', !!finTour.etat.tour);
+    // Le point qui compte : la rotation des roles a deja eu lieu quand on
+    // publie, et lire l etat du jeu nommerait donc le joueur SUIVANT.
+    check('et c est bien celui qui vient de jouer, pas le suivant',
+          finTour.etat.tour.joueur === quiVientDeJouer);
+    check('on n annonce pas encore le tour d apres', finTour.etat.aVenir === null);
     check('le paquet est vide, la manche est finie', finTour.etat.restantes === 0);
 
     $('btn-next-turn').click();

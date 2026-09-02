@@ -299,8 +299,10 @@ localStorage.removeItem('timesup_rejoint');
     check('le titre dit que le temps est ecoule',
           LJ('mon-fin-titre').includes('Temps écoulé'));
     check('son score du tour est annonce', LJ('mon-fin-resultat').includes('3 carte'));
+    // Le compte a quitte les parentheses : il vit dans son propre element,
+    // pour pouvoir porter sa couleur.
     check('les cartes comptees sont listees',
-          LJ('mon-resume-comptees').includes('(3)'));
+          dj.querySelector('#mon-resume-comptees .drawer-compte').textContent === '3');
     check('et les non comptees aussi',
           dj.querySelectorAll('#mon-liste-manquees li').length > 0);
 
@@ -359,7 +361,8 @@ localStorage.removeItem('timesup_rejoint');
     const aRetirer = dj.querySelector('#mon-liste-comptees li .player-name').textContent;
     dj.querySelector('#mon-liste-comptees li button').click();
     log('       retiree du comptage : ' + aRetirer);
-    check('la carte quitte les comptees', LJ('mon-resume-comptees').includes('(2)'));
+    check('la carte quitte les comptees',
+          dj.querySelector('#mon-resume-comptees .drawer-compte').textContent === '2');
     check('elle rejoint les non comptees',
           [...dj.querySelectorAll('#mon-liste-manquees .player-name')]
             .some(e => e.textContent === aRetirer));

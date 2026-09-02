@@ -127,6 +127,15 @@ function Invoke-FausseSession($corps) {
     if (-not $id -or $null -eq $corps.mots) {
       return @{ statut = 400; corps = @{ error = 'Tour incomplet.' } }
     }
+    # Les regles de passe de la partie. Sans elles le telephone jouerait avec
+    # les siennes — passes illimitees, carte remise en bas — meme sur une partie
+    # ou l organisateur a interdit de passer. Valeur inconnue = illimite, ce que
+    # l app faisait avant.
+    $modes = @('unlimited', 'limited', 'forbidden')
+    $mode = if ($modes -contains [string]$corps.passe.mode) { [string]$corps.passe.mode } else { 'unlimited' }
+    $limite = [Math]::Max(0, [Math]::Min(99, [int]($corps.passe.limite ?? 0)))
+    $remise = if ([string]$corps.passe.remise -eq 'random') { 'random' } else { 'bottom' }
+
     $tours[$code] = [ordered]@{
       idJoueur = $id
       mots     = @($corps.mots)
@@ -134,6 +143,7 @@ function Invoke-FausseSession($corps) {
       # Ce tour reprend les secondes gagnees a la manche precedente
       reporte  = ($corps.reporte -eq $true)
       manche   = $corps.manche
+      passe    = [ordered]@{ mode = $mode; limite = $limite; remise = $remise }
       confieA  = (Get-HorodatageMs)
       rendu    = $null
     }

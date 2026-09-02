@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head><meta charset="utf-8"><title>Test Rush — le tour perdu par un rechargement</title></head>
+<body>
+<pre id="log">demarrage...</pre>
+<div id="hote"></div>
+<script>
+const out = [];
+function log(s) { out.push(s); document.getElementById('log').textContent = out.join('\n'); }
+function check(name, cond) { log((cond ? 'PASS' : 'FAIL') + ' -- ' + name); }
+const wait = ms => new Promise(r => setTimeout(r, ms));
+
+async function api(action, donnees = {}) {
+  const r = await fetch('/api/session', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ action, ...donnees })
+  });
+  return { statut: r.status, corps: await r.json().catch(() => ({})) };
+}
+
+const f = document.createElement('iframe');
+f.style.cssText = 'width:420px;height:900px;border:1px solid #ccc';
+document.getElementById('hote').appendChild(f);
+
+let resoudre = null;
+f.addEventListener('load', () => { const r = resoudre; resoudre = null; if (r) r(); });
+const charger = url => new Promise(r => { resoudre = r; f.src = url; });
+const recharger = () => new Promise(r => { resoudre = r; f.contentWindow.location.reload(); });
+
+const EQUIPES = [
+  { nom: 'Les Rapides', couleur: '#d6336c', joueurs: ['Ines'], manche: 0, partie: 0 },
+  { nom: 'Les Malins',  couleur: '#33c26a', joueurs: ['Lou'],  manche: 0, partie: 0 }
+];
+const MANCHE = { numero: 1, sur: 3, nom: 'Description libre', icone: '💬',
+                 regle: 'Le joueur parle librement.' };
+
+(async () => {
+  try {
+    const d = () => f.contentDocument;
+    const $ = id => d().getElementById(id);
+    const ecran = () => [...d().querySelectorAll('.screen')]
+      .find(s => s.classList.contains('active'))?.id;
+    const visible = id => $(id) && $(id).style.display !== 'none';
+
+    localStorage.removeItem('timesup_rejoint');
+
+    // ===== Une partie prete a jouer, avec un invite sur son telephone =====
+    const s = await api('creer', { cartesParJoueur: 2, mode: 'nominatif' });
+    const code = s.corps.code, jeton = s.corps.jeton;
+    log('       session : ' + code);
+
+    const lou = await api('rejoindre', { code, prenom: 'Lou' });
+    await api('deposer', { code, idJoueur: lou.corps.idJoueur, cartes: ['L1', 'L2'], fini: true });
+
+    await charger('/rejoindre.html?c=' + code);
+    await wait(700);
+    $('champ-prenom').value = 'Ines';
+    $('btn-prenom').click();
+    await wait(700);
+    for (const m of ['I1', 'I2']) { $('champ-carte').value = m; $('btn-ajouter').click(); }
+    await wait(900);
+    $('btn-terminer').click();
+    await wait(1200);
+    check('l invite suit la partie', ecran() === 'screen-attente');
+
+    const etat = await api('etat', { code });
+    const ines = etat.corps.joueurs.find(j => j.prenom === 'Ines');
+    check('l invite est bien inscrit', !!ines);
+
+    await api('fermer', { code, jeton });
+    let v = 1;
+    const publier = etat => api('publier', { code, jeton, v: v++, etat });
+
+    // ===== Le tour est confie au telephone d Ines =====
+    // « entre-tours » : l app ne va chercher un tour confie qu a ces moments-la
+    // — voir ETAPES_LANCEMENT. C est tout l interet du defaut teste ici : apres
+    // un rechargement en pleine partie, ce moment est deja passe.
+    await publier({
+      etape: 'entre-tours', manche: MANCHE, equipes: EQUIPES,
+      aVenir: { equipe: 0, joueur: 'Ines' }, restantes: 4
+    });
+    await api('confierTour', {
+      code, jeton, idJoueur: ines.id, duree: 40, manche: MANCHE,
+      mots: ['Montgolfiere', 'Tire-bouchon', 'Karaoke', 'Trampoline']
+    });
+    await wait(3200);
+    check('le paquet arrive sur son telephone', visible('bloc-a-toi'));
+
+    $('btn-atoi-lancer').click();
+    await wait(600);
+    check('elle joue son tour', ecran() === 'screen-mon-tour');
+    $('btn-mon-found').click();
+    await wait(300);
+    log('       une carte trouvee, puis on recharge la page');
+
+    // ===== LE RECHARGEMENT =====
+    // Le paquet vivait en memoire, et les cartes trouvees avec lui : elles ne
+    // sont nulle part ailleurs. On ne peut ni reprendre le tour — il faudrait
+    // repartir a zero carte — ni laisser le joueur devant le sablier de son
+    // propre tour, ce que l app faisait.
+    await recharger();
+    await wait(4000);
+    log('       ecran apres rechargement : ' + ecran());
+    // La visibilite reelle, pas l attribut : un bloc peut porter display:'' a
+    // l interieur d un ecran qui n est plus affiche.
+    const vraimentVisible = id => !!$(id) && $(id).offsetParent !== null;
+    check('l invite n est pas laisse spectateur de son propre tour',
+          !vraimentVisible('bloc-tour'));
+    check('un ecran lui dit ce qui s est passe', ecran() === 'screen-message');
+    log('       "' + $('message-titre').textContent + '"');
+    check('le titre parle d interruption',
+          $('message-titre').textContent.includes('interrompu'));
+    check('le texte renvoie vers l organisateur',
+          $('message-texte').textContent.includes('organisateur'));
+    check('et laisse revenir au suivi', $('btn-message').style.display !== 'none');
+
+    $('btn-message').click();
+    await wait(600);
+    check('le bouton ramene au suivi', ecran() === 'screen-attente');
+
+    // ===== L AUTRE CAS, QUI NE DOIT RIEN DECLENCHER =====
+    // Un joueur peut faire deviner depuis l appareil de l organisateur : l etat
+    // publie l annonce alors comme celui qui joue, sans qu aucun paquet n ait
+    // ete confie a son telephone. Il n a rien perdu, et doit voir le suivi
+    // normal — c est le piege dans lequel une premiere version est tombee.
+    await api('reprendreTour', { code, jeton, oublier: true });
+    const reste = await api('lireTour', { code, jeton });
+    check('plus aucun tour confie', !reste.corps.tour);
+
+    await publier({
+      etape: 'tour', manche: MANCHE, equipes: EQUIPES,
+      tour: { joueur: 'Ines', equipe: 0, restant: 30, duree: 40 },
+      restantes: 4
+    });
+    await wait(4000);
+    log('       ecran quand elle joue depuis l appareil de l organisateur : ' + ecran());
+    check('elle reste sur le suivi', ecran() === 'screen-attente');
+    check('et voit le tour en cours comme les autres', visible('bloc-tour'));
+    check('aucun message d interruption', ecran() !== 'screen-message');
+
+    log('SCENARIO 43 TERMINE');
+  } catch (e) {
+    log('EXCEPTION: ' + e.message + '\n' + e.stack);
+  }
+})();
+</script>
+</body>
+</html>

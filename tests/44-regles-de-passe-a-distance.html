@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head><meta charset="utf-8"><title>Test Rush — les règles de passe sur le téléphone du joueur</title></head>
+<body>
+<pre id="log">demarrage...</pre>
+<div id="hote"></div>
+<script>
+const out = [];
+function log(s) { out.push(s); document.getElementById('log').textContent = out.join('\n'); }
+function check(name, cond) { log((cond ? 'PASS' : 'FAIL') + ' -- ' + name); }
+const wait = ms => new Promise(r => setTimeout(r, ms));
+
+async function api(action, donnees = {}) {
+  const r = await fetch('/api/session', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ action, ...donnees })
+  });
+  return { statut: r.status, corps: await r.json().catch(() => ({})) };
+}
+
+const f = document.createElement('iframe');
+f.style.cssText = 'width:420px;height:900px;border:1px solid #ccc';
+document.getElementById('hote').appendChild(f);
+let resoudre = null;
+f.addEventListener('load', () => { const r = resoudre; resoudre = null; if (r) r(); });
+const charger = url => new Promise(r => { resoudre = r; f.src = url; });
+
+const MANCHE = { numero: 1, sur: 3, nom: 'Description libre', icone: '💬',
+                 regle: 'Le joueur parle librement.' };
+const EQUIPES = [
+  { nom: 'Les Rapides', couleur: '#d6336c', joueurs: ['Ines'], manche: 0, partie: 0 },
+  { nom: 'Les Malins',  couleur: '#33c26a', joueurs: ['Lou'],  manche: 0, partie: 0 }
+];
+
+const d = () => f.contentDocument;
+const $ = id => d().getElementById(id);
+const ecran = () => [...d().querySelectorAll('.screen')]
+  .find(s => s.classList.contains('active'))?.id;
+const visible = id => !!$(id) && $(id).offsetParent !== null;
+const carte = () => $('mon-card-word').textContent;
+
+// Une partie neuve par regle, et un PREMIER tour confie a un telephone : c'est
+// le cas qui compte, et le seul qu'on puisse mettre en place sans rejouer toute
+// une soiree. Enchainer deux tours au meme joueur dans un scenario ne
+// ressemblerait a rien de ce qui se passe en vrai — entre deux de ses tours, la
+// partie traverse le comptage, le tour des autres, et la manche avance.
+async function unPremierTourAvec(passe, mots) {
+  const s = await api('creer', { cartesParJoueur: 2, mode: 'nominatif' });
+  const code = s.corps.code, jeton = s.corps.jeton;
+
+  const lou = await api('rejoindre', { code, prenom: 'Lou' });
+  await api('deposer', { code, idJoueur: lou.corps.idJoueur, cartes: ['L1', 'L2'], fini: true });
+
+  await charger('/rejoindre.html?c=' + code);
+  await wait(700);
+  $('champ-prenom').value = 'Ines';
+  $('btn-prenom').click();
+  await wait(700);
+  for (const m of ['I1', 'I2']) { $('champ-carte').value = m; $('btn-ajouter').click(); }
+  await wait(900);
+  $('btn-terminer').click();
+  await wait(1200);
+
+  const etat = await api('etat', { code });
+  const ines = etat.corps.joueurs.find(j => j.prenom === 'Ines');
+  await api('fermer', { code, jeton });
+
+  // « entre-tours » : le seul moment ou le telephone va chercher un tour confie.
+  await api('publier', { code, jeton, v: 1, etat: {
+    etape: 'entre-tours', manche: MANCHE, equipes: EQUIPES,
+    aVenir: { equipe: 0, joueur: 'Ines' }, restantes: mots.length
+  } });
+  await api('confierTour', {
+    code, jeton, idJoueur: ines.id, duree: 60, manche: MANCHE, mots, passe
+  });
+
+  let tours = 0;
+  while (!visible('bloc-a-toi') && tours < 14) { await wait(600); tours++; }
+  $('btn-atoi-lancer').click();
+  await wait(500);
+  return code;
+}
+
+(async () => {
+  try {
+    localStorage.removeItem('timesup_rejoint');
+
+    // ════════ PASSE INTERDITE ════════
+    // Le defaut d origine : le telephone ne recevait aucune regle et passait
+    // toujours, meme sur une partie ou l organisateur l avait interdit.
+    await unPremierTourAvec({ mode: 'forbidden', limite: 0, remise: 'bottom' },
+                            ['Alpha', 'Bravo', 'Charlie']);
+    check('le tour se lance sur le telephone', ecran() === 'screen-mon-tour');
+    log('       bouton : "' + $('btn-mon-pass').textContent + '"');
+    check('passe interdite : le bouton est eteint', $('btn-mon-pass').disabled);
+    check('et il le dit', $('btn-mon-pass').textContent.includes('interdit'));
+    const avant = carte();
+    $('btn-mon-pass').click();
+    await wait(200);
+    check('appuyer dessus ne change pas la carte', carte() === avant);
+    check('et le paquet reste entier',
+          parseInt($('mon-cards-left').textContent, 10) === 3);
+
+    // ════════ PASSE LIMITEE ════════
+    localStorage.removeItem('timesup_rejoint');
+    await unPremierTourAvec({ mode: 'limited', limite: 2, remise: 'bottom' },
+                            ['Delta', 'Echo', 'Foxtrot', 'Golf']);
+    check('le tour se lance', ecran() === 'screen-mon-tour');
+    log('       bouton : "' + $('btn-mon-pass').textContent + '"');
+    check('le bouton annonce ce qui reste', $('btn-mon-pass').textContent.includes('(2)'));
+    check('et il est actif', !$('btn-mon-pass').disabled);
+
+    const premiere = carte();
+    $('btn-mon-pass').click();
+    await wait(200);
+    check('la premiere passe change de carte', carte() !== premiere);
+    check('le compteur descend', $('btn-mon-pass').textContent.includes('(1)'));
+
+    $('btn-mon-pass').click();
+    await wait(200);
+    check('la seconde passe aussi', $('btn-mon-pass').textContent.includes('(0)'));
+    check('et la troisieme est refusee', $('btn-mon-pass').disabled);
+
+    const figee = carte();
+    $('btn-mon-pass').click();
+    await wait(200);
+    check('la carte ne bouge plus', carte() === figee);
+    // Passer n est pas jeter : la carte revient plus loin dans le paquet.
+    check('le paquet n a pas retreci',
+          parseInt($('mon-cards-left').textContent, 10) === 4);
+
+    // ════════ PASSE ILLIMITEE, REMISE AU HASARD ════════
+    // La carte ne doit pas revenir immediatement sous le nez du joueur : le
+    // moteur impose un ecart minimum, le telephone doit faire pareil.
+    localStorage.removeItem('timesup_rejoint');
+    await unPremierTourAvec({ mode: 'unlimited', limite: 0, remise: 'random' },
+                            ['Hotel', 'India', 'Juliett', 'Kilo', 'Lima', 'Mike']);
+    check('le tour se lance', ecran() === 'screen-mon-tour');
+    log('       bouton : "' + $('btn-mon-pass').textContent + '"');
+    check('sans limite, le bouton ne compte rien',
+          !$('btn-mon-pass').textContent.includes('('));
+
+    let jamaisLaMeme = true;
+    for (let i = 0; i < 6; i++) {
+      const avantPasse = carte();
+      $('btn-mon-pass').click();
+      await wait(120);
+      if (carte() === avantPasse) jamaisLaMeme = false;
+    }
+    check('on peut passer autant de fois qu on veut', !$('btn-mon-pass').disabled);
+    check('et la carte passee ne revient jamais tout de suite', jamaisLaMeme);
+    check('le paquet est toujours entier',
+          parseInt($('mon-cards-left').textContent, 10) === 6);
+
+    log('SCENARIO 44 TERMINE');
+  } catch (e) {
+    log('EXCEPTION: ' + e.message + '\n' + e.stack);
+  }
+})();
+</script>
+</body>
+</html>

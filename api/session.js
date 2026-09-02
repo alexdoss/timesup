@@ -516,6 +516,20 @@ function cleTour(code) {
 }
 
 // L'organisateur confie le tour : à qui, avec quels mots, pour combien de temps.
+// Les règles de passe, ramenées à ce que le téléphone doit savoir. On les
+// valide ici plutôt que de faire confiance à ce qui arrive : une valeur
+// inconnue vaut « illimité », c'est-à-dire ce que faisait l'app avant.
+function reglesDePasse(brut) {
+  const modes = ['unlimited', 'limited', 'forbidden'];
+  const mode = modes.includes(brut?.mode) ? brut.mode : 'unlimited';
+  const limite = Math.max(0, Math.min(99, Number(brut?.limite) || 0));
+  return {
+    mode,
+    limite,
+    remise: brut?.remise === 'random' ? 'random' : 'bottom'
+  };
+}
+
 async function confierTour(req, res, code) {
   const config = analyser(await commandeKV(['HGET', cleSession(code), 'config']));
   if (!config) {
@@ -540,6 +554,10 @@ async function confierTour(req, res, code) {
     // d'habitude sans savoir pourquoi.
     reporte: req.body.reporte === true,
     manche: req.body.manche || null,
+    // Les règles de passe de la partie. Sans elles, le téléphone jouerait avec
+    // les siennes — passes illimitées, carte remise en bas — même sur une
+    // partie où l'organisateur a interdit de passer.
+    passe: reglesDePasse(req.body.passe),
     confieA: Date.now(),
     rendu: null
   });

@@ -146,9 +146,12 @@ export async function relancerSession(cartesParJoueur) {
 // reporte : ce tour reprend les secondes gagnées à la manche précédente. Le
 // téléphone ne peut pas le deviner — il ne connaît que la durée qu'on lui donne,
 // pas le réglage de la partie — et c'est ce qui lui permet de prévenir le joueur.
-export function confierTour(idJoueur, mots, duree, manche, reporte = false) {
+// `passe` porte les règles de passe de la partie. Sans elles, le téléphone
+// jouerait avec les siennes — passes illimitées et carte remise en bas — même
+// quand l'organisateur a interdit de passer. Deux appareils, deux jeux.
+export function confierTour(idJoueur, mots, duree, manche, reporte = false, passe = null) {
   return appeler('confierTour', {
-    code: courante.code, jeton: courante.jeton, idJoueur, mots, duree, manche, reporte
+    code: courante.code, jeton: courante.jeton, idJoueur, mots, duree, manche, reporte, passe
   });
 }
 

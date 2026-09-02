@@ -29,6 +29,7 @@ let pausedAuto = false;        // la pause en cours vient-elle d'un passage en a
 let puppetAnswer = null;       // réponse à la question d'effectif en mode simple (null / true / false)
 let turnEndTitle = '';         // titre du récapitulatif de tour (temps écoulé / plus de cartes)
 let turnEndLabel = '';         // qui vient de jouer, conservé pour les re-rendus après correction
+let tourAcheve = null;         // équipe et joueur du tour qu'on est en train de compter, notés avant la rotation
 let editingThemeId = null;     // thème maison ouvert dans la fiche d'édition
 let saisieMode = 'partagee';   // 'partagee' (QR) ou 'sequentielle' (on se passe le téléphone)
 let moiJoueur = null;          // l'organisateur, inscrit dans sa propre session
@@ -1918,7 +1919,11 @@ async function confierLeTourSiPossible() {
       game.reportTemps > 0 ? game.reportTemps : game.turnTime,
       { numero: game.currentRound + 1, sur: game.activeRounds.length,
         nom: round.name, icone: round.icon, regle: round.desc },
-      game.reportTemps > 0
+      game.reportTemps > 0,
+      // Les règles de passe partent avec le paquet : sans elles le téléphone
+      // jouerait avec les siennes, et on pourrait passer une carte sur une
+      // partie où l'organisateur l'a interdit.
+      { mode: game.passMode, limite: game.passLimit, remise: game.passReplace }
     );
     tourConfieA = idJoueur;
     afficherAttenteDuJoueur(getCurrentPlayer());
@@ -2426,6 +2431,15 @@ function endTurn(paquetVide = false) {
     ? `${game.turnPlayer} (${teamName})`
     : teamName;
 
+  // Noté AVANT la rotation : une fois l'équipe et le joueur avancés, l'état du
+  // jeu désigne le suivant, et les invités liraient « Sacha compte ses cartes »
+  // alors que c'est Lou qui vient de jouer.
+  tourAcheve = {
+    equipe: game.turnTeam,
+    joueur: game.nominativeMode ? game.turnPlayer : null,
+    raison: paquetVide ? 'paquet' : 'temps'
+  };
+
   // Paquet vidé avant la fin du temps : la même équipe, et le même joueur,
   // enchaînent sur la manche suivante avec ce qui reste au chrono. On ne passe
   // donc la main ni à l'équipe suivante ni au joueur suivant.
@@ -2435,7 +2449,11 @@ function endTurn(paquetVide = false) {
     switchTeam();
   }
   saveGame(game);
-  publierEtat('entre-tours');
+  // « comptage » et non « entre-tours » : le tour n'est pas fini, il est en
+  // train d'être compté. Annoncer la suite ici montrait aux invités le joueur
+  // suivant et un score d'avant correction, qui bougeait ensuite sous leurs
+  // yeux à chaque case cochée.
+  publierEtat('comptage', tourAcheve);
   renderTurnEnd();
   showScreen('screen-turn-end');
 }
@@ -2460,14 +2478,16 @@ function renderTurnEnd() {
 function onUncountCard(word) {
   if (!uncountCard(word)) return;
   saveGame(game);
-  publierEtat('entre-tours');
+  // Toujours « comptage » : corriger ne fait pas sortir de cet écran, et les
+  // invités doivent continuer d'attendre plutôt que de voir un score bouger.
+  publierEtat('comptage');
   renderTurnEnd();
 }
 
 function onCountCard(word) {
   if (!countCard(word)) return;
   saveGame(game);
-  publierEtat('entre-tours');
+  publierEtat('comptage');
   renderTurnEnd();
 }
 

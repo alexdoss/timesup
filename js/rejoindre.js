@@ -162,6 +162,12 @@ function proposerRejeu(etat) {
   session.cartesParJoueur = etat.cartesParJoueur;
   document.getElementById('rejouer-question').textContent =
     `Tu rejoues, ${session.prenom} ?`;
+  // La même pastille que sur la liste des arrivées et dans les équipes : on se
+  // reconnaît à sa couleur avant d'avoir lu son prénom.
+  const pastille = document.getElementById('rejouer-pastille');
+  const prenom = session.prenom || '';
+  pastille.textContent = prenom.slice(0, 1).toLocaleUpperCase();
+  pastille.style.background = prenom ? couleurDe(prenom) : 'var(--surface)';
   montrer('screen-rejouer');
 }
 
@@ -186,6 +192,7 @@ function reinitialiserSuivi() {
   dernierResultat = null;
   equipesConnues = null;
   monTour = null;
+  tourPerduVerifie = false;
   ['bloc-resultats', 'bloc-lancement', 'bloc-tour', 'bloc-comptage', 'bloc-a-toi', 'btn-voir-equipes']
     .forEach(id => { const el = document.getElementById(id); if (el) el.style.display = 'none'; });
   ['attente-joueurs', 'attente-total'].forEach(id => {
@@ -566,7 +573,7 @@ function rendreCartes() {
   bouton.disabled = reste > 0;
   bouton.textContent = reste > 0
     ? `Encore ${reste} carte${reste > 1 ? 's' : ''}`
-    : `✅ Envoyer mes ${cible} cartes`;
+    : `Envoyer mes ${cible} cartes`;
 
   // Le compte atteint, on ferme l'ajout plutôt que de refuser après coup.
   // Retirer une carte reste possible, et rouvre l'ajout.
@@ -618,8 +625,8 @@ function afficherEtatEnvoi(etat) {
   zone.textContent = {
     attente: '…',
     envoi: 'Envoi…',
-    ok: 'Enregistré ✓',
-    horsligne: '📡 Hors ligne — tes cartes sont gardées sur ce téléphone'
+    ok: 'Enregistré',
+    horsligne: 'Hors ligne — tes cartes sont gardées sur ce téléphone'
   }[etat] || '';
 }
 
@@ -735,10 +742,22 @@ async function rafraichirAttente() {
     // pendant qu'un autre joue ou qu'on regarde des résultats. Ça épargne une
     // requête sur deux à chaque invité, et autant au stockage.
     if (avantUnTour) await guetterMonTour();
-  } catch {
-    // Coupure passagère : on garde le dernier affichage plutôt que de le vider
+    lectures.reussies++;
+  } catch (err) {
+    // Coupure passagère : on garde le dernier affichage plutôt que de le vider.
+    // Mais on garde la trace : avaler l'erreur sans rien en dire a laissé un
+    // écran figé passer pour un réseau lent, et le défaut invisible.
+    lectures.echecs++;
+    lectures.dernier = err?.message || String(err);
+    if (typeof console !== 'undefined') console.warn('lecture du suivi :', err);
   }
 }
+
+// Lisible depuis les scénarios. Cumulatif à dessein : un compteur remis à zéro
+// au premier succès efface la panne qu'on cherchait, et un écran figé
+// redeviendrait indiscernable d'un écran qui n'a rien à montrer.
+const lectures = { reussies: 0, echecs: 0, dernier: null };
+window.rushLectures = () => ({ ...lectures });
 
 function arreterAttente() {
   clearInterval(minuterieAttente);
@@ -784,11 +803,20 @@ function rendreConfiguration(suivi, heureServeur) {
   // Le comptage fait partie de mon tour : oublier ici que je l'ai rendu me
   // ramènerait, deux secondes plus tard, le miroir « je compte mes cartes »
   // pour un comptage déjà envoyé. On n'oublie qu'une fois la partie repartie.
-  if (!ETAPES_TOUR.includes(etape) && etape !== 'comptage') monTourRendu = false;
+  if (!ETAPES_TOUR.includes(etape) && etape !== 'comptage') {
+    monTourRendu = false;
+    // Le tour perdu appartient au passé : on reposera la question au suivant.
+    tourPerduVerifie = false;
+  }
   const enTour = ETAPES_TOUR.includes(etape) && !!etat?.tour && !monTourFini;
   // Le tour est fini, mais pas encore compté : ni sablier, ni résultats.
   const enComptage = etape === 'comptage' && !!etat?.tour && !monTourFini;
   const enResultat = ETAPES_RESULTAT.includes(etape);
+  // L'état publié dit que c'est moi qui fais deviner et je n'ai plus de tour en
+  // mémoire : il se peut qu'un rechargement me l'ait fait perdre. On va le
+  // demander au serveur — sans bloquer l'affichage, qui reste juste tant que la
+  // réponse n'est pas là.
+  if (pourraisAvoirPerduMonTour(etat, etape)) verifierSiMonTourEstPerdu();
   // Dès la partie finie, on guette la suivante plutôt que l'état publié —
   // mais seulement quand il y a de nouvelles cartes à ressaisir. Sur une partie
   // à thèmes, rien à resaisir : la session n'est jamais relancée, et c'est la
@@ -1055,6 +1083,49 @@ function libelleRestantes(n) {
 
 let monTour = null;   // le paquet reçu, quand le tour m'est confié
 
+// ===== UN TOUR PERDU EN COURS DE ROUTE =====
+// Recharger la page pendant son propre tour efface le paquet en mémoire, et
+// avec lui les cartes déjà trouvées : elles ne vivent que sur ce téléphone,
+// c'est le prix du paquet prêté d'un coup. On ne peut donc ni reprendre le
+// tour ici — il faudrait repartir à zéro carte, ce qui vole des points à
+// l'équipe — ni le laisser filer en silence.
+//
+// Sans ce garde-fou, l'app se contentait de montrer l'écran des spectateurs :
+// le joueur se regardait lui-même faire deviner, sans rien pouvoir faire, et
+// le tour restait bloqué jusqu'à ce que l'organisateur s'en aperçoive.
+let tourPerduVerifie = false;
+
+// Que l'état publié m'annonce en train de faire deviner ne suffit pas : un
+// joueur peut très bien faire deviner depuis l'appareil de l'organisateur,
+// sans qu'aucun paquet n'ait été confié à son téléphone. Il n'y a alors rien
+// de perdu, et le sortir du suivi serait une faute.
+// Seul le serveur sait si ce paquet était à moi : on le lui demande, une fois.
+function pourraisAvoirPerduMonTour(etat, etape) {
+  if (tourPerduVerifie || partieEnCours || monTour || monTourRendu) return false;
+  if (!ETAPES_TOUR.includes(etape)) return false;
+  return !!etat?.tour?.joueur && etat.tour.joueur === session.prenom;
+}
+
+async function verifierSiMonTourEstPerdu() {
+  tourPerduVerifie = true;   // une seule question par tour, quoi qu'il arrive
+  let tour = null;
+  try {
+    ({ tour } = await appeler('lireTour', {
+      code: session.code, idJoueur: session.idJoueur
+    }));
+  } catch {
+    return;   // réseau : on retentera au tour suivant, sans rien casser ici
+  }
+  // `mots` n'arrive qu'au joueur à qui le paquet est confié : sa présence
+  // prouve que ce tour était bien sur ce téléphone, et que je l'ai perdu.
+  if (!tour || !Array.isArray(tour.mots) || tour.rendu) return;
+
+  bloquer('🔌', 'Ton tour a été interrompu',
+    "Le rechargement de la page a effacé les cartes déjà trouvées. "
+    + "Préviens l'organisateur : il reprendra ce tour sur son appareil.",
+    'Suivre la partie', ouvrirAttente);
+}
+
 async function guetterMonTour() {
   if (!session.idJoueur) return;
   try {
@@ -1140,6 +1211,9 @@ function lancerMonTour() {
     trouvees: [],
     manquees: [],
     restant: monTour.duree || 40,
+    // Compté ici et nulle part ailleurs : le tour se joue en local, personne
+    // d'autre ne peut tenir ce compte.
+    passes: 0,
     enPause: false,
     minuterie: null
   };
@@ -1288,6 +1362,7 @@ function peindreMonTour(sens) {
 
   mot.textContent = p.mots[p.index] ?? '';
   document.getElementById('mon-cards-left').textContent = p.mots.length - p.index;
+  rendreLeBoutonPasser();
 
   // Les mêmes seuils que chez l'organisateur — 10 s puis 5 s — pour que les
   // deux écrans changent de couleur au même moment de la partie.
@@ -1336,15 +1411,74 @@ function monTourTrouve() {
   publierMonEtat('tour');
 }
 
+// ===== LES RÈGLES DE PASSE =====
+// Elles viennent avec le paquet : le téléphone n'en invente aucune. Sans elles
+// on pouvait passer une carte sur une partie où l'organisateur l'avait
+// interdit, et autant de fois qu'on voulait quand il l'avait limitée — deux
+// appareils, deux jeux, et personne pour s'en apercevoir.
+// Une valeur absente vaut « illimité, remise en bas » : c'est ce que faisaient
+// les tours confiés avant que ces règles ne soient transmises.
+function reglesDePasse() {
+  const p = monTour?.passe || {};
+  return {
+    mode: ['unlimited', 'limited', 'forbidden'].includes(p.mode) ? p.mode : 'unlimited',
+    limite: Math.max(0, Number(p.limite) || 0),
+    remise: p.remise === 'random' ? 'random' : 'bottom'
+  };
+}
+
+function jePeuxPasser() {
+  const p = partieEnCours;
+  if (!p) return false;
+  const regles = reglesDePasse();
+  if (regles.mode === 'forbidden') return false;
+  if (regles.mode === 'limited' && p.passes >= regles.limite) return false;
+  return true;
+}
+
+// Le bouton dit ce qu'il reste : « Passer ✗ », « Passer (1) » quand c'est
+// compté, et il s'éteint quand il n'y a plus rien à passer. Le retirer
+// complètement déplacerait « Trouvé » sous le doigt, au milieu d'un tour.
+function rendreLeBoutonPasser() {
+  const bouton = document.getElementById('btn-mon-pass');
+  const regles = reglesDePasse();
+  const p = partieEnCours;
+  if (regles.mode === 'forbidden') {
+    bouton.textContent = 'Passer interdit';
+  } else if (regles.mode === 'limited') {
+    const reste = Math.max(0, regles.limite - (p?.passes || 0));
+    bouton.textContent = `Passer ✗ (${reste})`;
+  } else {
+    bouton.textContent = 'Passer ✗';
+  }
+  bouton.disabled = !jePeuxPasser();
+}
+
+// Remettre la carte plus loin sans qu'elle revienne aussitôt sous le nez du
+// joueur. La valeur doit être celle de `ECART_MINIMUM` dans game.js : deux
+// paquets qui se replacent différemment, ce sont deux jeux différents.
+const ECART_MINIMUM_PASSE = 2;
+
+function remettreLaCarte(mots, index, remise) {
+  const carte = mots.splice(index, 1)[0];
+  if (remise !== 'random') {
+    mots.push(carte);
+    return;
+  }
+  const plusTot = Math.min(index + ECART_MINIMUM_PASSE, mots.length);
+  const choix = mots.length - plusTot + 1;
+  mots.splice(plusTot + Math.floor(Math.random() * choix), 0, carte);
+}
+
 // Passer remet la carte plus loin : le paquet ne rétrécit pas, contrairement
-// à « Trouvé ». C'est la règle du jeu, appliquée ici en local.
-// Ni son ni vibration : seule la récompense se sent. Si les deux gestes
-// rendaient la même chose, aucun des deux ne dirait plus rien.
+// à « Trouvé ». Ni son ni vibration : seule la récompense se sent. Si les deux
+// gestes rendaient la même chose, aucun des deux ne dirait plus rien.
 function monTourPasse() {
   const p = partieEnCours;
   if (!p || p.enPause || p.index >= p.mots.length) return;
-  const carte = p.mots.splice(p.index, 1)[0];
-  p.mots.push(carte);
+  if (!jePeuxPasser()) return;
+  remettreLaCarte(p.mots, p.index, reglesDePasse().remise);
+  p.passes += 1;
   peindreMonTour('vers-gauche');
 }
 
@@ -1411,8 +1545,8 @@ function rendreMonComptage() {
   if (n > dernierComptage) chiffre.classList.add('pousse');
   dernierComptage = n;
 
-  T('mon-resume-comptees', `✅ Cartes comptées (${p.trouvees.length})`);
-  T('mon-resume-manquees', `↩️ Cartes non comptées (${p.manquees.length})`);
+  ecrireResumeDuTiroir('mon-resume-comptees', '✅ Comptées', p.trouvees.length);
+  ecrireResumeDuTiroir('mon-resume-manquees', '↩️ Non comptées', p.manquees.length);
 
   remplirListeComptage('mon-liste-comptees', p.trouvees, '✕', mot => {
     p.trouvees.splice(p.trouvees.indexOf(mot), 1);
@@ -1424,6 +1558,17 @@ function rendreMonComptage() {
     p.trouvees.push(mot);
     rendreMonComptage();
   });
+}
+
+// Le libellé, puis le compte dans son propre élément : il doit pouvoir porter
+// sa couleur sans que le texte du résumé en dépende.
+function ecrireResumeDuTiroir(id, libelle, combien) {
+  const resume = document.getElementById(id);
+  resume.textContent = libelle + ' ';
+  const compte = document.createElement('span');
+  compte.className = 'drawer-compte';
+  compte.textContent = String(combien);
+  resume.appendChild(compte);
 }
 
 function remplirListeComptage(id, mots, libelle, surClic) {
@@ -1569,24 +1714,52 @@ function afficherEquipes() {
   const contenu = document.getElementById('equipes-contenu');
   contenu.innerHTML = '';
 
+  // Deux cartes opposées, pas deux colonnes de texte : la couleur d'équipe est
+  // le signal le plus fort dont on dispose, et elle ne servait qu'à teinter une
+  // étiquette minuscule. Ici elle borde le bloc et porte le nom.
   equipesConnues.forEach(equipe => {
     const bloc = document.createElement('div');
     bloc.className = 'equipe-bloc';
+    if (equipe.couleur) bloc.style.borderTopColor = equipe.couleur;
 
     const titre = document.createElement('h4');
     titre.textContent = equipe.nom;
     titre.style.color = equipe.couleur;
     bloc.appendChild(titre);
 
+    // Combien ils sont : c'est la première question qu'on se pose en
+    // découvrant les équipes — est-ce que c'est équilibré ? Elle demandait
+    // jusqu'ici de compter les lignes à la main.
+    const joueurs = equipe.joueurs || [];
+    const compte = document.createElement('p');
+    compte.className = 'equipe-compte';
+    compte.textContent = joueurs.length > 1
+      ? `${joueurs.length} joueurs` : `${joueurs.length} joueur`;
+    bloc.appendChild(compte);
+
     const liste = document.createElement('ul');
-    (equipe.joueurs || []).forEach(joueur => {
+    joueurs.forEach(joueur => {
       const item = document.createElement('li');
+      // Le sien saute aux yeux : c'est la première chose qu'on cherche.
+      const cestMoi = joueur.toLocaleLowerCase() === (session.prenom || '').toLocaleLowerCase();
+      if (cestMoi) item.className = 'moi';
+
+      // Les mêmes pastilles que sur l'écran d'arrivée : l'invité les a vues
+      // il y a cinq minutes, il n'y a rien à lui réapprendre.
+      const pastille = document.createElement('span');
+      pastille.className = 'equipe-pastille';
+      pastille.style.background = cestMoi ? 'var(--secondary)' : couleurDe(joueur);
+      pastille.textContent = joueur.slice(0, 1).toLocaleUpperCase();
+      // L'initiale ne dit rien de plus que le prénom qui suit : un lecteur
+      // d'écran annoncerait « I, Inès ».
+      pastille.setAttribute('aria-hidden', 'true');
+
+      const nom = document.createElement('span');
+      nom.className = 'equipe-joueur';
       // textContent : les prénoms viennent du téléphone des autres invités
-      item.textContent = joueur;
-      // On souligne le sien : c'est la première chose qu'on cherche
-      if (joueur.toLocaleLowerCase() === (session.prenom || '').toLocaleLowerCase()) {
-        item.className = 'moi';
-      }
+      nom.textContent = joueur;
+
+      item.append(pastille, nom);
       liste.appendChild(item);
     });
     bloc.appendChild(liste);
@@ -1696,7 +1869,7 @@ function rendreAttente(etat) {
     const qui = document.createElement('span');
     qui.className = 'qui';
     // textContent : les prénoms viennent du téléphone des autres invités
-    qui.textContent = `${joueur.fini ? '●' : '○'} ${joueur.prenom} `;
+    qui.textContent = `${joueur.prenom} `;
     if (joueur.id === session.idJoueur) {
       const marque = document.createElement('span');
       marque.className = 'sans-tel';

@@ -123,10 +123,17 @@ function historique() {
 // n'est pas une fin de tour — le tour reprendra, avec le temps qui restait. Les
 // deux se ressemblent de l'extérieur, et les confondre revient à laisser la
 // table sans explication devant un tour qui disparaît.
-function resume(etape) {
+// `celuiQuiVientDeJouer` n'est fourni qu'au comptage. À cet instant le jeu a
+// déjà fait tourner les rôles — équipe suivante, joueur suivant — et lire
+// l'état du jeu nommerait donc le prochain au lieu de celui qui vient de finir.
+// C'est à l'appelant de l'avoir noté avant la rotation.
+function resume(etape, celuiQuiVientDeJouer) {
   const manche = ROUNDS[game.activeRounds[game.currentRound]];
   const scoresManche = getRoundScores();
   const enTour = etape === 'tour' || etape === 'pause';
+  // Le comptage fait encore partie du tour du point de vue des invités : ils
+  // doivent lire « X vérifie ses cartes », pas déjà le lancement du suivant.
+  const enComptage = etape === 'comptage';
 
   const paquet = {
     etape,
@@ -164,11 +171,20 @@ function resume(etape) {
       // Le temps restant AU MOMENT de la publication. L'invité le rejoue à
       // partir de l'heure du serveur, sans jamais consulter sa propre horloge.
       restant: game.timeLeft
-    } : null,
+    } : (enComptage && celuiQuiVientDeJouer ? {
+      equipe: celuiQuiVientDeJouer.equipe,
+      joueur: celuiQuiVientDeJouer.joueur,
+      // Le tour ne tourne plus : ces deux-là n'ont plus de sens ici, mais
+      // l'écran des invités attend la même forme.
+      duree: 0, restant: 0,
+      raison: celuiQuiVientDeJouer.raison
+    } : null),
     // Qui s'apprête à jouer, sur l'écran de début de tour. À ne pas confondre
     // avec `tour` : celui-ci décrit le tour en cours, et entre deux tours il
     // désignerait encore celui qui vient de finir.
-    aVenir: enTour ? null : {
+    // Pendant le comptage non plus : la question n'est pas encore « qui joue
+    // ensuite », et l'annoncer ferait défiler le tour suivant trop tôt.
+    aVenir: (enTour || enComptage) ? null : {
       equipe: game.currentTeam,
       joueur: game.nominativeMode ? getCurrentPlayer() : null
     }
@@ -211,7 +227,7 @@ async function envoyer(battementSeul, secondEssai = false) {
         code: etat.code,
         jeton: etat.jeton,
         v: etat.version,
-        etat: resume(etapeCourante)
+        etat: resume(etapeCourante, tourQuiSAcheve)
       })
     });
 
@@ -247,9 +263,15 @@ async function envoyer(battementSeul, secondEssai = false) {
 
 // Le seul point d'entrée depuis le jeu. Sans session active, ne fait rien —
 // ce qui permet d'appeler cette fonction partout sans se soucier du mode de partie.
-export function publierEtat(etape) {
+// Retenu entre deux publications : les battements republient le même bulletin,
+// et pendant tout le comptage ils doivent continuer de nommer celui qui vient
+// de jouer, pas de retomber sur l'état du jeu — qui parle déjà du suivant.
+let tourQuiSAcheve = null;
+
+export function publierEtat(etape, celuiQuiVientDeJouer) {
   if (!etat) return;
   etapeCourante = etape;
+  tourQuiSAcheve = etape === 'comptage' ? (celuiQuiVientDeJouer || tourQuiSAcheve) : null;
   if (!battement) relancerBattement();
   envoyer(false);
 }

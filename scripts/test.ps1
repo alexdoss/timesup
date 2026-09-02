@@ -70,6 +70,8 @@ $SCENARIOS = @(
   @{ f = '40-report-du-temps.html';                 b = 200000; p = 'an' }
   @{ f = '41-report-du-temps-a-distance.html';    b = 360000; p = 'ao' }
   @{ f = '42-arrivee-de-l-invite.html';           b = 240000; p = 'ap' }
+  @{ f = '43-tour-perdu-au-rechargement.html';    b = 240000; p = 'aq' }
+  @{ f = '44-regles-de-passe-a-distance.html';    b = 300000; p = 'ar' }
 )
 
 function Resolve-Chrome {

@@ -62,6 +62,10 @@ function Get-VuePublique($s) {
     ouverte         = $s.ouverte
     suiviSeul       = [bool]$s.suiviSeul
     inscription     = [bool]$s.inscription
+    # Combien de personnes l organisateur attend, pour que les invites sachent
+    # qu il en manque encore. Zero sur les sessions ouvertes avant que ce
+    # nombre ne soit transmis : on retombe alors sur l ancien comportement.
+    effectifPrevu   = [int]($s.effectifPrevu ?? 0)
     partie          = [int]($s.partie ?? 1)
     joueurs         = $liste
     total           = $total
@@ -96,6 +100,9 @@ function Invoke-FausseSession($corps) {
       suiviSeul       = $suiviSeul
       inscription     = $inscription
       attendus        = $attendus
+      # Combien de personnes on attend, a ne pas confondre avec `attendus`,
+      # qui est une liste de prenoms.
+      effectifPrevu   = [Math]::Max(0, [Math]::Min(30, [int]($corps.effectifPrevu ?? 0)))
       partie          = 1
       joueurs         = @{}
     }

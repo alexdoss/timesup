@@ -1782,7 +1782,14 @@ function masquerEquipes() {
 
 // Au-delà de trois prénoms la phrase devient une liste qu'on ne lit plus :
 // on repasse au compte, qui dit la même chose en un coup d'œil.
-function titreDeLAttente(enRetard, inscriptionSeule) {
+//
+// `manquants` : les personnes qu'on attend encore et qui ne sont même pas
+// arrivées. Sans elles, l'écran annonçait « tout le monde est prêt » à trois
+// joueurs sur six — il ne comptait que ceux qu'il voyait.
+function titreDeLAttente(enRetard, inscriptionSeule, manquants = 0) {
+  if (!enRetard.length && manquants > 0) {
+    return manquants === 1 ? 'Il manque encore un joueur' : `Il manque encore ${manquants} joueurs`;
+  }
   if (!enRetard.length) return 'Tout le monde est prêt';
   if (enRetard.length > 3) {
     return inscriptionSeule
@@ -1812,9 +1819,13 @@ function rendreAttente(etat) {
   // les relancer à voix haute, la seule action utile à ce moment-là. Et les
   // grains montrent où chacun en est, donc nommer ne revient pas à accuser.
   const enRetard = (etat.joueurs || []).filter(j => !j.fini).map(j => j.prenom);
+  // Ceux qui ne sont pas encore arrivés. L'organisateur a annoncé combien il
+  // en attend ; sans ce nombre — sessions ouvertes avant cette version — on
+  // retombe sur l'ancien comportement, qui ne compte que les présents.
+  const manquants = Math.max(0, (Number(etat.effectifPrevu) || 0) - (etat.joueurs || []).length);
   document.getElementById('attente-titre').textContent =
     configEnCours ? 'Configuration de la partie en cours'
-                  : titreDeLAttente(enRetard, inscriptionSeule);
+                  : titreDeLAttente(enRetard, inscriptionSeule, manquants);
   document.getElementById('attente-sous').textContent = configEnCours
     ? "L'organisateur prépare la partie. Elle démarre juste après."
     : (!enRetard.length
@@ -1896,11 +1907,15 @@ function rendreAttente(etat) {
   });
 
   const prets = etat.joueurs.filter(j => j.fini).length;
+  // Le compte se fait sur l'effectif annoncé par l'organisateur, pas sur les
+  // seuls arrivés : « 3 sur 3 ont terminé » était vrai et trompeur quand il en
+  // attendait six. On retombe sur les présents quand il n'a rien annoncé.
+  const attendu = Math.max(Number(etat.effectifPrevu) || 0, etat.joueurs.length);
   document.getElementById('attente-total').textContent = inscriptionSeule
     ? `${etat.joueurs.length} joueur(s) inscrit(s)`
     : (configEnCours
         ? `${etat.total} cartes dans le paquet`
-        : `${prets} joueur(s) sur ${etat.joueurs.length} ont terminé · ${etat.total} cartes`);
+        : `${prets} joueur(s) sur ${attendu} ont terminé · ${etat.total} cartes`);
 }
 
 // Revenir modifier repasse le joueur en saisie : côté organisateur, le

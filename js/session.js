@@ -57,8 +57,12 @@ async function appeler(action, donnees = {}) {
 // dans tous les cas.
 // joueursAttendus : liste fermée, quand on rejoue avec les mêmes personnes.
 // Les invités choisissent alors leur prénom au lieu de le saisir.
-export async function ouvrirSession(cartesParJoueur, joueursAttendus = []) {
-  const reponse = await appeler('creer', { cartesParJoueur, joueursAttendus });
+// effectifPrevu : combien de personnes l'organisateur attend. À ne pas
+// confondre avec `joueursAttendus`, qui est une liste de prénoms. Sans ce
+// nombre, les invités ne peuvent pas savoir qu'il en manque encore : ils
+// voyaient « tout le monde est prêt » à trois quand on en attendait six.
+export async function ouvrirSession(cartesParJoueur, joueursAttendus = [], effectifPrevu = 0) {
+  const reponse = await appeler('creer', { cartesParJoueur, joueursAttendus, effectifPrevu });
   courante = {
     code: reponse.code,
     jeton: reponse.jeton,

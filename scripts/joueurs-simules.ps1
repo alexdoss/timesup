@@ -10,6 +10,12 @@
     pwsh -File scripts/joueurs-simules.ps1 -Code Y4X6 -Prenoms Lou,Sacha
     pwsh -File scripts/joueurs-simules.ps1 -Code Y4X6            # veille seule
     pwsh -File scripts/joueurs-simules.ps1 -Code Y4X6 -Trouvees 4
+    pwsh -File scripts/joueurs-simules.ps1 -Code Y4X6 -Prenoms Lou -Prod
+
+  -Prod vise le site en ligne au lieu du serveur de developpement. Les vraies
+  parties d essai s y jouent aussi, et rien ne distingue un code de l un de
+  l autre : sans ce drapeau, le script cherche la partie au mauvais endroit et
+  ne trouve rien.
 
   Le script inscrit les prenoms demandes, leur fait deposer un paquet de cartes,
   puis reste en veille : des qu'un tour est confie a l'un d'eux, il le joue et
@@ -23,6 +29,10 @@ param(
   [Parameter(Mandatory = $true)][string]$Code,
   [string]$Prenoms = '',
   [int]$Port = 8080,
+  # Ou tourne la partie. Par defaut le serveur de developpement ; -Prod vise le
+  # site en ligne, parce que le PM y essaie aussi de vraies parties.
+  [switch]$Prod,
+  [string]$Site = 'https://rush-alexina.vercel.app',
   # Combien de cartes le joueur simule trouve a chaque tour. -1 = tout le paquet,
   # ce qui vide la manche et declenche le report du temps restant.
   [int]$Trouvees = 5,
@@ -34,7 +44,7 @@ param(
 )
 
 $ErrorActionPreference = 'Stop'
-$racine = "http://localhost:$Port/api/session"
+$racine = if ($Prod) { "$Site/api/session" } else { "http://localhost:$Port/api/session" }
 
 function Appeler([string]$action, [hashtable]$corps = @{}) {
   $corps['action'] = $action
@@ -42,12 +52,12 @@ function Appeler([string]$action, [hashtable]$corps = @{}) {
     return Invoke-RestMethod -Uri $racine -Method Post -ContentType 'application/json' `
                              -Body ($corps | ConvertTo-Json -Compress -Depth 6)
   } catch {
-    $reponse = $_.Exception.Response
-    if ($reponse) {
-      $lecteur = [System.IO.StreamReader]::new($reponse.GetResponseStream())
-      throw "$action a echoue : " + $lecteur.ReadToEnd()
-    }
-    throw
+    # PowerShell 7 rend un HttpResponseMessage, pas l objet .NET Framework :
+    # appeler GetResponseStream() dessus masquait la vraie erreur derriere une
+    # panne du gestionnaire d erreur lui-meme. Le corps est deja lu pour nous.
+    $detail = $_.ErrorDetails?.Message
+    if (-not $detail) { $detail = $_.Exception.Message }
+    throw "$action a echoue sur $racine : $detail"
   }
 }
 

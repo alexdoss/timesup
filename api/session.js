@@ -174,6 +174,11 @@ async function creer(req, res) {
   const cartesParJoueur = Math.max(2, Math.min(15, parseInt(req.body.cartesParJoueur, 10) || 5));
   const mode = req.body.mode === 'nominatif' ? 'nominatif' : 'simple';
   const attendus = nettoyerListe(req.body.joueursAttendus);
+  // Combien de personnes l'organisateur attend. À ne pas confondre avec
+  // `attendus`, qui est une liste de prénoms. Sans ce nombre, les invités
+  // lisaient « tout le monde est prêt » à trois quand on en attendait six :
+  // ils ne comptent que ceux qui sont déjà arrivés.
+  const effectifPrevu = Math.max(0, Math.min(30, parseInt(req.body.effectifPrevu, 10) || 0));
 
   // Partie jouée avec des thèmes prédéfinis : personne ne saisit de cartes, la
   // session ne sert qu'à regarder. Elle naît donc close — il n'y a rien à
@@ -294,6 +299,11 @@ function etat(req, res, session) {
     cartesParJoueur: session.config.cartesParJoueur,
     mode: session.config.mode,
     attendus: session.config.attendus || [],
+    // Combien de personnes l'organisateur attend, pour que les invités sachent
+    // qu'il en manque encore. Zéro sur les sessions ouvertes avant que ce
+    // nombre ne soit transmis : on retombe alors sur l'ancien comportement,
+    // qui ne compte que les arrivés.
+    effectifPrevu: Number(session.config.effectifPrevu) || 0,
     ouverte: session.config.ouverte !== false,
     // Session de suivi seul : rien à saisir, on entre directement en spectateur
     suiviSeul: session.config.suiviSeul === true,

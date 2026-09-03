@@ -913,7 +913,10 @@ async function demarrerSessionPartagee() {
     const recyclable = modeRejeu && !!sessionCourante();
     const session = recyclable
       ? { ...sessionCourante(), ...(await relancerSession(game.numCards)) }
-      : await ouvrirSession(game.numCards, modeRejeu ? listeJoueurs : []);
+      // `joueursAttendus` est l'effectif que l'organisateur vient de régler.
+      // Sans l'envoyer, les invités ne peuvent pas savoir qu'il en manque
+      // encore : ils lisaient « tout le monde est prêt » à trois sur six.
+      : await ouvrirSession(game.numCards, modeRejeu ? listeJoueurs : [], joueursAttendus);
 
     afficherInvitation(
       creerQrSvg(adresseInvitation(), { taille: 190 }),

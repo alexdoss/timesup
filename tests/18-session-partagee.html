@@ -118,6 +118,22 @@ const ENV = { KV_REST_API_URL: URL_KV, KV_REST_API_TOKEN: 'jeton-test' };
     res = await appeler({ action: 'creer', cartesParJoueur: 999 });
     check('un nombre de cartes aberrant est ramene dans les bornes', res.body.cartesParJoueur === 15);
 
+    // L'effectif attendu ne sert a rien s'il ne survit pas a la creation : il doit
+    // etre range dans la session, pas seulement lu. Sans cette verification, le
+    // serveur repondait 0 a tout le monde et les invites se croyaient au complet.
+    res = await appeler({ action: 'creer', cartesParJoueur: 3, effectifPrevu: 6 });
+    const codeEffectif = res.body.code;
+    res = await appeler({ action: 'etat', code: codeEffectif });
+    check('l effectif attendu est conserve puis rendu', res.body.effectifPrevu === 6);
+
+    res = await appeler({ action: 'creer', cartesParJoueur: 3, effectifPrevu: 900 });
+    res = await appeler({ action: 'etat', code: res.body.code });
+    check('un effectif aberrant est ramene dans les bornes', res.body.effectifPrevu === 30);
+
+    res = await appeler({ action: 'creer', cartesParJoueur: 3 });
+    res = await appeler({ action: 'etat', code: res.body.code });
+    check('sans effectif annonce, la session en rend zero', res.body.effectifPrevu === 0);
+
     // ===== Etat initial =====
     res = await appeler({ action: 'etat', code });
     check('la session est ouverte', res.code === 200 && res.body.ouverte === true);

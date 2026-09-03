@@ -210,7 +210,8 @@ async function creer(req, res) {
   const jeton = tirerIdentifiant();
   const config = {
     creee: Date.now(), cartesParJoueur, mode, jeton,
-    ouverte: !suiviSeul, attendus, partie: 1, suiviSeul, inscription
+    ouverte: !suiviSeul, attendus, partie: 1, suiviSeul, inscription,
+    effectifPrevu
   };
 
   await commandeKV(['HSET', cleSession(code), 'config', JSON.stringify(config)]);

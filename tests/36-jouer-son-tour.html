@@ -277,7 +277,7 @@ localStorage.removeItem('timesup_rejoint');
     check('et combien de cartes il reste',
           A('distant-restantes').textContent.includes('Cartes restantes'));
     check('l ecran de lancement a cede la place',
-          A('round-scores').style.display === 'none'
+          A('bloc-tour-a-venir').style.display === 'none'
           && A('round-header').style.display === 'none');
     check('aucun mot du paquet chez l organisateur non plus',
           !paquet.some(mot => A('bloc-tour-distant').textContent.includes(mot)));
@@ -449,7 +449,7 @@ localStorage.removeItem('timesup_rejoint');
       check('l ecran du tour distant ne revient pas apres coup', !revenu);
       check('et l ecran de lancement est bien complet',
             A('round-header').style.display !== 'none'
-            && A('round-scores').style.display !== 'none');
+            && A('bloc-tour-a-venir').style.display !== 'none');
     }
     check('et le tour suivant peut etre lance',
           A('btn-start-turn').style.display !== 'none'

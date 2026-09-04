@@ -584,6 +584,55 @@ body {
   display: none;
 }
 
+/* Le bandeau ouvre l'écran de lancement. Il porte déjà sa propre marge basse,
+   écrite pour les invités : la laisser s'ajouter au `gap` de la colonne creusait
+   34 px entre lui et la première aire. */
+.round-content .suivi-bandeau {
+  margin-bottom: 0;
+}
+
+/* LE TOUR PERDU — un fait, pas une attente. Le rouge est celui des erreurs :
+   quelque chose s'est cassé du côté du joueur, et l'organisateur doit le voir
+   sans lire. Le bloc reste sobre pour autant — il annonce une déconnexion, pas
+   un danger que l'on court. */
+.alerte-tour {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  text-align: center;
+  background: var(--error-soft);
+  border: 1px solid rgba(239, 68, 68, 0.45);
+  border-radius: var(--r-lg);
+  padding: 20px 16px;
+}
+
+.alerte-emoji {
+  font-size: 2.6rem;
+  line-height: 1;
+}
+
+.alerte-titre {
+  font-size: 1.05rem;
+  font-weight: 700;
+}
+
+.alerte-quoi {
+  font-size: 0.85rem;
+  color: var(--muted-strong);
+  line-height: 1.45;
+}
+
+/* Le bloc et son bouton forment un seul geste : les séparer par le `gap` de la
+   colonne les faisait flotter à deux hauteurs différentes. */
+#bloc-tour-perdu {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
 .round-content.reparti #round-header {
   padding-top: 22px;
   padding-bottom: 22px;

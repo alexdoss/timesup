@@ -180,6 +180,9 @@ function Invoke-FausseSession($corps) {
     $t.rendu = [ordered]@{
       trouvees = @($corps.trouvees); manquees = @($corps.manquees)
       restant = [Math]::Max(0, [int]($corps.restant ?? 0))
+      # perdu : le telephone du joueur a recharge sa page en plein tour. Il rend
+      # un tour vide sans l avoir termine — voir api/session.js.
+      perdu = ($corps.perdu -eq $true)
       renduA = (Get-HorodatageMs) }
     return @{ statut = 200; corps = @{ rendu = $true } }
   }

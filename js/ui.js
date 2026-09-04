@@ -3,10 +3,6 @@
 
 export function applyTeamAccent(teamColor) {
   document.documentElement.style.setProperty('--accent', teamColor);
-  const teamLabel = document.getElementById('game-team-label');
-  if (teamLabel) {
-    teamLabel.style.background = teamColor + '22';
-  }
 }
 
 export function showScreen(id) {
@@ -49,7 +45,10 @@ export function showCard(word, remaining) {
 // report : le rappel du temps repris de la manche précédente, vide s'il n'y en a pas.
 export function updateRoundScreen(round, teams, roundLabel, roundScores = [0, 0],
                                   restantes = '', report = '') {
-  document.getElementById('round-title').textContent = roundLabel;
+  // Le bandeau porte la manche : « Manche 2/3 · 🎭 Mime ». Le corps de l'écran
+  // n'a donc plus à la nommer, il en donne la règle.
+  document.getElementById('round-bandeau-manche').textContent =
+    `${roundLabel} · ${round.icon} ${round.name}`;
   const roundName = document.getElementById('round-name-label');
   if (roundName) roundName.textContent = `${round.icon} ${round.name}`;
   document.getElementById('round-icon').textContent = round.icon;
@@ -67,11 +66,6 @@ export function updateRoundScreen(round, teams, roundLabel, roundScores = [0, 0]
 export function updateTurnInfo(teamName) {
   document.getElementById('current-team-turn').textContent =
     `🎯 C'est au tour de : ${teamName}`;
-}
-
-export function updateGameHeader(roundName, teamName) {
-  document.getElementById('game-round-label').textContent = roundName;
-  document.getElementById('game-team-label').textContent = teamName;
 }
 
 export function showPauseOverlay(title, info, teams) {

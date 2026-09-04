@@ -99,7 +99,13 @@ try {
   check('l ecran annonce cette equipe', $('current-team-turn').textContent.includes(nomAttendu));
 
   $('btn-start-turn').click();
-  check('le bandeau de jeu affiche la meme equipe', $('game-team-label').textContent === nomAttendu);
+  // L ecran de jeu n a plus d en-tete depuis le lot 5 : rien n y nomme l equipe,
+  // c est la teinte de l ecran qui la porte. On verifie donc la couleur.
+  // La teinte vit dans le cadre de l app, pas dans celui de la page de test :
+  // interroger `document` ici lirait la racine du mauvais document.
+  check('l ecran de jeu prend la couleur de cette equipe',
+        w.getComputedStyle(w.document.documentElement)
+          .getPropertyValue('--accent').trim() === etat.teams[etat.startingTeam].color);
 
   log('SCENARIO 06 TERMINE');
 } catch (e) {

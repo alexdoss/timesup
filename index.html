@@ -607,37 +607,43 @@
               title="Corriger le tour précédent" style="display:none">←</button>
       <button class="btn-close" onclick="confirmQuit()">✕</button>
       <div class="round-content">
-        <!-- Trois aires, chacune sur son fond : la manche, le score, à qui de
-             jouer. Elles n'apparaissent comme telles que sur l'écran de
-             lancement — c'est la classe « reparti » qui les dessine. -->
+        <!-- LE BANDEAU — le même que celui des invités, aux mêmes classes. Il ne
+             quitte jamais cet écran, quel que soit l'état qu'il porte : c'est ce
+             qui fait des cinq états qui s'y succèdent un seul écran. Il répond
+             à « où en est la partie ? », question qu'on se pose en relevant la
+             tête, et il dispense tous les états de redire la manche et le score.
+             Deux téléphones posés côte à côte montrent enfin la même chose. -->
+        <div id="round-bandeau" class="suivi-bandeau">
+          <div class="bandeau-haut">
+            <span id="round-bandeau-manche" class="bandeau-manche"></span>
+            <button id="btn-voir-equipes" class="bandeau-equipes">👥 Équipes</button>
+          </div>
+          <!-- Comme un tableau d'affichage de gymnase : le nom en petit, le
+               chiffre en grand dessous. Les deux scores s'alignent, donc se
+               comparent d'un coup d'œil. -->
+          <div class="bandeau-score">
+            <div class="bandeau-eq">
+              <span id="round-team1-name" class="bandeau-nom">Équipe 1</span>
+              <b id="round-team1-score">0</b>
+            </div>
+            <span class="bandeau-tiret" aria-hidden="true"></span>
+            <div class="bandeau-eq">
+              <span id="round-team2-name" class="bandeau-nom">Équipe 2</span>
+              <b id="round-team2-score">0</b>
+            </div>
+          </div>
+          <p id="round-total" class="bandeau-total"></p>
+        </div>
+        <!-- Ce qu'on va jouer. La manche est nommée dans le bandeau : cette aire
+             ne la renomme pas, elle en donne la règle. -->
         <div id="round-header" class="aire">
-          <h2 id="round-title">Manche 1/3</h2>
           <p id="round-name-label" class="round-name-label">🗣️ Description libre</p>
           <div id="round-icon" class="round-icon">🗣️</div>
           <p id="round-description" class="round-desc"></p>
         </div>
-        <!-- Le grand chiffre est celui de la manche en cours ; le total de la
-             partie tient dans le rappel juste en dessous. -->
-        <div id="round-scores" class="bloc-score aire">
-          <p class="score-cap">Score de la manche</p>
-          <div class="score-board">
-            <div class="score-team">
-              <span id="round-team1-name">Équipe 1</span>
-              <span id="round-team1-score" class="score">0</span>
-            </div>
-            <div class="score-team">
-              <span id="round-team2-name">Équipe 2</span>
-              <span id="round-team2-score" class="score">0</span>
-            </div>
-          </div>
-          <p id="round-total" class="score-rappel"></p>
-        </div>
-        <!-- Qui s'apprête à jouer. Les deux lignes vivent dans la même aire :
-             les masquer séparément laisserait un cadre vide à l'écran. -->
         <!-- Ce qui décrit le tour qui va s'ouvrir : qui joue, avec combien de
-             temps et combien de cartes. Ces deux dernières lignes tiennent ici
-             plutôt que dans la manche : c'est l'enjeu du tour, et c'est juste
-             au-dessus du bouton, là où regarde celui qui va jouer. -->
+             temps et combien de cartes. Le score n'y est plus — il est monté
+             dans le bandeau, où il ne se dit qu'une fois. -->
         <div id="bloc-tour-a-venir" class="aire">
           <p id="current-team-turn" class="turn-info"></p>
           <p id="current-player" class="player-info"></p>
@@ -652,10 +658,11 @@
         <p id="attente-joueur-nom" class="attente-joueur" style="display:none"></p>
 
         <!-- Le tour a démarré ailleurs : l'organisateur voit exactement ce que
-             voient les invités — le sablier, et rien de plus. -->
+             voient les invités — le sablier, et rien de plus. La manche et le
+             score sont dans le bandeau, au-dessus. -->
         <div id="bloc-tour-distant" style="display:none">
-          <p id="distant-manche" class="score-cap"></p>
           <p id="distant-qui" class="turn-info"></p>
+          <!-- Le sable se pose avant le nombre : voir js/app.js -->
           <div id="distant-bloc-chrono" class="chrono-bloc">
             <p id="distant-chrono" class="chrono-invite">--</p>
           </div>
@@ -666,11 +673,25 @@
         <!-- Le tour est fini, le joueur arbitre son comptage : plus de sablier
              à faire tourner, mais la partie n'a pas encore avancé. -->
         <div id="bloc-comptage-distant" style="display:none">
-          <p id="dc-manche" class="score-cap"></p>
           <div id="dc-emoji" class="round-icon">🃏</div>
           <h2 id="dc-titre">Fin du tour !</h2>
           <p id="dc-qui" class="wizard-hint"></p>
           <div class="points-attente"><i></i><i></i><i></i></div>
+        </div>
+
+        <!-- LE TOUR PERDU — le téléphone du joueur a rechargé sa page en pleine
+             partie, et nous l'a dit. Sans ce bloc, l'organisateur regardait un
+             sablier tourner dans le vide, sans rien pour distinguer « il
+             réfléchit » de « il ne reviendra pas ». Un seul geste est offert :
+             reprendre. Une sortie qui saute le tour effacerait les points d'une
+             équipe sur un doigt posé de travers, un soir de partie. -->
+        <div id="bloc-tour-perdu" style="display:none">
+          <div class="alerte-tour">
+            <div class="alerte-emoji">🔌</div>
+            <p id="perdu-titre" class="alerte-titre"></p>
+            <p id="perdu-quoi" class="alerte-quoi"></p>
+          </div>
+          <button id="btn-reprendre-ici" class="btn btn-danger">Reprendre ce tour ici ▶️</button>
         </div>
         <!-- La porte de sortie de l'organisateur : elle vit sous tout le reste,
              sablier compris. On la cherche quand un joueur ne répond pas, on ne
@@ -678,17 +699,17 @@
         <div id="attente-du-joueur" style="display:none">
           <button id="btn-reprendre-tour" class="btn-link">Reprendre ce tour sur ce téléphone</button>
         </div>
-        <button id="btn-voir-equipes" class="btn-link">👥 Les équipes</button>
       </div>
     </div>
 
     <!-- ÉCRAN DE JEU -->
     <div id="screen-game" class="screen">
       <button id="btn-pause" class="btn-pause" title="Mettre en pause">⏸</button>
-      <div class="game-header">
-        <span id="game-round-label" class="round-label">Manche 1</span>
-        <span id="game-team-label" class="team-label">Équipe 1</span>
-      </div>
+      <!-- Pas d'en-tête « Manche 1 · Équipe 1 » : celui qui fait deviner vient
+           de quitter l'écran de lancement, qui les lui a annoncées toutes les
+           deux. Les répéter ici pousse la carte vers le bas alors qu'elle est la
+           seule chose à lire. C'est l'écran des invités qui jouent depuis leur
+           téléphone, au caractère près. -->
       <div id="timer" class="timer">40</div>
       <div id="card" class="card">
         <span id="card-word">Mot</span>

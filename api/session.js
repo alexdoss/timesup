@@ -619,6 +619,11 @@ async function rendreTour(req, res, code) {
     // elles ouvriront la manche suivante. Seul ce téléphone les connaît, il
     // tenait le chrono.
     restant: Math.max(0, Math.floor(Number(req.body.restant) || 0)),
+    // Le téléphone du joueur a rechargé sa page en plein tour : il rend un tour
+    // vide, mais il ne l'a pas terminé pour autant. Sans cette marque,
+    // l'organisateur enchaînerait sur le tour suivant avec zéro point compté et
+    // sans jamais savoir qu'il s'est passé quelque chose.
+    perdu: req.body.perdu === true,
     renduA: Date.now()
   };
   await commandeKV(['SET', cleTour(code), JSON.stringify(tour), 'EX', DUREE_TOUR_S]);

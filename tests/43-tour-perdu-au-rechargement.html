@@ -115,6 +115,20 @@ const MANCHE = { numero: 1, sur: 3, nom: 'Description libre', icone: '💬',
           $('message-texte').textContent.includes('organisateur'));
     check('et laisse revenir au suivi', $('btn-message').style.display !== 'none');
 
+    // ===== CE QUE L ORGANISATEUR EN APPREND =====
+    // Le joueur ne doit pas avoir a prevenir qui que ce soit : son telephone
+    // rend le tour lui-meme, vide mais marque perdu. Sans cette marque,
+    // l organisateur enchainerait sur le tour suivant avec zero point compte,
+    // et personne ne saurait pourquoi.
+    const apres = await api('lireTour', { code, jeton });
+    check('le telephone a rendu le tour tout seul', !!apres.corps.tour?.rendu);
+    check('et l a marque perdu', apres.corps.tour?.rendu?.perdu === true);
+    check('sans inventer de cartes trouvees',
+          (apres.corps.tour?.rendu?.trouvees || []).length === 0);
+    // Le temps rendu vaut zero : ce telephone ne sait plus rien. C est
+    // l estimation du sablier de l organisateur qui fera foi, pas ce zero.
+    check('ni de secondes restantes', apres.corps.tour?.rendu?.restant === 0);
+
     $('btn-message').click();
     await wait(600);
     check('le bouton ramene au suivi', ecran() === 'screen-attente');

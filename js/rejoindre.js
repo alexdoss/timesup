@@ -1065,7 +1065,10 @@ const sablier = creerSablier({
   mention: 'tour-mention',
   restantes: 'tour-restantes'
 });
-document.getElementById('tour-bloc-chrono').insertAdjacentHTML('beforeend', svgSablier('inv'));
+// Le dessin se pose AVANT le nombre : on regarde le sable, puis la seconde
+// exacte si on la cherche. L'ordre inverse faisait lire le chiffre d'abord et
+// reléguait le sablier au rang d'illustration.
+document.getElementById('tour-bloc-chrono').insertAdjacentHTML('afterbegin', svgSablier('inv'));
 
 // Ce qu'il reste dans le paquet de la manche. Le même libellé que chez
 // l'organisateur, avec un mot pour la fin : c'est là que ça devient un enjeu.
@@ -1120,9 +1123,22 @@ async function verifierSiMonTourEstPerdu() {
   // prouve que ce tour était bien sur ce téléphone, et que je l'ai perdu.
   if (!tour || !Array.isArray(tour.mots) || tour.rendu) return;
 
+  // Le dire à l'organisateur plutôt que de charger le joueur de le faire. De
+  // son côté il regarde un sablier tourner dans le vide, sans rien pour
+  // distinguer « il réfléchit » de « il ne reviendra pas » : c'est ce téléphone,
+  // et lui seul, qui sait ce qui vient d'arriver. On rend donc un tour vide —
+  // les cartes trouvées sont parties avec le rechargement — mais marqué perdu,
+  // pour qu'il ne soit pas compté comme un tour joué.
+  try {
+    await appeler('rendreTour', {
+      code: session.code, idJoueur: session.idJoueur,
+      trouvees: [], manquees: [], restant: 0, perdu: true
+    });
+  } catch { /* réseau : l'organisateur garde sa porte de sortie manuelle */ }
+
   bloquer('🔌', 'Ton tour a été interrompu',
     "Le rechargement de la page a effacé les cartes déjà trouvées. "
-    + "Préviens l'organisateur : il reprendra ce tour sur son appareil.",
+    + "L'organisateur en est prévenu : il reprendra ce tour sur son appareil.",
     'Suivre la partie', ouvrirAttente);
 }
 

@@ -1,0 +1,549 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Rush — lancement de tour et jeu</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root {
+  --fond: #14102B; --fond-halo: #2A1F5C; --surface: #1E1846; --bord: #2E2660;
+  --texte: #FFF6F0; --doux: #A79BD6;
+  --violet: #7C3AED; --violet-clair: #B14BFF; --ambre: #FFB020;
+  --vert: #22C55E; --rouge: #EF4444;
+  --eq1: #FF4D8D; --eq2: #22C55E;
+  --e1: 4px; --e2: 8px; --e3: 16px; --e4: 24px; --e5: 32px; --e6: 48px;
+  --t1: .75rem; --t2: .875rem; --t3: 1rem; --t4: 1.375rem; --t5: 2rem; --t6: 3rem;
+  --r-bloc: 20px; --r-pastille: 100px; --ombre: 0 10px 30px rgba(0,0,0,.35);
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  font-family: 'Outfit', sans-serif;
+  background: radial-gradient(120% 45% at 50% 0%, var(--fond-halo) 0%, var(--fond) 58%);
+  color: var(--texte); padding: var(--e4); line-height: 1.5;
+}
+h1 { font-size: var(--t4); margin-bottom: var(--e1); }
+h2 { font-size: var(--t1); text-transform: uppercase; letter-spacing: .1em;
+     color: var(--ambre); margin: var(--e6) 0 var(--e3); font-weight: 700; }
+.intro { color: var(--doux); font-size: var(--t2); max-width: 880px; }
+.intro strong { color: var(--texte); }
+.intro + .intro { margin-top: var(--e2); }
+.rangee { display: flex; gap: var(--e4); flex-wrap: wrap; align-items: flex-start; }
+.colonne { display: flex; flex-direction: column; gap: var(--e2); }
+.etiquette { font-size: var(--t1); text-transform: uppercase; letter-spacing: .08em;
+             font-weight: 700; color: var(--doux); }
+.etiquette.avant { color: #7E7396; }
+.etiquette.apres { color: var(--vert); }
+.note { font-size: var(--t2); color: var(--doux); max-width: 320px; }
+.note b { color: var(--texte); font-weight: 600; }
+
+/* ═══════ LE TÉLÉPHONE ═══════ */
+.tel {
+  width: 320px; height: 620px; position: relative; overflow: hidden;
+  background: radial-gradient(120% 34% at 50% 0%, var(--fond-halo) 0%, var(--fond) 62%);
+  border: 1px solid var(--bord); border-radius: 28px; box-shadow: var(--ombre);
+  display: flex; flex-direction: column; padding: var(--e3);
+}
+.tel.terne { filter: saturate(.55) brightness(.92); }
+.fermer { position: absolute; top: 14px; right: 16px; background: none; border: none;
+          color: var(--doux); font-size: var(--t3); cursor: pointer; }
+
+/* ═══════ LE BANDEAU ═══════
+   Celui des invités, mot pour mot. C'est le point de la refonte : les deux
+   côtés de la table regardent enfin la même chose. */
+.bandeau {
+  flex: none; background: rgba(255,255,255,.04); border: 1px solid var(--bord);
+  border-radius: var(--r-bloc); padding: var(--e2) var(--e3) var(--e3);
+}
+.bandeau-haut { display: flex; align-items: center; justify-content: space-between; }
+.bandeau-manche {
+  font-size: var(--t1); font-weight: 800; letter-spacing: .1em;
+  text-transform: uppercase; color: var(--ambre);
+}
+.bandeau-equipes {
+  background: none; border: 1px solid var(--bord); border-radius: var(--r-pastille);
+  color: var(--doux); font-size: var(--t1); padding: 3px 10px; cursor: pointer;
+}
+.bandeau-score {
+  display: grid; grid-template-columns: 1fr 1px 1fr; align-items: center;
+  margin-top: var(--e2);
+}
+.bandeau-eq { text-align: center; display: flex; flex-direction: column; gap: 2px; }
+.bandeau-nom { font-size: var(--t1); color: var(--doux); font-weight: 600;
+               text-transform: uppercase; letter-spacing: .06em; }
+.bandeau-eq b { font-size: var(--t5); line-height: 1; font-variant-numeric: tabular-nums; }
+.bandeau-eq.a b { color: var(--eq1); }
+.bandeau-eq.b b { color: var(--eq2); }
+.bandeau-tiret { width: 1px; height: 34px; background: var(--bord); }
+.bandeau-total { text-align: center; font-size: var(--t1); color: var(--doux); margin-top: var(--e1); }
+
+/* ═══════ LE CORPS DU LANCEMENT ═══════ */
+.corps { flex: 1; display: flex; flex-direction: column; gap: var(--e3);
+         margin-top: var(--e3); overflow: hidden; }
+.aire { background: var(--surface); border: 1px solid var(--bord);
+        border-radius: var(--r-bloc); padding: var(--e3); text-align: center; }
+.manche-nom { font-size: var(--t1); font-weight: 700; text-transform: uppercase;
+              letter-spacing: .08em; color: var(--ambre); }
+.manche-icone { font-size: 2.6rem; line-height: 1.2; margin: var(--e1) 0; }
+.manche-regle { font-size: var(--t2); color: var(--doux); }
+
+/* ─── À qui de jouer ───
+   Le nom du joueur est la plus grosse chose de l'écran après le bouton : c'est
+   la seule information qu'on cherche en relevant la tête. La pastille porte la
+   couleur de l'équipe, qui teinte déjà tout l'écran. */
+.qui { display: flex; flex-direction: column; align-items: center; gap: var(--e1); }
+.qui-equipe {
+  display: inline-flex; align-items: center; gap: 6px; font-size: var(--t1);
+  font-weight: 700; text-transform: uppercase; letter-spacing: .08em;
+  padding: 3px 12px; border-radius: var(--r-pastille);
+  background: color-mix(in srgb, var(--eq1) 18%, transparent); color: var(--eq1);
+}
+.qui-nom { font-size: var(--t5); font-weight: 800; letter-spacing: -.02em; }
+.qui-detail { font-size: var(--t2); color: var(--doux); }
+.qui-detail b { color: var(--ambre); font-weight: 700; }
+
+.bouton {
+  flex: none; width: 100%; border: none; border-radius: var(--r-pastille);
+  padding: var(--e3); font-family: inherit; font-size: var(--t3); font-weight: 700;
+  color: #fff; background: linear-gradient(135deg, var(--violet), var(--violet-clair));
+  cursor: pointer; box-shadow: 0 8px 20px rgba(124,58,237,.35);
+}
+.lien { flex: none; background: none; border: none; color: var(--doux);
+        font-size: var(--t2); padding: var(--e2); cursor: pointer; }
+
+/* ═══════ L'ANCIEN ÉCRAN ═══════
+   Reproduit tel quel pour la comparaison : quatre blocs de même poids, et le
+   score dit deux fois — une fois par équipe, une fois en rappel. */
+.vieux-bloc { background: var(--surface); border: 1px solid var(--bord);
+              border-radius: 14px; padding: var(--e3); text-align: center; }
+.vieux-titre { font-size: var(--t4); font-weight: 700; }
+.vieux-petit { font-size: var(--t2); color: var(--doux); }
+.vieux-score { display: flex; justify-content: space-around; margin-top: var(--e2); }
+.vieux-score div { display: flex; flex-direction: column; font-size: var(--t2); color: var(--doux); }
+.vieux-score b { font-size: var(--t4); color: var(--texte); }
+
+/* ═══════ L'ÉCRAN DE JEU ═══════ */
+.entete-jeu { display: flex; align-items: center; justify-content: space-between;
+              flex: none; font-size: var(--t1); font-weight: 700;
+              text-transform: uppercase; letter-spacing: .1em; color: var(--doux); }
+.entete-jeu .equipe { color: var(--eq1); }
+.pastille-eq { display: inline-flex; align-items: center; gap: 6px;
+               padding: 3px 12px; border-radius: var(--r-pastille);
+               background: color-mix(in srgb, var(--eq1) 18%, transparent);
+               color: var(--eq1); font-size: var(--t1); font-weight: 700;
+               text-transform: uppercase; letter-spacing: .08em; }
+.pause { background: none; border: 1px solid var(--bord); border-radius: 50%;
+         width: 30px; height: 30px; color: var(--doux); cursor: pointer; font-size: .8rem; }
+.chrono { text-align: center; margin: var(--e2) 0; flex: none;
+          font-size: 3.4rem; font-weight: 800; line-height: 1;
+          letter-spacing: -.03em; color: var(--ambre); }
+.chrono.danger { color: var(--rouge); }
+.zone-carte { position: relative; flex: 1; display: flex; align-items: center; justify-content: center; }
+.carte {
+  width: 100%; min-height: 150px; display: flex; align-items: center; justify-content: center;
+  background: linear-gradient(160deg, #FFFFFF 0%, #F2ECFF 100%);
+  border-radius: var(--r-bloc); box-shadow: 0 12px 28px rgba(0,0,0,.4);
+  padding: var(--e4) var(--e3);
+}
+.carte span { color: #1A1035; font-size: 1.9rem; font-weight: 800; text-align: center;
+              letter-spacing: -.02em; }
+.restantes { text-align: center; font-size: var(--t2); color: var(--doux);
+             margin: var(--e2) 0; flex: none; }
+.restantes b { color: var(--texte); font-variant-numeric: tabular-nums; }
+.actions { display: grid; grid-template-columns: 1fr 1fr; gap: var(--e2); flex: none; }
+.actions button { border: none; border-radius: var(--r-pastille); padding: var(--e3);
+                  font-family: inherit; font-size: var(--t3); font-weight: 700; cursor: pointer; }
+.passer { background: rgba(255,255,255,.08); color: var(--doux); border: 1px solid var(--bord) !important; }
+.trouve { background: var(--vert); color: #06240F; }
+
+/* ═══════ LE SABLIER ═══════
+   Le dessin vient de js/sablier.js, partagé par les deux pages. Il est reproduit
+   ici tel quel : ce n'est pas lui qu'on retouche, c'est ce qu'il y a autour. */
+.chrono-bloc { display: flex; flex-direction: column; align-items: center; gap: 2px; }
+.sablier { width: 96px; height: 139px; flex-shrink: 0; }
+.sablier .sable { fill: var(--ambre); }
+.sablier .verre { fill: none; stroke: var(--bord); stroke-width: 3; stroke-linejoin: round; }
+.sablier .socle { fill: var(--bord); }
+.chrono-geant { font-size: 4.4rem; font-weight: 800; line-height: 1; color: var(--ambre);
+                font-variant-numeric: tabular-nums; }
+.mention { font-size: var(--t2); color: var(--doux); text-align: center; }
+
+/* ─── Le comptage vu d'ailleurs ───
+   Le sablier n'a plus rien à décompter : il cède la place. */
+.grand-emoji { font-size: 3.4rem; text-align: center; }
+
+/* ═══════ LE TOUR PERDU ═══════
+   L'organisateur attend un joueur qui ne reviendra pas. Aujourd'hui il attend
+   sans le savoir ; l'écran doit le lui dire, et lui rendre la main. */
+.attente-bloc { text-align: center; display: flex; flex-direction: column;
+                align-items: center; gap: var(--e2); }
+.points { display: flex; gap: 6px; }
+.points i { width: 7px; height: 7px; border-radius: 50%; background: var(--doux); opacity: .4; }
+.points i:nth-child(2) { opacity: .7; }
+.points i:nth-child(3) { opacity: 1; }
+.alerte {
+  background: color-mix(in srgb, var(--rouge) 14%, transparent);
+  border: 1px solid color-mix(in srgb, var(--rouge) 45%, transparent);
+  border-radius: var(--r-bloc); padding: var(--e3); text-align: center;
+  display: flex; flex-direction: column; align-items: center; gap: var(--e2);
+}
+.alerte-emoji { font-size: 2.4rem; }
+.alerte-titre { font-size: var(--t3); font-weight: 700; }
+.alerte-quoi { font-size: var(--t2); color: var(--doux); }
+.bouton.rattrape { background: linear-gradient(135deg, #DC2626, #EF4444);
+                   box-shadow: 0 8px 20px rgba(239,68,68,.3); }
+
+.legende { margin-top: var(--e6); border-top: 1px solid var(--bord); padding-top: var(--e4); }
+.legende ul { list-style: none; display: flex; flex-direction: column; gap: var(--e2); max-width: 880px; }
+.legende li { font-size: var(--t2); color: var(--doux); padding-left: var(--e3);
+              border-left: 2px solid var(--bord); }
+.legende li b { color: var(--texte); }
+.question { border-left-color: var(--ambre) !important; }
+.question b { color: var(--ambre) !important; }
+</style>
+</head>
+<body>
+
+<h1>Lancement de tour et jeu — l'écran de l'organisateur</h1>
+<p class="intro">Les deux derniers écrans de la partie à porter l'ancien habillage. Ce sont
+ceux que <strong>l'organisateur regarde toute la soirée</strong>, et depuis que les invités ont
+le leur, les deux se contredisent quand on pose deux téléphones côte à côte.</p>
+
+<h2>1 · Le lancement de tour</h2>
+<p class="intro">Aujourd'hui, quatre blocs de même poids se suivent, et le score est dit deux
+fois : une fois par équipe, une fois en rappel. On cherche <strong>qui joue</strong> — c'est
+justement ce qui est le plus bas et le plus petit.</p>
+<p class="intro">À droite, le bandeau des invités arrive chez l'organisateur. La manche et le
+score y montent, le corps de l'écran n'a plus qu'un sujet : <strong>le tour qui s'ouvre</strong>.</p>
+
+<div class="rangee" style="margin-top:var(--e4)">
+  <div class="colonne">
+    <span class="etiquette avant">Aujourd'hui</span>
+    <div class="tel terne">
+      <button class="fermer">✕</button>
+      <div class="corps" style="margin-top:var(--e5); gap:var(--e2)">
+        <div class="vieux-bloc">
+          <div class="vieux-titre">Manche 2/3</div>
+          <div class="vieux-petit">🎭 Mime</div>
+          <div style="font-size:2.2rem">🎭</div>
+          <div class="vieux-petit">Sans parler, ni bruit, ni objet.</div>
+        </div>
+        <div class="vieux-bloc">
+          <div class="vieux-petit">Score de la manche</div>
+          <div class="vieux-score">
+            <div>Les Renards<b>4</b></div>
+            <div>Les Loutres<b>6</b></div>
+          </div>
+          <div class="vieux-petit" style="margin-top:var(--e2)">Partie : 12 – 15</div>
+        </div>
+        <div class="vieux-bloc">
+          <div class="vieux-petit">Au tour des Renards</div>
+          <div class="vieux-petit">Camille fait deviner</div>
+          <div class="vieux-petit">14 cartes restantes</div>
+        </div>
+        <button class="bouton" style="opacity:.8">Lancer le tour ▶️</button>
+      </div>
+    </div>
+    <p class="note">Le score occupe le centre de l'écran alors qu'il ne change rien à ce
+    qu'on va faire. <b>Camille</b>, qui doit se lever, est en petit tout en bas.</p>
+  </div>
+
+  <div class="colonne">
+    <span class="etiquette apres">Proposition</span>
+    <div class="tel">
+      <button class="fermer">✕</button>
+      <div class="bandeau">
+        <div class="bandeau-haut">
+          <span class="bandeau-manche">Manche 2/3 · Mime</span>
+          <button class="bandeau-equipes">👥 Équipes</button>
+        </div>
+        <div class="bandeau-score">
+          <div class="bandeau-eq a"><span class="bandeau-nom">Renards</span><b>4</b></div>
+          <span class="bandeau-tiret"></span>
+          <div class="bandeau-eq b"><span class="bandeau-nom">Loutres</span><b>6</b></div>
+        </div>
+        <p class="bandeau-total">Partie : 12 – 15</p>
+      </div>
+      <div class="corps">
+        <div class="aire">
+          <div class="manche-icone">🎭</div>
+          <p class="manche-nom">Mime</p>
+          <p class="manche-regle">Sans parler, ni bruit, ni objet.</p>
+        </div>
+        <div class="aire qui">
+          <span class="qui-equipe">🦊 Renards</span>
+          <span class="qui-nom">Camille</span>
+          <span class="qui-detail">40 s · <b>14 cartes</b> restantes</span>
+        </div>
+        <div style="flex:1"></div>
+        <button class="bouton">Lancer le tour ▶️</button>
+      </div>
+    </div>
+    <p class="note">Le même bandeau que les invités, au même endroit. En dessous, deux
+    choses seulement : <b>ce qu'on joue</b>, et <b>qui se lève</b>.</p>
+  </div>
+</div>
+
+<h2>2 · Pendant qu'un autre joue</h2>
+<p class="intro">Le tour est parti sur le téléphone de Camille. L'organisateur ne joue pas :
+il <strong>regarde</strong>, comme toute la table. Deux moments se succèdent, et ce sont deux
+états du même écran de lancement — c'est pour ça qu'ils appartiennent à ce lot.</p>
+<p class="intro">Le sablier ne change pas : c'est le dessin partagé par les deux pages, et vous
+avez demandé à le garder. Ce qui change est <strong>ce qu'il y a autour</strong> — aujourd'hui
+la manche et le score sont redits en petit au-dessus de lui, alors que le bandeau les porte déjà.</p>
+
+<div class="rangee" style="margin-top:var(--e4)">
+  <div class="colonne">
+    <span class="etiquette avant">Aujourd'hui — le tour tourne</span>
+    <div class="tel terne">
+      <button class="fermer">✕</button>
+      <div class="corps" style="margin-top:var(--e5)">
+        <p class="vieux-petit" style="text-align:center">Score de la manche</p>
+        <p class="vieux-petit" style="text-align:center;margin-top:calc(-1 * var(--e2))">
+          Renards 4 – Loutres 6</p>
+        <p class="qui-detail" style="text-align:center">🎯 C'est au tour de Camille</p>
+        <div class="chrono-bloc">
+          <p class="chrono-geant">32</p>
+          <svg class="sablier" viewBox="0 0 100 145" aria-hidden="true">
+            <defs>
+              <clipPath id="a-h"><path d="M14,12 H86 L54,70 H46 Z"/></clipPath>
+              <clipPath id="a-b"><path d="M46,70 H54 L86,128 H14 Z"/></clipPath>
+            </defs>
+            <g clip-path="url(#a-h)"><rect class="sable" x="0" width="100" y="35" height="35"/></g>
+            <rect class="sable" x="48.6" width="2.8" y="70" height="18"/>
+            <g clip-path="url(#a-b)"><rect class="sable" x="0" width="100" y="110" height="18"/></g>
+            <path class="verre" d="M14,12 H86 L54,70 L86,128 H14 L46,70 Z"/>
+            <rect class="socle" x="8" y="6" width="84" height="6" rx="3"/>
+            <rect class="socle" x="8" y="128" width="84" height="6" rx="3"/>
+          </svg>
+        </div>
+        <p class="mention">14 cartes restantes</p>
+        <p class="mention">Camille joue depuis son téléphone.</p>
+        <div style="flex:1"></div>
+        <button class="lien" style="text-decoration:underline">Reprendre ce tour sur ce téléphone</button>
+      </div>
+    </div>
+    <p class="note">Deux lignes de score en tête, puis le nom, puis le chrono, puis le sablier :
+    <b>quatre choses qui se disputent le haut de l'écran</b> avant qu'on voie le sablier.</p>
+  </div>
+
+  <div class="colonne">
+    <span class="etiquette apres">Proposition — le tour tourne</span>
+    <div class="tel">
+      <button class="fermer">✕</button>
+      <div class="bandeau">
+        <div class="bandeau-haut">
+          <span class="bandeau-manche">Manche 2/3 · Mime</span>
+          <button class="bandeau-equipes">👥 Équipes</button>
+        </div>
+        <div class="bandeau-score">
+          <div class="bandeau-eq a"><span class="bandeau-nom">Renards</span><b>4</b></div>
+          <span class="bandeau-tiret"></span>
+          <div class="bandeau-eq b"><span class="bandeau-nom">Loutres</span><b>6</b></div>
+        </div>
+      </div>
+      <div class="corps" style="gap:var(--e2)">
+        <div class="qui" style="gap:var(--e1)">
+          <span class="qui-equipe">🦊 Renards</span>
+          <span class="qui-nom" style="font-size:var(--t4)">Camille fait deviner</span>
+        </div>
+        <div class="chrono-bloc">
+          <svg class="sablier" viewBox="0 0 100 145" aria-hidden="true">
+            <defs>
+              <clipPath id="b-h"><path d="M14,12 H86 L54,70 H46 Z"/></clipPath>
+              <clipPath id="b-b"><path d="M46,70 H54 L86,128 H14 Z"/></clipPath>
+            </defs>
+            <g clip-path="url(#b-h)"><rect class="sable" x="0" width="100" y="35" height="35"/></g>
+            <rect class="sable" x="48.6" width="2.8" y="70" height="18"/>
+            <g clip-path="url(#b-b)"><rect class="sable" x="0" width="100" y="110" height="18"/></g>
+            <path class="verre" d="M14,12 H86 L54,70 L86,128 H14 L46,70 Z"/>
+            <rect class="socle" x="8" y="6" width="84" height="6" rx="3"/>
+            <rect class="socle" x="8" y="128" width="84" height="6" rx="3"/>
+          </svg>
+          <p class="chrono-geant">32</p>
+        </div>
+        <p class="mention"><b style="color:var(--texte)">14 cartes</b> restantes</p>
+        <div style="flex:1"></div>
+        <button class="lien">Reprendre ce tour sur mon téléphone</button>
+      </div>
+    </div>
+    <p class="note">Le score monte dans le bandeau, le nom devient une phrase, et le sablier
+    récupère la place. <b>Le chiffre passe sous le verre</b> : on lit le dessin d'abord, la
+    seconde exacte ensuite — c'est l'ordre dans lequel on les regarde.</p>
+  </div>
+
+  <div class="colonne">
+    <span class="etiquette apres">Proposition — elle compte</span>
+    <div class="tel">
+      <button class="fermer">✕</button>
+      <div class="bandeau">
+        <div class="bandeau-haut">
+          <span class="bandeau-manche">Manche 2/3 · Mime</span>
+          <button class="bandeau-equipes">👥 Équipes</button>
+        </div>
+        <div class="bandeau-score">
+          <div class="bandeau-eq a"><span class="bandeau-nom">Renards</span><b>4</b></div>
+          <span class="bandeau-tiret"></span>
+          <div class="bandeau-eq b"><span class="bandeau-nom">Loutres</span><b>6</b></div>
+        </div>
+      </div>
+      <div class="corps">
+        <div style="flex:1"></div>
+        <div class="grand-emoji">🃏</div>
+        <p style="text-align:center;font-size:var(--t4);font-weight:700">Fin du tour !</p>
+        <p class="mention">Camille compte ses cartes.</p>
+        <div class="attente-bloc"><div class="points"><i></i><i></i><i></i></div></div>
+        <div style="flex:1"></div>
+      </div>
+    </div>
+    <p class="note">L'état que vous avez fait ajouter la semaine dernière côté invités, dans sa
+    version organisateur. Le sablier n'a plus rien à décompter : <b>il cède la place</b>.</p>
+  </div>
+</div>
+
+<h2>3 · L'écran de jeu</h2>
+<p class="intro">Le plus exigeant de l'app : lu d'un coup d'œil, sous pression, par quelqu'un
+qui parle en même temps. Les invités qui jouent depuis leur téléphone ont déjà cette version —
+<strong>chrono nu, carte, deux boutons</strong> — et vous avez validé qu'aucun en-tête ne devait
+la surmonter : celui qui fait deviner sait déjà quelle manche il joue, il vient de le lire.</p>
+<p class="intro">Chez l'organisateur, un doute demeure : en <strong>mode simple</strong>, sans
+prénoms, le téléphone passe d'une équipe à l'autre et rien d'autre ne dit à qui il appartient.
+D'où deux variantes à trancher.</p>
+
+<div class="rangee" style="margin-top:var(--e4)">
+  <div class="colonne">
+    <span class="etiquette avant">Aujourd'hui</span>
+    <div class="tel terne">
+      <button class="pause" style="position:absolute;top:14px;right:16px">⏸</button>
+      <div class="entete-jeu" style="margin-top:var(--e5)">
+        <span>Manche 2</span><span class="equipe">Les Renards</span>
+      </div>
+      <div class="chrono">32</div>
+      <div class="zone-carte"><div class="carte"><span>Tire-bouchon</span></div></div>
+      <p class="restantes">Cartes restantes : <b>14</b></p>
+      <div class="actions">
+        <button class="passer">Passer ✗</button>
+        <button class="trouve">Trouvé ✓</button>
+      </div>
+    </div>
+    <p class="note">L'en-tête répète ce que l'écran précédent vient d'annoncer, et pousse la
+    carte vers le bas.</p>
+  </div>
+
+  <div class="colonne">
+    <span class="etiquette apres">Variante A — nu</span>
+    <div class="tel">
+      <button class="pause" style="position:absolute;top:14px;right:16px">⏸</button>
+      <div class="chrono" style="margin-top:var(--e5)">32</div>
+      <div class="zone-carte"><div class="carte"><span>Tire-bouchon</span></div></div>
+      <p class="restantes">Cartes restantes : <b>14</b></p>
+      <div class="actions">
+        <button class="passer">Passer ✗</button>
+        <button class="trouve">Trouvé ✓</button>
+      </div>
+    </div>
+    <p class="note">Exactement l'écran des invités. La carte gagne la place de l'en-tête et
+    devient <b>la plus grosse chose de l'écran</b>, ce qu'elle devrait être.</p>
+  </div>
+
+  <div class="colonne">
+    <span class="etiquette apres">Variante B — une pastille</span>
+    <div class="tel">
+      <button class="pause" style="position:absolute;top:14px;right:16px">⏸</button>
+      <div style="margin-top:var(--e5);text-align:center;flex:none">
+        <span class="pastille-eq">🦊 Renards</span>
+      </div>
+      <div class="chrono">32</div>
+      <div class="zone-carte"><div class="carte"><span>Tire-bouchon</span></div></div>
+      <p class="restantes">Cartes restantes : <b>14</b></p>
+      <div class="actions">
+        <button class="passer">Passer ✗</button>
+        <button class="trouve">Trouvé ✓</button>
+      </div>
+    </div>
+    <p class="note">La manche disparaît, l'équipe reste — en pastille de couleur, pas en
+    en-tête. Le téléphone qui circule <b>dit toujours à qui il est</b>.</p>
+  </div>
+</div>
+
+<h2>4 · Le tour perdu — la dette du lot 5</h2>
+<p class="intro">Quand un joueur recharge sa page en plein tour, son téléphone a désormais de
+quoi s'en apercevoir et le lui dire. <strong>L'organisateur, lui, ne sait rien</strong> : il
+regarde « En attente de Camille… » et le sablier tourner dans le vide. Il finit par trouver le
+petit lien « Reprendre ce tour sur ce téléphone » — ou pas.</p>
+<p class="intro">La proposition : le téléphone du joueur <strong>signale au serveur</strong> qu'il
+a perdu son tour, et l'écran de l'organisateur bascule tout seul.</p>
+
+<div class="rangee" style="margin-top:var(--e4)">
+  <div class="colonne">
+    <span class="etiquette avant">Aujourd'hui</span>
+    <div class="tel terne">
+      <button class="fermer">✕</button>
+      <div class="corps" style="margin-top:var(--e5)">
+        <div class="aire">
+          <div class="manche-icone">🎭</div>
+          <p class="manche-nom">Mime</p>
+        </div>
+        <div class="attente-bloc">
+          <p class="qui-detail">⏳ En attente de Camille…</p>
+          <div class="points"><i></i><i></i><i></i></div>
+        </div>
+        <div style="flex:1"></div>
+        <button class="lien" style="text-decoration:underline">Reprendre ce tour sur ce téléphone</button>
+      </div>
+    </div>
+    <p class="note">Rien ne distingue « Camille réfléchit » de « Camille ne reviendra pas ».
+    On attend, parfois plusieurs minutes.</p>
+  </div>
+
+  <div class="colonne">
+    <span class="etiquette apres">Proposition</span>
+    <div class="tel">
+      <button class="fermer">✕</button>
+      <div class="bandeau">
+        <div class="bandeau-haut">
+          <span class="bandeau-manche">Manche 2/3 · Mime</span>
+          <button class="bandeau-equipes">👥 Équipes</button>
+        </div>
+        <div class="bandeau-score">
+          <div class="bandeau-eq a"><span class="bandeau-nom">Renards</span><b>4</b></div>
+          <span class="bandeau-tiret"></span>
+          <div class="bandeau-eq b"><span class="bandeau-nom">Loutres</span><b>6</b></div>
+        </div>
+      </div>
+      <div class="corps">
+        <div class="alerte">
+          <div class="alerte-emoji">🔌</div>
+          <p class="alerte-titre">Camille a perdu son tour</p>
+          <p class="alerte-quoi">Son téléphone a rechargé la page en pleine partie.
+          Les cartes qu'elle avait trouvées sont perdues.</p>
+        </div>
+        <div style="flex:1"></div>
+        <button class="bouton rattrape">Reprendre ce tour ici ▶️</button>
+        <button class="lien">Passer au tour suivant</button>
+      </div>
+    </div>
+    <p class="note">L'attente devient un fait, et le geste de secours devient
+    <b>le bouton principal</b> au lieu d'un lien qu'on cherche.</p>
+  </div>
+</div>
+
+<div class="legende">
+  <ul>
+    <li><b>Ce que ça coûte.</b> Le bandeau existe déjà en CSS, écrit pour les invités : il se
+    pose chez l'organisateur sans nouveau style. L'écran de jeu perd un bloc. Le tour perdu est
+    le seul vrai développement — une marque de plus sur le tour, comme <i>repris</i>.</li>
+    <li><b>Ce que ça ne touche pas.</b> Le moteur de jeu, les règles, le comptage. Rien de ce qui
+    décide des points ne bouge.</li>
+    <li class="question"><b>À trancher : variante A ou B</b> pour l'écran de jeu. A si l'on
+    considère que la carte prime toujours ; B si le téléphone qui circule doit dire à qui il est.</li>
+    <li class="question"><b>À trancher : « Passer au tour suivant »</b> sur l'écran du tour perdu.
+    Il abandonne les points de Camille pour ce tour. Utile quand elle est partie fumer, ou
+    tentation dangereuse ?</li>
+  </ul>
+</div>
+
+</body>
+</html>

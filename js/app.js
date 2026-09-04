@@ -3,7 +3,7 @@
 
 import { loadThemes } from './themes.js';
 import { game, ROUNDS, shuffle, resetGame, replayGame, buildDeck, startNewRound, getCurrentCard, cardFound, cardPassed, switchTeam, isRoundOver, isGameOver, nextRound, getCardsRemaining, addPlayer, removePlayer, assignTeamsRoundRobin, getCurrentPlayer, advancePlayer, getActiveRound, syncChosenTeams, canPass, getPlannedTeamSizes, beginTurn, closeTurn, reporterLeTempsRestant, uncountCard, countCard, getRoundScores, getSessionScores, playerExists, recordRound, getRoundHistory, getPlayerBreakdown, appliquerTourDistant } from './game.js';
-import { showScreen, updateTimer, showCard, updateRoundScreen, updateTurnInfo, updateGameHeader, showTurnResult, showRoundEnd, showFinalScreen, renderThemeButtons, renderPlayerList, updateCurrentPlayer, renderPlayerStats, renderRoundsSelector, applyTeamAccent, showResumeOption, renderSoundSetting, renderRules, showPauseOverlay, showPauseCountdown, hidePause, showPuppetConfirm, setRoundsNextEnabled, renderThemeEditor, showThemeEditError, renderCustomThemes, showDialog,
+import { showScreen, updateTimer, showCard, updateRoundScreen, updateTurnInfo, showTurnResult, showRoundEnd, showFinalScreen, renderThemeButtons, renderPlayerList, updateCurrentPlayer, renderPlayerStats, renderRoundsSelector, applyTeamAccent, showResumeOption, renderSoundSetting, renderRules, showPauseOverlay, showPauseCountdown, hidePause, showPuppetConfirm, setRoundsNextEnabled, renderThemeEditor, showThemeEditError, renderCustomThemes, showDialog,
          afficherInvitation, afficherPartageSuivi, afficherInscription, renderInscrits,
          renderSession, renderBoutonMesCartes, renderSaisieLocale,
          showSaisieError, renderRepartition,
@@ -504,7 +504,14 @@ function setupListeners() {
 
   // Start turn
   document.getElementById('btn-start-turn').addEventListener('click', startTurn);
-  document.getElementById('btn-reprendre-tour').addEventListener('click', reprendreLeTourIci);
+  // Les deux entrées du même geste. Enveloppées, et pas passées directement :
+  // le gestionnaire recevrait l'événement du clic en premier argument, ce qui
+  // vaut « vrai » et sauterait la confirmation.
+  document.getElementById('btn-reprendre-tour')
+    .addEventListener('click', () => reprendreLeTourIci());
+  // Le tour est perdu, on le sait : plus rien à confirmer.
+  document.getElementById('btn-reprendre-ici')
+    .addEventListener('click', () => reprendreLeTourIci(true));
 
   // Found / Pass
   document.getElementById('btn-found').addEventListener('click', onFound);
@@ -1960,6 +1967,9 @@ function afficherTourDistant(actif) {
   if (!actif) {
     document.getElementById('bloc-tour-distant').style.display = 'none';
     document.getElementById('bloc-comptage-distant').style.display = 'none';
+    // L'alerte du tour perdu s'efface au même moment : elle appartient au tour
+    // qui vient de finir, et resterait affichée par-dessus le tour suivant.
+    document.getElementById('bloc-tour-perdu').style.display = 'none';
   }
   // La mention ne se rallume que si l'on attend encore quelqu'un : elle n'est
   // plus protégée par un bloc parent, un affichage systématique la ferait
@@ -1970,7 +1980,7 @@ function afficherTourDistant(actif) {
   // Le reste de l'écran de lancement n'a plus lieu d'être pendant le tour.
   // « C'est au tour de » et le prénom du joueur en font partie : le bloc du
   // tour distant dit déjà qui fait deviner, deux lignes plus bas.
-  ['round-header', 'round-scores', 'bloc-tour-a-venir'].forEach(id => {
+  ['round-header', 'bloc-tour-a-venir'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.style.display = actif ? 'none' : '';
   });
@@ -1979,9 +1989,37 @@ function afficherTourDistant(actif) {
   repartirLEcranDeLancement(!actif);
   // La composition des équipes suit sa propre règle : elle n'existe qu'en mode
   // nominatif. La rétablir sans condition la ferait apparaître en mode simple.
+  //
+  // Le bouton s'efface pendant qu'un autre joue, bandeau ou pas : c'est la même
+  // règle que chez les invités, où l'écran ne montre qu'une chose à la fois. Le
+  // rendre permanent ici aurait fait diverger les deux côtés de la table.
   if (actif) document.getElementById('btn-voir-equipes').style.display = 'none';
   else afficherBoutonEquipes(game.nominativeMode && game.teams.some(e => e.players.length > 0));
   if (!actif) sablierDistant.oublier();
+}
+
+// Le tour est perdu et on le sait : l'attente devient un fait, et la porte de
+// sortie devient le geste principal. Un seul bouton — une sortie qui saute le
+// tour effacerait les points d'une équipe sur un doigt posé de travers.
+// Les secondes qu'il restait quand le tour s'est perdu. Le joueur ne les rend
+// pas — il ne sait plus rien — donc c'est l'estimation du sablier qui fait foi,
+// et il faut la retenir avant de l'éteindre.
+let tourPerduRestant = 0;
+
+function afficherTourPerdu(prenom) {
+  tourPerduRestant = sablierDistant.actif() ? sablierDistant.restant() : 0;
+  sablierDistant.oublier();
+  const cacher = id => { const el = document.getElementById(id); if (el) el.style.display = 'none'; };
+  ['round-header', 'bloc-tour-a-venir', 'btn-start-turn', 'attente-joueur-nom',
+   'attente-du-joueur', 'bloc-tour-distant', 'bloc-comptage-distant',
+   'btn-voir-equipes'].forEach(cacher);
+  repartirLEcranDeLancement(false);
+  document.getElementById('bloc-tour-perdu').style.display = '';
+  document.getElementById('perdu-titre').textContent =
+    prenom ? `${prenom} a perdu son tour` : 'Le tour a été perdu';
+  // Sans genre : le prénom du joueur ne dit pas comment l'accorder.
+  document.getElementById('perdu-quoi').textContent =
+    'Son téléphone a rechargé la page en pleine partie. Les cartes déjà trouvées sont perdues.';
 }
 
 // Le joueur ne répond pas : l'organisateur récupère le tour sur son appareil.
@@ -1991,12 +2029,16 @@ function afficherTourDistant(actif) {
 // posé de travers. Ensuite, si le tour avait déjà démarré là-bas, on reprend le
 // temps qu'il restait au joueur — repartir d'un tour plein lui offrirait des
 // secondes qu'il n'avait plus.
-async function reprendreLeTourIci() {
+async function reprendreLeTourIci(sansConfirmation = false) {
   const qui = getCurrentPlayer();
-  const enCours = sablierDistant.actif();
-  const restant = enCours ? sablierDistant.restant() : 0;
+  // Un tour perdu a déjà éteint son sablier : ses secondes ont été mises de côté.
+  const enCours = sablierDistant.actif() || tourPerduRestant > 0;
+  const restant = sablierDistant.actif() ? sablierDistant.restant() : tourPerduRestant;
+  tourPerduRestant = 0;
 
-  const confirme = await showDialog({
+  // Quand le tour est perdu, la question ne se pose plus : personne ne joue
+  // plus en face. Demander confirmation ajouterait un clic à une panne.
+  const confirme = sansConfirmation || await showDialog({
     title: 'Reprendre ce tour ici ?',
     message: enCours
       ? `Le tour de ${qui} s'arrêtera sur son téléphone. Il reprendra ici, avec les ${restant} s qu'il lui restait.`
@@ -2036,7 +2078,9 @@ async function reprendreLeTourIci() {
   // Le temps qu'il indique fait foi sur celui qu'on avait estimé — il tenait
   // le chrono, nous le reconstituions.
   if (rendu) appliquerTourDistant(rendu.trouvees);
-  const secondes = rendu ? rendu.restant : restant;
+  // Un tour perdu rend zéro seconde parce qu'il ne sait plus rien, pas parce
+  // que le temps était écoulé : c'est l'estimation du sablier qui fait foi.
+  const secondes = (rendu && !rendu.perdu) ? rendu.restant : restant;
 
   // Le même mécanisme que le report entre deux manches : le prochain tour lancé
   // ici partira de ces secondes-là, et l'écran de lancement l'annonce.
@@ -2112,13 +2156,13 @@ const sablierDistant = creerSablier({
   prefixe: 'org',
   chrono: 'distant-chrono',
   blocChrono: 'distant-bloc-chrono',
-  manche: 'distant-manche',
   qui: 'distant-qui',
   mention: 'distant-mention',
   restantes: 'distant-restantes'
 });
+// Comme chez les invités : le sable d'abord, le nombre dessous.
 document.getElementById('distant-bloc-chrono')
-  .insertAdjacentHTML('beforeend', svgSablier('org'));
+  .insertAdjacentHTML('afterbegin', svgSablier('org'));
 
 // L'écran de lancement occupe toute la hauteur ; le sablier d'un tour joué
 // ailleurs, non. C'est le même écran, mais pas le même contenu.
@@ -2166,6 +2210,14 @@ function guetterLeRetourDuTour() {
     }
     if (!tour.rendu) return suivreLeTourDistant();
 
+    // Le téléphone du joueur s'est signalé perdu : il a rendu un tour vide qu'il
+    // n'a pas joué. L'enchaîner comme un tour normal compterait zéro point à son
+    // équipe sans que personne comprenne pourquoi.
+    if (tour.rendu.perdu) {
+      arreterLeGuet();
+      return afficherTourPerdu(getCurrentPlayer());
+    }
+
     arreterLeGuet();
     tourConfieA = null;
     afficherTourDistant(false);
@@ -2204,7 +2256,6 @@ async function suivreLeTourDistant() {
     const T = (id, texte) => { document.getElementById(id).textContent = texte; };
     const m = suivi.etat.manche;
     const surLePaquet = suivi.etat.tour.raison === 'paquet';
-    T('dc-manche', m ? `Manche ${m.numero}/${m.sur} · ${m.icone} ${m.nom}` : '');
     T('dc-emoji', surLePaquet ? '🃏' : '⏰');
     T('dc-titre', surLePaquet ? 'Fin du tour !' : 'Temps écoulé !');
     T('dc-qui', `${suivi.etat.tour.joueur} compte ses cartes`);
@@ -2238,9 +2289,8 @@ function startTurn() {
 
 // Affiche l'écran de jeu dans son état courant, sans lancer le chrono.
 function renderTurn() {
-  const round = getActiveRound();
+  // Pas d'en-tête à remplir : l'écran de jeu ne porte plus que la carte.
   applyTeamAccent(game.teams[game.currentTeam].color);
-  updateGameHeader(`${getRoundLabel()} · ${round.name}`, game.teams[game.currentTeam].name);
   displayCurrentCard();
   updatePassButton();
   updateTimer(game.timeLeft);

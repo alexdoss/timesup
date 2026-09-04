@@ -27,7 +27,7 @@ document.getElementById('f').addEventListener('load', async () => {
     $('btn-resume').click();
     check('reprise sur l ecran de debut de tour', screen() === 'screen-round');
     check('scores a zero conserves', $('round-team1-score').textContent === '0');
-    check('bon libelle de manche', $('round-title').textContent === 'Manche 1/3');
+    check('bon libelle de manche', $('round-bandeau-manche').textContent.startsWith('Manche 1/3'));
 
     $('btn-start-turn').click();
     check('le tour demarre normalement', screen() === 'screen-game');

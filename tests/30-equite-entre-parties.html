@@ -95,6 +95,18 @@ f.addEventListener('load', async () => {
       await wait(700);
       check(`la partie ${numero} demarre`, ecran() === 'screen-round');
 
+      // Une partie neuve s ouvre sur un score vierge. Le bandeau porte le score
+      // de la manche en grand et le total de la partie en dessous : ni l un ni
+      // l autre n a le droit de trainer un chiffre de la partie precedente.
+      log(`       bandeau partie ${numero} : `
+          + $('round-team1-score').textContent + ' - ' + $('round-team2-score').textContent
+          + ' · "' + $('round-total').textContent + '"');
+      check(`la partie ${numero} s ouvre sur un score vierge`,
+            $('round-team1-score').textContent === '0'
+            && $('round-team2-score').textContent === '0');
+      check(`et sur un total de partie vierge`,
+            /(^|\D)0\D+0(\D|$)/.test($('round-total').textContent));
+
       s = etat();
       suivi.push({ equipe: s.startingTeam, ordres: ordres(), ouvreurs: ouvreurs() });
       log(`       partie ${numero} : equipe ` + (s.startingTeam + 1) + ' ouvre · '

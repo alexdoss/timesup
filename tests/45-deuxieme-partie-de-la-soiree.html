@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head><meta charset="utf-8"><title>Test Rush — la deuxieme partie de la soiree</title></head>
+<body>
+<pre id="log">demarrage...</pre>
+<div id="hote"></div>
+<script>
+// On joue une partie, on rentre a l accueil, et on en ouvre une NEUVE avec une
+// nouvelle session. C est le moment ou l organisateur change de groupe au cours
+// d une soiree — et le seul chemin par lequel `activerSuivi()` publie alors que
+// `game` porte encore le score de la partie precedente : la session s ouvre
+// AVANT `resetGame()`. L invite qui scannait le nouveau code lisait donc un
+// score positif sorti de nulle part, sur une partie ou personne n avait joue.
+const out = [];
+function log(s) { out.push(s); document.getElementById('log').textContent = out.join('\n'); }
+function check(name, cond) { log((cond ? 'PASS' : 'FAIL') + ' -- ' + name); }
+const wait = ms => new Promise(r => setTimeout(r, ms));
+
+async function api(action, donnees = {}) {
+  const r = await fetch('/api/session', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ action, ...donnees })
+  });
+  return { statut: r.status, corps: await r.json().catch(() => ({})) };
+}
+
+localStorage.removeItem('timesup_partie_en_cours');
+localStorage.removeItem('timesup_suivi');
+
+const f = document.createElement('iframe');
+f.src = '/';
+f.style.cssText = 'width:420px;height:1100px;border:1px solid #ccc';
+document.getElementById('hote').appendChild(f);
+
+let demarre = false;
+f.addEventListener('load', async () => {
+  if (demarre) return;
+  demarre = true;
+
+  const d = f.contentDocument, w = f.contentWindow;
+  w.onerror = (m, s, l) => log('ERREUR APP: ' + m + ' @' + s + ':' + l);
+  const $ = id => d.getElementById(id);
+  const ecran = () => [...d.querySelectorAll('.screen')].find(s => s.classList.contains('active'))?.id;
+  const etat = () => JSON.parse(w.localStorage.getItem('timesup_partie_en_cours')).state;
+
+  const suiviDe = async code => (await api('suivre', { code })).corps.suivi;
+
+  async function invite(code, prenom, cartes) {
+    const r = await api('rejoindre', { code, prenom });
+    await api('deposer', { code, idJoueur: r.corps.idJoueur, cartes, fini: true });
+  }
+
+  // Ouvre une partie en cartes perso jusqu a l ecran de lancement, et rend le
+  // code de sa session. Les deux parties de la soiree empruntent le meme chemin.
+  async function ouvrirUnePartie(prefixe) {
+    $('btn-start').click();
+    d.querySelector('[data-source="custom"]').click();
+    for (let i = 0; i < 4; i++) $('btn-joueurs-plus').click();
+    $('btn-cartes-moins').click();
+    $('btn-cartes-moins').click();
+    $('btn-ouvrir-session').click();
+    await wait(900);
+    const code = $('session-code').textContent.trim();
+
+    await invite(code, 'Ana', [prefixe + 'a1', prefixe + 'a2', prefixe + 'a3']);
+    await invite(code, 'Bob', [prefixe + 'b1', prefixe + 'b2', prefixe + 'b3']);
+    await invite(code, 'Cleo', [prefixe + 'c1', prefixe + 'c2', prefixe + 'c3']);
+    await invite(code, 'Dan', [prefixe + 'd1', prefixe + 'd2', prefixe + 'd3']);
+    await wait(2600);
+    $('btn-session-lancer').click();
+    await wait(500);
+    $('dialog-confirm').click();   // paquet court, on lance quand meme
+    await wait(700);
+    $('btn-next-players').click();
+    await wait(300);
+    $('btn-repartition-jouer').click();
+    await wait(500);
+
+    // ICI. La session est ouverte et publie deja, mais la partie n est pas
+    // lancee : `resetGame()` n a pas encore eu lieu. C est la fenetre que voit
+    // l invite qui vient de scanner, et elle dure le temps que l organisateur
+    // regle ses manches — plusieurs dizaines de secondes en vrai.
+    const bulletin = await suiviDe(code);
+
+    $('btn-next-rounds').click();
+    $('btn-play').click();
+    await wait(0);
+    await wait(900);
+    return { code, bulletin };
+  }
+
+  try {
+    await wait(1200);
+
+    // ===== PARTIE 1 : on marque des points =====
+    const { code: code1 } = await ouvrirUnePartie('P1');
+    log('       partie 1 : session ' + code1);
+    check('la partie 1 demarre', ecran() === 'screen-round');
+
+    $('btn-start-turn').click();
+    await wait(400);
+    $('btn-found').click();
+    $('btn-found').click();
+    await wait(400);
+
+    const scores1 = etat().teams.map(e => e.score);
+    log('       score de la partie 1 : ' + scores1.join(' - '));
+    check('la partie 1 a bien marque des points', scores1.some(n => n > 0));
+
+    // ===== RETOUR A L ACCUEIL =====
+    // Quitter ne remet rien a zero, et c est voulu : la partie reste proposee
+    // a la reprise. C est justement ce qui laisse un score dans `game`.
+    d.querySelector('#screen-game .btn-pause')?.click();
+    await wait(300);
+    $('btn-quit-game').click();
+    await wait(600);
+    check('on est revenu a l accueil', ecran() === 'screen-home');
+    check('le score de la partie 1 est toujours en memoire',
+          etat().teams.some(e => e.score > 0));
+
+    // ===== PARTIE 2 : toute neuve, avec d autres invites =====
+    const { code: code2, bulletin } = await ouvrirUnePartie('P2');
+    log('       partie 2 : session ' + code2);
+    check('la session de la partie 2 porte un autre code', code2 !== code1);
+    check('la partie 2 demarre', ecran() === 'screen-round');
+
+    // ===== LE BULLETIN QUE LIT L INVITE PENDANT LA CONFIGURATION =====
+    check('la nouvelle session publie pendant la configuration', !!bulletin);
+    log('       etape publiee : ' + bulletin?.etat?.etape
+        + ' · scores ' + JSON.stringify(bulletin?.etat?.equipes?.map(e => [e.manche, e.partie]))
+        + ' · manche ' + JSON.stringify(bulletin?.etat?.manche));
+    check('elle annonce une configuration en cours',
+          bulletin.etat.etape === 'configuration');
+    check('aucune equipe n arrive avec un score de partie',
+          (bulletin.etat.equipes || []).every(e => e.partie === 0));
+    check('ni avec un score de manche',
+          (bulletin.etat.equipes || []).every(e => e.manche === 0));
+    // Sans manche, le bandeau de l invite masque le tableau de score : il n a
+    // donc meme pas de quoi afficher un chiffre.
+    check('et aucune manche n est annoncee', bulletin.etat.manche === null);
+    check('personne n est annonce sur le depart', bulletin.etat.aVenir === null);
+    check('les equipes, elles, sont bien la',
+          (bulletin.etat.equipes || []).length === 2);
+
+    // Le premier etat publie apres le lancement, lui, doit etre propre aussi.
+    const premier = await suiviDe(code2);
+    check('le lancement publie un etat vierge',
+          (premier.etat.equipes || []).every(e => e.partie === 0 && e.manche === 0));
+    check('rien du paquet de la partie 1 ne traine dans la nouvelle session',
+          !JSON.stringify(premier.etat).includes('P1'));
+
+    // ===== L ancienne session n a pas ete polluee non plus =====
+    const ancienne = await suiviDe(code1);
+    log('       ancienne session : etape ' + ancienne?.etat?.etape);
+    check('l ancienne session garde son propre etat', !!ancienne);
+
+    log('SCENARIO 45 TERMINE');
+  } catch (e) {
+    log('EXCEPTION: ' + e.message + '\n' + e.stack);
+  }
+});
+</script>
+</body>
+</html>

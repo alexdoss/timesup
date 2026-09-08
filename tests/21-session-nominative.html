@@ -173,11 +173,16 @@ f.addEventListener('load', async () => {
 
     // ===== La composition des equipes reste consultable =====
     check('un acces aux equipes est propose', !!$('btn-voir-equipes') && visible('btn-voir-equipes'));
-    // Depuis le lot 5 il vit dans le bandeau, comme chez les invites : il ne
-    // bouge plus d un etat a l autre de l ecran, et ne pousse rien vers le bas.
-    check('il est loge dans le bandeau',
-          $('round-bandeau').contains($('btn-voir-equipes')));
-    check('il est discret', $('btn-voir-equipes').classList.contains('bandeau-equipes'));
+    // Sous le lancement du tour, sans exiger d etre collé : la mention
+    // « X lance depuis son telephone » vient s intercaler quand le tour est confie.
+    // Il est passe par le bandeau au lot 5, puis redescendu : cet ecran n a
+    // qu un geste, et un second bouton en haut disputait sa place a la manche.
+    check('il est place sous le lancement du tour',
+          ($('btn-start-turn').compareDocumentPosition($('btn-voir-equipes'))
+            & Node.DOCUMENT_POSITION_FOLLOWING) !== 0);
+    check('il est discret', $('btn-voir-equipes').classList.contains('btn-link'));
+    check('et il ne vit plus dans le bandeau',
+          !$('round-bandeau').contains($('btn-voir-equipes')));
 
     $('btn-voir-equipes').click();
     check('la fenetre s ouvre', visible('equipes-overlay'));

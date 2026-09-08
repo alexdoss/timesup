@@ -128,8 +128,15 @@ function historique() {
 // l'état du jeu nommerait donc le prochain au lieu de celui qui vient de finir.
 // C'est à l'appelant de l'avoir noté avant la rotation.
 function resume(etape, celuiQuiVientDeJouer) {
-  const manche = ROUNDS[game.activeRounds[game.currentRound]];
-  const scoresManche = getRoundScores();
+  // « Configuration » décrit une partie qui n'a pas commencé — et qui n'a donc
+  // ni manche, ni score, ni personne sur le départ. Le dire explicitement,
+  // parce que `game` n'en sait encore rien : cette étape est publiée à
+  // l'ouverture de la session, juste AVANT `resetGame()`. Les équipes y portent
+  // encore le score de la partie précédente, et l'invité qui rejoignait une
+  // partie toute neuve lisait donc un score positif sorti de nulle part.
+  const enConfiguration = etape === 'configuration';
+  const manche = enConfiguration ? null : ROUNDS[game.activeRounds[game.currentRound]];
+  const scoresManche = enConfiguration ? game.teams.map(() => 0) : getRoundScores();
   const enTour = etape === 'tour' || etape === 'pause';
   // Le comptage fait encore partie du tour du point de vue des invités : ils
   // doivent lire « X vérifie ses cartes », pas déjà le lancement du suivant.
@@ -148,15 +155,15 @@ function resume(etape, celuiQuiVientDeJouer) {
     } : null,
     // Combien de cartes il reste dans le paquet de la manche. Un nombre, jamais
     // un mot : c'est ce qui dit si la manche touche à sa fin, sans rien révéler.
-    restantes: getCardsRemaining(),
+    restantes: enConfiguration ? 0 : getCardsRemaining(),
     // Les secondes reprises de la manche précédente, quand une équipe a vidé le
     // paquet avant la fin du temps. Sans ça, les invités voient un tour se
     // terminer bien plus tôt que prévu sans comprendre pourquoi.
-    report: game.reportTemps || 0,
+    report: enConfiguration ? 0 : (game.reportTemps || 0),
     equipes: game.teams.map((equipe, index) => ({
       nom: equipe.name,
       couleur: equipe.color,
-      partie: equipe.score,
+      partie: enConfiguration ? 0 : equipe.score,
       manche: scoresManche[index],
       // Les prénoms, pour que les invités puissent consulter la composition.
       // En mode simple il n'y a personne à nommer.
@@ -184,7 +191,7 @@ function resume(etape, celuiQuiVientDeJouer) {
     // désignerait encore celui qui vient de finir.
     // Pendant le comptage non plus : la question n'est pas encore « qui joue
     // ensuite », et l'annoncer ferait défiler le tour suivant trop tôt.
-    aVenir: (enTour || enComptage) ? null : {
+    aVenir: (enTour || enComptage || enConfiguration) ? null : {
       equipe: game.currentTeam,
       joueur: game.nominativeMode ? getCurrentPlayer() : null
     }

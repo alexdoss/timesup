@@ -616,7 +616,6 @@
         <div id="round-bandeau" class="suivi-bandeau">
           <div class="bandeau-haut">
             <span id="round-bandeau-manche" class="bandeau-manche"></span>
-            <button id="btn-voir-equipes" class="bandeau-equipes">👥 Équipes</button>
           </div>
           <!-- Comme un tableau d'affichage de gymnase : le nom en petit, le
                chiffre en grand dessous. Les deux scores s'alignent, donc se
@@ -699,6 +698,13 @@
         <div id="attente-du-joueur" style="display:none">
           <button id="btn-reprendre-tour" class="btn-link">Reprendre ce tour sur ce téléphone</button>
         </div>
+        <!-- La composition des équipes reste sous l'action principale. Elle est
+             montée dans le bandeau au lot 5, par imitation des invités, et c'était
+             une mauvaise lecture : chez eux le bandeau surplombe six états très
+             différents et le bouton doit rester atteignable partout. Cet écran-ci
+             n'a qu'un sujet et qu'un geste — lancer le tour. Un second bouton en
+             haut ne faisait que disputer sa place au titre de la manche. -->
+        <button id="btn-voir-equipes" class="btn-link">👥 Les équipes</button>
       </div>
     </div>
 

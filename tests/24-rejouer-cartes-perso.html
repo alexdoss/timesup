@@ -248,6 +248,24 @@ f.addEventListener('load', async () => {
     await wait(900);
     check('la partie 2 demarre directement', ecran() === 'screen-round');
 
+    // Le bandeau d une partie neuve ne traine aucun chiffre de la precedente,
+    // ni en score de manche ni en total de partie.
+    log('       bandeau partie 2 : '
+        + $('round-team1-score').textContent + ' - ' + $('round-team2-score').textContent
+        + ' · "' + $('round-total').textContent + '"');
+    check('elle s ouvre sur un score de manche vierge',
+          $('round-team1-score').textContent === '0'
+          && $('round-team2-score').textContent === '0');
+    check('et sur un total de partie vierge',
+          /(^|\D)0\D+0(\D|$)/.test($('round-total').textContent));
+    // Le cumul de la soiree, lui, doit AVOIR retenu la partie 1 : c est la
+    // difference entre « remettre la partie a zero » et « oublier la soiree ».
+    log('       cumul soiree : ' + JSON.stringify(etat().sessionScores)
+        + ' · parties jouees : ' + etat().gamesPlayed);
+    check('mais le cumul de la soiree a retenu la partie 1',
+          (etat().sessionScores || []).some(n => n > 0));
+    check('et la soiree compte une partie jouee', etat().gamesPlayed === 1);
+
     const e2 = etat();
     const paquet2 = [...e2.masterDeck].sort().join(',');
     log('       paquet 2 : ' + paquet2);

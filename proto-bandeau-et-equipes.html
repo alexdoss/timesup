@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Rush — le bandeau et le bouton des équipes</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root {
+  --fond: #14102B; --fond-halo: #2A1F5C; --surface: #1E1846; --bord: #2E2660;
+  --texte: #FFF6F0; --doux: #A79BD6;
+  --violet: #7C3AED; --violet-clair: #B14BFF; --ambre: #FFB020;
+  --vert: #22C55E; --rouge: #EF4444;
+  --eq1: #FF4D8D; --eq2: #22C55E;
+  --e1: 4px; --e2: 8px; --e3: 16px; --e4: 24px; --e5: 32px; --e6: 48px;
+  --t1: .75rem; --t2: .875rem; --t3: 1rem; --t4: 1.375rem; --t5: 2rem;
+  --r-bloc: 20px; --r-pastille: 100px; --ombre: 0 10px 30px rgba(0,0,0,.35);
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  font-family: 'Outfit', sans-serif;
+  background: radial-gradient(120% 45% at 50% 0%, var(--fond-halo) 0%, var(--fond) 58%);
+  color: var(--texte); padding: var(--e4); line-height: 1.5;
+}
+h1 { font-size: var(--t4); margin-bottom: var(--e1); }
+h2 { font-size: var(--t1); text-transform: uppercase; letter-spacing: .1em;
+     color: var(--ambre); margin: var(--e6) 0 var(--e3); font-weight: 700; }
+.intro { color: var(--doux); font-size: var(--t2); max-width: 880px; }
+.intro strong { color: var(--texte); }
+.intro + .intro { margin-top: var(--e2); }
+.rangee { display: flex; gap: var(--e4); flex-wrap: wrap; align-items: flex-start; }
+.colonne { display: flex; flex-direction: column; gap: var(--e2); }
+.etiquette { font-size: var(--t1); text-transform: uppercase; letter-spacing: .08em;
+             font-weight: 700; color: var(--doux); }
+.etiquette.avant { color: #7E7396; }
+.etiquette.apres { color: var(--vert); }
+.note { font-size: var(--t2); color: var(--doux); max-width: 320px; }
+.note b { color: var(--texte); font-weight: 600; }
+.pointe { color: var(--ambre); font-weight: 700; }
+
+.tel {
+  width: 320px; height: 620px; position: relative; overflow: hidden;
+  background: radial-gradient(120% 34% at 50% 0%, var(--fond-halo) 0%, var(--fond) 62%);
+  border: 1px solid var(--bord); border-radius: 28px; box-shadow: var(--ombre);
+  display: flex; flex-direction: column; padding: var(--e3);
+}
+.tel.terne { filter: saturate(.55) brightness(.92); }
+.fermer { position: absolute; top: 14px; right: 16px; background: none; border: none;
+          color: var(--doux); font-size: var(--t3); cursor: pointer; }
+
+.bandeau {
+  flex: none; background: rgba(255,255,255,.04); border: 1px solid var(--bord);
+  border-radius: var(--r-bloc); padding: var(--e2) var(--e3) var(--e3);
+  margin-top: var(--e4);
+}
+.bandeau.nu { padding-bottom: var(--e2); }
+.bandeau-haut { display: flex; align-items: center; justify-content: space-between; }
+.bandeau-manche {
+  font-size: var(--t1); font-weight: 800; letter-spacing: .1em;
+  text-transform: uppercase; color: var(--ambre);
+}
+.bandeau-equipes {
+  background: none; border: 1px solid var(--bord); border-radius: var(--r-pastille);
+  color: var(--doux); font-size: var(--t1); padding: 3px 10px; cursor: pointer;
+}
+.bandeau-score {
+  display: grid; grid-template-columns: 1fr 1px 1fr; align-items: center;
+  margin-top: var(--e2);
+}
+.bandeau-eq { text-align: center; display: flex; flex-direction: column; gap: 2px; }
+.bandeau-nom { font-size: var(--t1); color: var(--doux); font-weight: 600;
+               text-transform: uppercase; letter-spacing: .06em; }
+.bandeau-eq b { font-size: var(--t5); line-height: 1; font-variant-numeric: tabular-nums; }
+.bandeau-eq.a b { color: var(--eq1); }
+.bandeau-eq.b b { color: var(--eq2); }
+.bandeau-tiret { width: 1px; height: 34px; background: var(--bord); }
+.bandeau-total { text-align: center; font-size: var(--t1); color: var(--doux); margin-top: var(--e1); }
+
+/* Le halo qui montre du doigt ce qui change d'une colonne à l'autre */
+.souligne { outline: 2px dashed rgba(255,176,32,.55); outline-offset: 5px; border-radius: 12px; }
+
+.corps { flex: 1; display: flex; flex-direction: column; gap: var(--e3);
+         margin-top: var(--e3); overflow: hidden; }
+.aire { background: var(--surface); border: 1px solid var(--bord);
+        border-radius: var(--r-bloc); padding: var(--e3); text-align: center; }
+.manche-nom { font-size: var(--t1); font-weight: 700; text-transform: uppercase;
+              letter-spacing: .08em; color: var(--ambre); }
+.manche-icone { font-size: 2.6rem; line-height: 1.2; margin: var(--e1) 0; }
+.manche-regle { font-size: var(--t2); color: var(--doux); }
+.qui { display: flex; flex-direction: column; align-items: center; gap: var(--e1); }
+.qui-equipe {
+  display: inline-flex; align-items: center; gap: 6px; font-size: var(--t1);
+  font-weight: 700; text-transform: uppercase; letter-spacing: .08em;
+  padding: 3px 12px; border-radius: var(--r-pastille);
+  background: color-mix(in srgb, var(--eq1) 18%, transparent); color: var(--eq1);
+}
+.qui-nom { font-size: var(--t5); font-weight: 800; letter-spacing: -.02em; }
+.qui-detail { font-size: var(--t2); color: var(--doux); }
+.qui-detail b { color: var(--ambre); font-weight: 700; }
+
+.bouton {
+  flex: none; width: 100%; border: none; border-radius: var(--r-pastille);
+  padding: var(--e3); font-family: inherit; font-size: var(--t3); font-weight: 700;
+  color: #fff; background: linear-gradient(135deg, var(--violet), var(--violet-clair));
+  cursor: pointer; box-shadow: 0 8px 20px rgba(124,58,237,.35);
+}
+.lien { flex: none; background: none; border: none; color: var(--doux);
+        font-size: var(--t2); padding: var(--e2); cursor: pointer; }
+
+.legende { margin-top: var(--e6); border-top: 1px solid var(--bord); padding-top: var(--e4); }
+.legende ul { list-style: none; display: flex; flex-direction: column; gap: var(--e2); max-width: 880px; }
+.legende li { font-size: var(--t2); color: var(--doux); padding-left: var(--e3);
+              border-left: 2px solid var(--bord); }
+.legende li b { color: var(--texte); }
+.question { border-left-color: var(--ambre) !important; }
+.question b { color: var(--ambre) !important; }
+</style>
+</head>
+<body>
+
+<h1>Le bandeau et le bouton des équipes</h1>
+<p class="intro">Deux retouches sur l'écran de lancement livré au lot 5 : le bouton des équipes
+qui redescend, et <strong>le score qui n'apparaît qu'une fois qu'il en existe un</strong>.</p>
+
+<h2>1 · Le bouton des équipes redescend</h2>
+<p class="intro">Il était en bas de l'écran, je l'ai monté dans le bandeau au lot 5 pour copier
+les invités. Sauf que <strong>ce n'est pas la même situation</strong> : chez l'invité, le
+bandeau surplombe six états très différents et le bouton doit rester atteignable partout. Chez
+l'organisateur, l'écran de lancement a un seul sujet et un seul geste — lancer le tour. Un
+second bouton en haut vient concurrencer le titre de la manche.</p>
+
+<div class="rangee" style="margin-top:var(--e4)">
+  <div class="colonne">
+    <span class="etiquette avant">Livré au lot 5</span>
+    <div class="tel terne">
+      <button class="fermer">✕</button>
+      <div class="bandeau">
+        <div class="bandeau-haut">
+          <span class="bandeau-manche">Manche 2/3 · Mime</span>
+          <button class="bandeau-equipes souligne">👥 Équipes</button>
+        </div>
+        <div class="bandeau-score">
+          <div class="bandeau-eq a"><span class="bandeau-nom">Renards</span><b>4</b></div>
+          <span class="bandeau-tiret"></span>
+          <div class="bandeau-eq b"><span class="bandeau-nom">Loutres</span><b>6</b></div>
+        </div>
+        <p class="bandeau-total">Total de la partie : 12 – 15</p>
+      </div>
+      <div class="corps">
+        <div class="aire">
+          <div class="manche-icone">🎭</div>
+          <p class="manche-nom">Mime</p>
+          <p class="manche-regle">Sans parler, ni bruit, ni objet.</p>
+        </div>
+        <div class="aire qui">
+          <span class="qui-equipe">🦊 Renards</span>
+          <span class="qui-nom">Camille</span>
+          <span class="qui-detail">40 s · <b>14 cartes</b> restantes</span>
+        </div>
+        <div style="flex:1"></div>
+        <button class="bouton">Lancer le tour ▶️</button>
+      </div>
+    </div>
+    <p class="note">Deux boutons se disputent le haut de l'écran, dont un qui ne sert
+    presque jamais.</p>
+  </div>
+
+  <div class="colonne">
+    <span class="etiquette apres">Proposition</span>
+    <div class="tel">
+      <button class="fermer">✕</button>
+      <div class="bandeau">
+        <div class="bandeau-haut">
+          <span class="bandeau-manche">Manche 2/3 · Mime</span>
+        </div>
+        <div class="bandeau-score">
+          <div class="bandeau-eq a"><span class="bandeau-nom">Renards</span><b>4</b></div>
+          <span class="bandeau-tiret"></span>
+          <div class="bandeau-eq b"><span class="bandeau-nom">Loutres</span><b>6</b></div>
+        </div>
+        <p class="bandeau-total">Total de la partie : 12 – 15</p>
+      </div>
+      <div class="corps">
+        <div class="aire">
+          <div class="manche-icone">🎭</div>
+          <p class="manche-nom">Mime</p>
+          <p class="manche-regle">Sans parler, ni bruit, ni objet.</p>
+        </div>
+        <div class="aire qui">
+          <span class="qui-equipe">🦊 Renards</span>
+          <span class="qui-nom">Camille</span>
+          <span class="qui-detail">40 s · <b>14 cartes</b> restantes</span>
+        </div>
+        <div style="flex:1"></div>
+        <button class="bouton">Lancer le tour ▶️</button>
+        <button class="lien souligne">👥 Les équipes</button>
+      </div>
+    </div>
+    <p class="note">Le bandeau retrouve un seul sujet : où en est la partie. Le bouton
+    redescend sous l'action principale, <b>là où il était avant le lot 5</b>.</p>
+  </div>
+</div>
+
+<h2>2 · Le score qui sortait de nulle part</h2>
+<p class="intro">Au tout premier lancement d'une partie, le bandeau affiche
+<strong>0 – 0</strong> et <strong>« Total de la partie : 0 – 0 »</strong>. Rien n'a encore été
+joué : ces deux zéros n'annoncent aucune information, et l'ancienne mise en page avait au moins
+une légende « Score de la manche » pour les expliquer. Le bandeau n'en a pas.</p>
+<p class="intro">Les invités règlent déjà ce cas : <strong>leur bandeau masque le tableau de
+score tant qu'il n'y a rien à montrer</strong>, et ne garde que le rappel de la partie. Je n'ai
+pas repris cette règle au lot 5. La voici appliquée des deux côtés.</p>
+
+<div class="rangee" style="margin-top:var(--e4)">
+  <div class="colonne">
+    <span class="etiquette avant">Aujourd'hui — début de partie</span>
+    <div class="tel terne">
+      <button class="fermer">✕</button>
+      <div class="bandeau">
+        <div class="bandeau-haut">
+          <span class="bandeau-manche">Manche 1/3 · Description</span>
+        </div>
+        <div class="bandeau-score souligne">
+          <div class="bandeau-eq a"><span class="bandeau-nom">Renards</span><b>0</b></div>
+          <span class="bandeau-tiret"></span>
+          <div class="bandeau-eq b"><span class="bandeau-nom">Loutres</span><b>0</b></div>
+        </div>
+        <p class="bandeau-total">Total de la partie : 0 – 0</p>
+      </div>
+      <div class="corps">
+        <div class="aire">
+          <div class="manche-icone">🗣️</div>
+          <p class="manche-nom">Description</p>
+          <p class="manche-regle">Tout dire, sauf le mot et sa famille.</p>
+        </div>
+        <div class="aire qui">
+          <span class="qui-equipe">🦊 Renards</span>
+          <span class="qui-nom">Camille</span>
+          <span class="qui-detail">40 s · <b>30 cartes</b> restantes</span>
+        </div>
+        <div style="flex:1"></div>
+        <button class="bouton">Lancer le tour ▶️</button>
+      </div>
+    </div>
+    <p class="note">Un tableau de score complet pour annoncer <b>qu'il n'y a pas de
+    score</b>. C'est le « score qui sort de nulle part ».</p>
+  </div>
+
+  <div class="colonne">
+    <span class="etiquette apres">Proposition — début de partie</span>
+    <div class="tel">
+      <button class="fermer">✕</button>
+      <div class="bandeau nu souligne">
+        <div class="bandeau-haut">
+          <span class="bandeau-manche">Manche 1/3 · Description</span>
+        </div>
+      </div>
+      <div class="corps">
+        <div class="aire">
+          <div class="manche-icone">🗣️</div>
+          <p class="manche-nom">Description</p>
+          <p class="manche-regle">Tout dire, sauf le mot et sa famille.</p>
+        </div>
+        <div class="aire qui">
+          <span class="qui-equipe">🦊 Renards</span>
+          <span class="qui-nom">Camille</span>
+          <span class="qui-detail">40 s · <b>30 cartes</b> restantes</span>
+        </div>
+        <div style="flex:1"></div>
+        <button class="bouton">Lancer le tour ▶️</button>
+        <button class="lien">👥 Les équipes</button>
+      </div>
+    </div>
+    <p class="note">Le bandeau se réduit à la manche. Le premier tour part sans qu'aucun
+    chiffre n'ait été inventé — et l'écran respire.</p>
+  </div>
+
+  <div class="colonne">
+    <span class="etiquette apres">Proposition — dès le 2<sup>e</sup> tour</span>
+    <div class="tel">
+      <button class="fermer">✕</button>
+      <div class="bandeau">
+        <div class="bandeau-haut">
+          <span class="bandeau-manche">Manche 1/3 · Description</span>
+        </div>
+        <div class="bandeau-score souligne">
+          <div class="bandeau-eq a"><span class="bandeau-nom">Renards</span><b>7</b></div>
+          <span class="bandeau-tiret"></span>
+          <div class="bandeau-eq b"><span class="bandeau-nom">Loutres</span><b>0</b></div>
+        </div>
+        <p class="bandeau-total">Total de la partie : 7 – 0</p>
+      </div>
+      <div class="corps">
+        <div class="aire">
+          <div class="manche-icone">🗣️</div>
+          <p class="manche-nom">Description</p>
+          <p class="manche-regle">Tout dire, sauf le mot et sa famille.</p>
+        </div>
+        <div class="aire qui">
+          <span class="qui-equipe" style="background:color-mix(in srgb,var(--eq2) 18%,transparent);color:var(--eq2)">🦦 Loutres</span>
+          <span class="qui-nom">Sacha</span>
+          <span class="qui-detail">40 s · <b>23 cartes</b> restantes</span>
+        </div>
+        <div style="flex:1"></div>
+        <button class="bouton">Lancer le tour ▶️</button>
+        <button class="lien">👥 Les équipes</button>
+      </div>
+    </div>
+    <p class="note">Dès qu'un tour a été joué, le tableau apparaît — et il annonce alors
+    quelque chose. <b>Il ne repart jamais en arrière</b> ensuite.</p>
+  </div>
+</div>
+
+<div class="legende">
+  <ul>
+    <li><b>Ce que ça coûte.</b> Le bouton retrouve sa place d'avant le lot 5 : un déplacement
+    dans le HTML et une classe. Le masquage du score suit la règle déjà écrite pour les
+    invités — une condition, au même endroit que celle qui remplit le bandeau.</li>
+    <li><b>Un test à retoucher.</b> Le scénario 21 vérifie depuis le lot 5 que le bouton vit
+    dans le bandeau ; il revérifiera qu'il est sous le lancement, comme avant.</li>
+    <li class="question"><b>À confirmer :</b> est-ce bien ce 0 – 0 du début de partie que tu as
+    vu ? Si le chiffre qui t'a surpris n'était <em>pas</em> zéro, dis-le moi — ce serait un
+    autre défaut, et je le chercherais ailleurs.</li>
+    <li class="question"><b>Quand faire réapparaître le score ?</b> Ci-dessus : dès le
+    deuxième tour. L'autre option serait de l'afficher dès la manche 2 — plus rare, donc plus
+    calme, mais on perd le score de la manche 1 en cours de route.</li>
+  </ul>
+</div>
+
+</body>
+</html>

@@ -1,4 +1,4 @@
-const CACHE_NAME = 'rush-v110';
+const CACHE_NAME = 'rush-v111';
 const ASSETS = [
   '/',
   '/index.html',

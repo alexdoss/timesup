@@ -134,10 +134,19 @@ function fillDrawer(prefix, label, words, bouton, onAction) {
 
 // title    : « Temps écoulé » ou « plus de cartes »
 // onRemove : la carte n'aurait pas dû être comptée — onAdd : elle aurait dû l'être
-export function showTurnResult({ title, emoji, teamName, score, found, missed }, onRemove, onAdd) {
+export function showTurnResult({ title, emoji, geste, teamName, score, found, missed },
+                               onRemove, onAdd) {
   document.getElementById('turn-end-title').textContent = title;
   const signe = document.getElementById('turn-end-emoji');
   if (signe && emoji) signe.textContent = emoji;
+  // La cloche se balance, le damier surgit. On retire la classe et on force un
+  // recalcul avant de la remettre : sans ça le navigateur ne voit aucun
+  // changement et ne rejoue rien.
+  if (signe && geste) {
+    signe.classList.remove('balance', 'surgit');
+    void signe.offsetWidth;
+    signe.classList.add(geste);
+  }
   document.getElementById('turn-result').textContent =
     `${teamName} a trouvé ${score} carte(s) !`;
 
@@ -221,7 +230,7 @@ export function showRoundEnd(roundNum, teams, history, anime = false) {
 }
 
 // session : { totals, parties } quand plusieurs parties s'enchaînent, sinon null
-export function showFinalScreen(teams, session = null, history = [], anime = false) {
+export function showFinalScreen(teams, session = null, history = [], anime = false, role = 'table') {
   document.getElementById('final-team1-name').textContent = teams[0].name;
   document.getElementById('final-team2-name').textContent = teams[1].name;
 
@@ -256,10 +265,12 @@ export function showFinalScreen(teams, session = null, history = [], anime = fal
 
   document.getElementById('winner').textContent = winnerText;
 
-  // L'écran de la table ne prend jamais parti : il nomme le vainqueur et
-  // qualifie la partie, sans s'adresser à personne. Les invités reçoivent leur
-  // propre version, choisie dans la même table (js/fins.js).
-  const fin = finDePartie(diff, 'table');
+  // `role` dit à qui cet écran s'adresse. Posé au milieu de la table il ne
+  // prend parti pour personne — la moitié de ceux qui le lisent vient de
+  // gagner. Mais quand l'organisateur joue avec son propre téléphone et que les
+  // invités ont le leur, il a perdu ou gagné comme eux : c'est app.js qui
+  // tranche (monCampEnFinDePartie), ui.js ne fait qu'appliquer.
+  const fin = finDePartie(diff, role);
   const signe = document.getElementById('final-emoji');
   const phrase = document.getElementById('final-phrase');
   if (signe) signe.textContent = fin.emoji;

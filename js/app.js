@@ -2480,7 +2480,10 @@ function endTurn(paquetVide = false) {
   closeTurn();
 
   // L emoji vit à part du titre : il est posé en grand au-dessus de lui.
-  turnEndEmoji = paquetVide ? '🃏' : '⏰';
+  // La cloche la ou elle sonne vraiment : le buzzer ne retentit qu au temps
+  // ecoule. Vider le paquet, personne ne l entend — et ce n est pas une fin
+  // mais une reussite, qui rapporte les secondes restantes : d ou le damier.
+  turnEndEmoji = paquetVide ? '🏁' : '🔔';
   turnEndTitle = paquetVide ? 'Plus de cartes !' : 'Temps écoulé !';
   const teamName = game.teams[game.turnTeam].name;
   turnEndLabel = game.nominativeMode && game.turnPlayer
@@ -2510,16 +2513,19 @@ function endTurn(paquetVide = false) {
   // suivant et un score d'avant correction, qui bougeait ensuite sous leurs
   // yeux à chaque case cochée.
   publierEtat('comptage', tourAcheve);
-  renderTurnEnd();
+  renderTurnEnd(true);   // l arrivee sur l ecran : l emoji s anime une fois
   showScreen('screen-turn-end');
 }
 
 // Récapitulatif du tour, rejoué à chaque correction pour que le score suive
-function renderTurnEnd() {
+// anime : seulement a l arrivee sur l ecran. Les corrections rejouent ce meme
+// rendu a chaque case cochee — relancer la cloche a chaque clic en ferait un tic.
+function renderTurnEnd(anime = false) {
   showTurnResult(
     {
       title: turnEndTitle,
       emoji: turnEndEmoji,
+      geste: anime ? (turnEndEmoji === '🔔' ? 'balance' : 'surgit') : null,
       teamName: turnEndLabel,
       score: game.turnScore,
       found: game.turnFound || [],
@@ -2572,6 +2578,32 @@ function onNextTurn() {
   }
 }
 
+// À qui s'adresse l'écran de fin de partie sur CET appareil.
+//
+// Posé au milieu de la table, il ne prend parti pour personne : la moitié de
+// ceux qui le lisent viennent de gagner, l'autre de perdre. C'est le cas d'une
+// partie jouée sur un seul téléphone, et la raison de la règle.
+//
+// Mais dès que les invités suivent sur leur propre écran, celui-ci redevient un
+// téléphone parmi d'autres — celui de l'organisateur, qui a gagné ou perdu
+// comme tout le monde et n'a aucune raison de lire la version neutre. On ne le
+// devine pas : il faut qu'il se soit inscrit dans sa propre session, et que son
+// prénom figure dans une équipe.
+function monCampEnFinDePartie() {
+  const prenom = moiJoueur?.prenom;
+  // playerPhones ne contient que les autres : l'organisateur en est exclu à la
+  // construction. Vide, c'est que cet appareil est le seul écran de la soirée.
+  const dAutresEcrans = Object.keys(game.playerPhones || {}).length > 0;
+  if (!prenom || !dAutresEcrans) return 'table';
+
+  const monEquipe = game.teams.findIndex(e => (e.players || []).includes(prenom));
+  if (monEquipe < 0) return 'table';
+
+  const ecart = game.teams[0].score - game.teams[1].score;
+  if (ecart === 0) return 'table';   // personne n'a gagné, personne n'est perdant
+  return monEquipe === (ecart > 0 ? 0 : 1) ? 'gagnant' : 'perdant';
+}
+
 function endRound() {
   stopTimer();
   game.turnActive = false;
@@ -2593,7 +2625,7 @@ function endRound() {
         ? { totals: getSessionScores(), parties: game.gamesPlayed + 1 }
         : null;
       publierEtat('fin-partie');
-      showFinalScreen(game.teams, session, getRoundHistory(), true);
+      showFinalScreen(game.teams, session, getRoundHistory(), true, monCampEnFinDePartie());
       if (game.nominativeMode) {
         renderPlayerStats(getPlayerBreakdown(), game.teams, getRoundHistory(),
                           session ? session.parties : 0);

@@ -3,252 +3,266 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Rush — ce que voient les spectateurs pendant le comptage</title>
+<title>Rush — l'emoji de fin de tour</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
 :root {
-  --primary: #6D28D9; --primary-hover: #7C3AED; --primary-soft: rgba(109,40,217,.16);
-  --background: #0F172A; --surface: #1E293B; --surface-2: #273449;
-  --border: #334155; --text: #F8FAFC; --muted: #94A3B8; --muted-strong: #CBD5E1;
-  --muted-2: #64748B; --success: #22C55E; --secondary: #F59E0B; --error: #EF4444;
-  --t1: #d6336c; --t2: #33c26a;
-  --r-sm: 8px; --r-md: 12px; --r-lg: 16px;
+  --fond: #14102B; --fond-halo: #2A1F5C; --surface: #1E1846; --bord: #2E2660;
+  --texte: #FFF6F0; --doux: #A79BD6;
+  --violet: #7C3AED; --violet-clair: #B14BFF; --ambre: #FFB020;
+  --vert: #22C55E; --rouge: #EF4444;
+  --e1: 4px; --e2: 8px; --e3: 16px; --e4: 24px; --e5: 32px; --e6: 48px;
+  --t1: .75rem; --t2: .875rem; --t3: 1rem; --t4: 1.375rem; --t5: 2rem;
+  --r-bloc: 20px; --r-pastille: 100px; --ombre: 0 10px 30px rgba(0,0,0,.35);
 }
 * { margin: 0; padding: 0; box-sizing: border-box; }
 body {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  background: #060B18; color: var(--text); padding: 22px 16px 60px; line-height: 1.5;
+  font-family: 'Outfit', sans-serif;
+  background: radial-gradient(120% 45% at 50% 0%, var(--fond-halo) 0%, var(--fond) 58%);
+  color: var(--texte); padding: var(--e4); line-height: 1.5;
 }
-.wrap { max-width: 1080px; margin: 0 auto; }
-h1 { font-size: 1.4rem; margin-bottom: 4px; }
-.intro { color: var(--muted); font-size: .93rem; margin-bottom: 10px; }
-.intro b { color: var(--muted-strong); }
-.fil { font-size: .86rem; color: var(--muted-strong); background: var(--surface);
-  border: 1px solid var(--border); border-radius: var(--r-md); padding: 11px 14px;
-  margin-bottom: 16px; }
-.fil b { color: var(--text); }
-.fil .fleche { color: var(--muted-2); margin: 0 6px; }
-.fil .ici { color: var(--secondary); font-weight: 700; }
+h1 { font-size: var(--t4); margin-bottom: var(--e1); }
+h2 { font-size: var(--t1); text-transform: uppercase; letter-spacing: .1em;
+     color: var(--ambre); margin: var(--e6) 0 var(--e3); font-weight: 700; }
+.intro { color: var(--doux); font-size: var(--t2); max-width: 880px; }
+.intro strong { color: var(--texte); }
+.intro + .intro { margin-top: var(--e2); }
+.rangee { display: flex; gap: var(--e4); flex-wrap: wrap; align-items: flex-start; }
+.colonne { display: flex; flex-direction: column; gap: var(--e2); }
+.etiquette { font-size: var(--t1); text-transform: uppercase; letter-spacing: .08em;
+             font-weight: 700; color: var(--doux); }
+.etiquette.avant { color: #7E7396; }
+.etiquette.apres { color: var(--vert); }
+.etiquette.ton { color: var(--violet-clair); }
+.note { font-size: var(--t2); color: var(--doux); max-width: 300px; }
+.note b { color: var(--texte); font-weight: 600; }
 
-.tabs { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 18px; }
-.tab { background: var(--surface); color: var(--muted-strong); border: 1px solid var(--border);
-  border-radius: var(--r-md); padding: 10px 16px; font-size: .88rem; font-weight: 700;
-  cursor: pointer; font-family: inherit; }
-.tab.on { background: var(--primary); border-color: var(--primary-hover); color: #fff; }
-.tab .num { display: block; font-size: .64rem; text-transform: uppercase;
-  letter-spacing: .05em; opacity: .7; font-weight: 600; }
+/* ═══════ LA VITRINE DES CANDIDATS ═══════ */
+.vitrine { display: flex; gap: var(--e3); flex-wrap: wrap; margin-top: var(--e3); }
+.candidat {
+  width: 168px; background: var(--surface); border: 1px solid var(--bord);
+  border-radius: var(--r-bloc); padding: var(--e3); text-align: center;
+}
+.candidat .signe { font-size: 3.2rem; line-height: 1.1; display: inline-block; }
+.candidat .quoi { font-size: var(--t1); text-transform: uppercase; letter-spacing: .07em;
+                  color: var(--doux); font-weight: 700; margin-top: var(--e2); }
+.candidat .dit { font-size: var(--t2); color: var(--doux); margin-top: var(--e1); }
+.candidat.retenu { border-color: var(--vert); }
+.candidat.ecarte { opacity: .55; }
 
-.stage { display: flex; gap: 26px; align-items: flex-start; flex-wrap: wrap; }
-.colonne { display: flex; flex-direction: column; gap: 8px; }
-.etiquette { font-size: .72rem; text-transform: uppercase; letter-spacing: .05em;
-  color: var(--muted); font-weight: 700; }
-.phone { width: 300px; height: 540px; flex-shrink: 0; background: var(--background);
-  border: 1px solid var(--border); border-radius: 28px; overflow: hidden;
-  box-shadow: 0 14px 44px rgba(0,0,0,.55); display: flex; flex-direction: column; }
-.barre { display: flex; align-items: center; gap: 8px; padding: 12px 16px 10px;
-  border-bottom: 1px solid var(--border); font-size: .72rem; color: var(--muted); }
-.barre .marque { font-weight: 800; color: var(--text); }
-.barre .qui { margin-left: auto; }
-.corps { padding: 18px 16px; flex: 1; display: flex; flex-direction: column; text-align: center; }
+/* La cloche se balance : deux allers-retours qui s amortissent, puis plus rien.
+   Une cloche qui sonne en boucle sur un ecran qu on lit devient un tic. */
+@keyframes balance {
+  0%   { transform: rotate(0deg) }
+  15%  { transform: rotate(16deg) }
+  35%  { transform: rotate(-13deg) }
+  55%  { transform: rotate(9deg) }
+  75%  { transform: rotate(-5deg) }
+  90%  { transform: rotate(2deg) }
+  100% { transform: rotate(0deg) }
+}
+.balance { animation: balance 1.4s ease-out; transform-origin: 50% 12%; }
 
-.cap { font-size: .7rem; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); }
-.grand-emoji { font-size: 3rem; line-height: 1.1; margin: 10px 0 2px; }
-h2.titre { font-size: 1.3rem; font-weight: 800; margin: 4px 0 4px; }
-.sous { font-size: .88rem; color: var(--muted-strong); }
-.reste { font-size: .8rem; color: var(--muted); font-weight: 600; margin-top: 8px; }
-.points { display: flex; align-items: center; justify-content: center; gap: 6px;
-  margin-top: 14px; }
-.points i { width: 7px; height: 7px; border-radius: 50%; background: var(--muted-2);
-  display: block; animation: bat 1.2s infinite; }
-.points i:nth-child(2) { animation-delay: .2s; }
-.points i:nth-child(3) { animation-delay: .4s; }
-@keyframes bat { 0%,100% { opacity: .25 } 50% { opacity: 1 } }
-@media (prefers-reduced-motion: reduce) { .points i { animation: none; opacity: .6 } }
+@keyframes surgit {
+  from { transform: scale(.4); opacity: 0 }
+  60%  { transform: scale(1.12); opacity: 1 }
+  to   { transform: scale(1); opacity: 1 }
+}
+.surgit { animation: surgit .5s ease-out; }
 
-.bloc-score { background: var(--surface); border: 1px solid var(--border);
-  border-radius: var(--r-lg); padding: 12px; margin-top: 16px; }
-.scores { display: flex; justify-content: center; gap: 28px; margin-top: 6px; }
-.eq { text-align: center; }
-.eq .nom { font-size: .64rem; font-weight: 800; text-transform: uppercase; display: block; }
-.eq.e1 .nom { color: var(--t1); } .eq.e2 .nom { color: var(--t2); }
-.eq .gros { font-size: 1.9rem; font-weight: 800; }
-.rappel { font-size: .76rem; color: var(--muted); margin-top: 6px; }
+@media (prefers-reduced-motion: reduce) {
+  .balance, .surgit { animation: none; }
+}
 
-/* le sablier, pour l onglet « aujourd hui » */
-.chrono-bloc { display: flex; flex-direction: column; align-items: center; margin: 6px 0; }
-.chrono { font-size: 2.6rem; font-weight: 800; color: var(--secondary); line-height: 1; }
-.sablier { width: 92px; height: 132px; }
-.sable { fill: var(--secondary); }
-.verre { fill: none; stroke: var(--border); stroke-width: 3; }
-.socle { fill: var(--muted-2); }
-.mention { font-size: .82rem; color: var(--muted); margin-top: 8px; }
+/* ═══════ LE TÉLÉPHONE ═══════ */
+.tel {
+  width: 320px; height: 600px; position: relative; overflow: hidden;
+  background: radial-gradient(120% 34% at 50% 0%, var(--fond-halo) 0%, var(--fond) 62%);
+  border: 1px solid var(--bord); border-radius: 28px; box-shadow: var(--ombre);
+  display: flex; flex-direction: column; padding: var(--e5) var(--e3) var(--e3);
+}
+.tel.terne { filter: saturate(.55) brightness(.92); }
+.fermer { position: absolute; top: 14px; right: 16px; background: none; border: none;
+          color: var(--doux); font-size: var(--t3); cursor: pointer; }
+.signe-grand { font-size: 3.4rem; text-align: center; line-height: 1;
+               display: block; margin-bottom: var(--e2); }
+.titre-fin { font-size: var(--t4); font-weight: 800; text-align: center; }
+.sous-fin { font-size: var(--t2); color: var(--doux); text-align: center; }
+.tiroir { background: var(--surface); border: 1px solid var(--bord);
+          border-radius: 14px; padding: 12px var(--e3); font-size: var(--t2); }
+.tiroir + .tiroir { margin-top: var(--e2); }
+.tiroir.gagnees { border-left: 3px solid var(--vert); }
+.tiroir.perdues { border-left: 3px solid var(--bord); color: var(--doux); }
+.tiroir .resume { display: flex; justify-content: space-between; font-weight: 600; }
+.tiroir .compte { font-variant-numeric: tabular-nums; color: var(--doux); font-weight: 700; }
+.bouton {
+  flex: none; width: 100%; border: none; border-radius: var(--r-pastille);
+  padding: 14px; font-family: inherit; font-size: var(--t3); font-weight: 700;
+  color: #fff; background: linear-gradient(135deg, var(--violet), var(--violet-clair));
+  cursor: pointer; box-shadow: 0 8px 20px rgba(124,58,237,.35);
+}
+.rejouer {
+  align-self: flex-start; background: none; border: 1px dashed var(--ambre);
+  color: var(--ambre); border-radius: var(--r-pastille); font-family: inherit;
+  font-size: var(--t1); font-weight: 700; padding: 5px 12px; cursor: pointer;
+}
+.rejouer:hover { background: rgba(255,176,32,.1); }
 
-.notes { flex: 1; min-width: 250px; background: var(--surface); border: 1px solid var(--border);
-  border-radius: var(--r-md); padding: 16px; font-size: .89rem; }
-.notes h3 { font-size: .73rem; text-transform: uppercase; letter-spacing: .05em;
-  color: var(--muted); margin-bottom: 10px; }
-.notes p { margin-bottom: 10px; } .notes p:last-child { margin-bottom: 0; }
-.plus::before { content: '＋ '; color: var(--success); font-weight: 700; }
-.minus::before { content: '− '; color: var(--secondary); font-weight: 700; }
-.question { background: rgba(245,158,11,.14); border-left: 3px solid var(--secondary);
-  border-radius: 0 var(--r-md) var(--r-md) 0; padding: 11px 13px; margin-top: 12px;
-  font-size: .86rem; color: var(--muted-strong); }
+.legende { margin-top: var(--e6); border-top: 1px solid var(--bord); padding-top: var(--e4); }
+.legende ul { list-style: none; display: flex; flex-direction: column; gap: var(--e2); max-width: 880px; }
+.legende li { font-size: var(--t2); color: var(--doux); padding-left: var(--e3);
+              border-left: 2px solid var(--bord); }
+.legende li b { color: var(--texte); }
+.question { border-left-color: var(--ambre) !important; }
+.question b { color: var(--ambre) !important; }
 </style>
 </head>
 <body>
-<div class="wrap">
 
-  <h1>Le moment où le tour s'arrête</h1>
-  <p class="intro">Entre la dernière carte et le tour suivant, il se passe quelques secondes :
-    celui qui a fait deviner <b>arbitre son comptage</b>. Que voient les autres pendant ce temps ?</p>
-  <div class="fil">
-    le tour tourne <span class="fleche">→</span>
-    <span class="ici">plus de cartes, ou temps écoulé</span> <span class="fleche">→</span>
-    <span class="ici">il compte</span> <span class="fleche">→</span>
-    il valide <span class="fleche">→</span> lancement du tour suivant
+<h1>L'emoji de fin de tour</h1>
+<p class="intro">Un tour s'arrête de <strong>deux façons</strong>, et l'emoji est là pour dire
+laquelle en un coup d'œil, avant qu'on ait lu le titre.</p>
+<p class="intro"><strong>Le chrono tombe à zéro</strong> — c'est le cas ordinaire, et
+<strong>la cloche sonne</strong> : trois coups, comme la fin d'un round de boxe.
+<strong>Ou l'équipe vide le paquet avant la fin du temps</strong> — c'est un exploit, il est
+rare, il fait gagner les secondes restantes pour la manche suivante, et
+<strong>aucun son ne le marque</strong> : l'app ne joue rien à ce moment-là.</p>
+
+<h2>1 · Les candidats</h2>
+<p class="intro">Passe la souris sur une carte pour rejouer son animation.</p>
+
+<div class="vitrine">
+  <div class="candidat ecarte">
+    <span class="signe surgit" data-anim="surgit">🃏</span>
+    <p class="quoi">Aujourd'hui · paquet vidé</p>
+    <p class="dit">Un joker, c'est-à-dire une carte <b>spéciale</b> — pas un paquet fini.
+    C'est ta remarque, et elle est juste.</p>
   </div>
-
-  <div class="tabs" id="tabs"></div>
-
-  <div class="stage">
-    <div class="colonne">
-      <span class="etiquette" id="etiquette">Le téléphone d'un spectateur</span>
-      <div class="phone">
-        <div class="barre"><span class="marque">Rush</span><span>tu suis la partie</span>
-          <span class="qui">K4T9</span></div>
-        <div class="corps" id="corps"></div>
-      </div>
-    </div>
-    <div class="notes" id="notes"></div>
+  <div class="candidat">
+    <span class="signe balance" data-anim="balance">🔔</span>
+    <p class="quoi">Ta proposition</p>
+    <p class="dit">La cloche qui se balance. Elle dit « le tour est fini » — et elle
+    illustre <b>un son réel</b>, celui du buzzer.</p>
+  </div>
+  <div class="candidat retenu">
+    <span class="signe surgit" data-anim="surgit">🏁</span>
+    <p class="quoi">Paquet vidé</p>
+    <p class="dit">Le drapeau à damier : <b>arrivé au bout</b>. Dit l'exploit, pas
+    seulement la fin.</p>
+  </div>
+  <div class="candidat retenu">
+    <span class="signe balance" data-anim="balance">🔔</span>
+    <p class="quoi">Temps écoulé</p>
+    <p class="dit">La cloche là où elle sonne vraiment. Le balancement arrive
+    <b>en même temps que les trois coups</b>.</p>
   </div>
 </div>
 
-<script>
-const sablier = `
-  <svg class="sablier" viewBox="0 0 100 145" aria-hidden="true">
-    <defs>
-      <clipPath id="ch"><path d="M14,12 H86 L54,70 H46 Z"/></clipPath>
-      <clipPath id="cb"><path d="M46,70 H54 L86,128 H14 Z"/></clipPath>
-    </defs>
-    <g clip-path="url(#ch)"><rect class="sable" x="0" width="100" y="70" height="0"/></g>
-    <g clip-path="url(#cb)"><rect class="sable" x="0" width="100" y="86" height="42"/></g>
-    <path class="verre" d="M14,12 H86 L54,70 L86,128 H14 L46,70 Z"/>
-    <rect class="socle" x="8" y="6" width="84" height="6" rx="3"/>
-    <rect class="socle" x="8" y="128" width="84" height="6" rx="3"/>
-  </svg>`;
+<h2>2 · Là où je ne te suis pas</h2>
+<p class="intro">La cloche est meilleure que le joker, sans discussion. Mais la mettre aux
+<strong>deux</strong> fins de tour ferait perdre la seule chose que cet emoji sait faire :
+distinguer les deux. Et elle le ferait dans le mauvais sens — en dessinant une cloche sur le
+seul des deux moments où <strong>aucune cloche ne sonne</strong>.</p>
+<p class="intro">Vider le paquet n'est pas une fin, c'est une réussite : cette équipe garde la
+main et emporte ses secondes dans la manche suivante. Le drapeau à damier le dit ;
+la cloche l'annoncerait comme un couperet.</p>
 
-const scoreManche = `
-  <div class="bloc-score">
-    <p class="cap">Score de la manche</p>
-    <div class="scores">
-      <div class="eq e1"><span class="nom">Les Bleus</span><span class="gros">4</span></div>
-      <div class="eq e2"><span class="nom">Équipe 2</span><span class="gros">3</span></div>
-    </div>
-    <p class="rappel">Le tour de Marc n'est pas encore compté</p>
-  </div>`;
-
-const ECRANS = {
-  aujourdhui: {
-    num: 'aujourd\'hui', onglet: 'Ce qui se passe', etiquette: 'Le téléphone d\'un spectateur — aujourd\'hui',
-    corps: `
-      <p class="cap">Manche 2/3 · 🎭 Mime</p>
-      <p class="sous" style="color:var(--t1);font-weight:700">Les Bleus · Marc fait deviner</p>
-      <div class="chrono-bloc"><p class="chrono">0</p>${sablier}</div>
-      <p class="reste">Plus de cartes</p>
-      <p class="mention">⏰ Temps écoulé !</p>`,
-    notes: `<p class="minus">Marc a vidé le paquet au bout de douze secondes. Chez les autres,
-      le sablier a continué de couler jusqu'à zéro — pour rien.</p>
-      <p class="minus">Puis « Temps écoulé » s'affiche, ce qui est faux : le temps n'était pas
-        écoulé, il n'y avait plus de cartes.</p>
-      <p class="minus">Et l'écran reste ainsi tant que Marc n'a pas validé son comptage,
-        sans que rien ne dise ce qu'on attend.</p>`
-  },
-
-  sobre: {
-    num: 'option 1', onglet: 'Sobre', etiquette: 'Le téléphone d\'un spectateur',
-    corps: `
-      <p class="cap">Manche 2/3 · 🎭 Mime</p>
+<div class="rangee" style="margin-top:var(--e4)">
+  <div class="colonne">
+    <span class="etiquette avant">Aujourd'hui — paquet vidé</span>
+    <div class="tel terne">
+      <button class="fermer">✕</button>
+      <span class="signe-grand">🃏</span>
+      <p class="titre-fin">Plus de cartes !</p>
+      <p class="sous-fin" style="margin-bottom:var(--e3)">Les Renards ont trouvé 9 cartes</p>
+      <div class="tiroir gagnees"><div class="resume"><span>✅ Comptées</span><span class="compte">9</span></div></div>
+      <div class="tiroir perdues"><div class="resume"><span>↩️ Non comptées</span><span class="compte">1</span></div></div>
       <div style="flex:1"></div>
-      <div class="grand-emoji">🃏</div>
-      <h2 class="titre">Fin du tour !</h2>
-      <p class="sous">Marc compte ses cartes</p>
-      <div class="points"><i></i><i></i><i></i></div>
-      <div style="flex:1"></div>`,
-    notes: `<p class="plus">Le sablier disparaît dès que le tour s'arrête : plus de décompte
-      qui tourne dans le vide.</p>
-      <p class="plus">Le titre dit ce qui s'est passé — « 🃏 Fin du tour ! » quand le paquet
-        est vide, « ⏰ Temps écoulé ! » quand c'est le chrono. La bonne raison, pas une
-        approximation.</p>
-      <p class="plus">Les trois points battants disent qu'on attend quelqu'un, sans
-        promettre de délai.</p>
-      <p class="minus">L'écran se vide beaucoup. Pendant dix secondes, il n'y a rien à lire.</p>`
-  },
+      <button class="bouton">Tour suivant ▶️</button>
+    </div>
+    <p class="note">Le joker ne dit ni la fin, ni l'exploit. Il décore.</p>
+  </div>
 
-  score: {
-    num: 'option 2', onglet: 'Avec le score', etiquette: 'Le téléphone d\'un spectateur',
-    corps: `
-      <p class="cap">Manche 2/3 · 🎭 Mime</p>
-      <div class="grand-emoji">🃏</div>
-      <h2 class="titre">Fin du tour !</h2>
-      <p class="sous">Marc compte ses cartes</p>
-      <div class="points"><i></i><i></i><i></i></div>
-      ${scoreManche}
-      <div style="flex:1"></div>`,
-    notes: `<p class="plus">Le score de la manche occupe le vide, et c'est ce qu'on regarde
-      naturellement entre deux tours.</p>
-      <p class="plus">La mention sous les chiffres dit clairement qu'ils vont bouger :
-        sans elle, on croirait le tour déjà compté.</p>
-      <p class="minus">Ces chiffres vont changer dans quelques secondes. Les montrer, c'est
-        accepter qu'on les voie sauter — ce que l'option 1 évite en ne montrant rien.</p>
-      <div class="question"><b>Ma recommandation.</b> Le vide de l'option 1 dure trop
-        longtemps pour ne rien porter, et le score est l'information la plus attendue à
-        cet instant.</div>`
-  },
+  <div class="colonne">
+    <span class="etiquette apres">Proposition — paquet vidé</span>
+    <div class="tel">
+      <button class="fermer">✕</button>
+      <span class="signe-grand surgit" data-anim="surgit">🏁</span>
+      <p class="titre-fin">Paquet terminé !</p>
+      <p class="sous-fin" style="margin-bottom:var(--e3)">Les Renards ont trouvé 9 cartes
+      <br><b style="color:var(--ambre)">⏱️ 12 s gardées pour la manche suivante</b></p>
+      <div class="tiroir gagnees"><div class="resume"><span>✅ Comptées</span><span class="compte">9</span></div></div>
+      <div class="tiroir perdues"><div class="resume"><span>↩️ Non comptées</span><span class="compte">1</span></div></div>
+      <div style="flex:1"></div>
+      <button class="rejouer" data-cible="drapeau">▶ Rejouer</button>
+      <button class="bouton" style="margin-top:var(--e2)">Tour suivant ▶️</button>
+    </div>
+    <p class="note">Le drapeau annonce l'arrivée, et la ligne ambre dit ce que ça
+    <b>rapporte</b> — le report existe déjà, il n'était dit que sur l'écran suivant.</p>
+  </div>
 
-  compact: {
-    num: 'option 3', onglet: 'Sans changer d\'écran', etiquette: 'Le téléphone d\'un spectateur',
-    corps: `
-      <p class="cap">Manche 2/3 · 🎭 Mime</p>
-      <p class="sous" style="color:var(--t1);font-weight:700">Les Bleus · Marc fait deviner</p>
-      <div class="grand-emoji" style="font-size:2.2rem">🃏</div>
-      <h2 class="titre" style="font-size:1.05rem">Fin du tour — Marc compte</h2>
-      <p class="reste">Plus de cartes dans la manche</p>
-      ${scoreManche}
-      <div style="flex:1"></div>`,
-    notes: `<p class="plus">Le sablier cède la place à une simple ligne : la mise en page ne
-      bouge presque pas, et l'œil ne se réoriente pas.</p>
-      <p class="plus">Le moins de travail des trois : c'est le bloc du tour, avec le sablier
-        remplacé par une icône.</p>
-      <p class="minus">Le moment est peu marqué. « Fin du tour » sur une ligne se remarque
-        moins qu'un titre, alors que c'est précisément le moment où la manche bascule.</p>`
-  }
-};
+  <div class="colonne">
+    <span class="etiquette apres">Proposition — temps écoulé</span>
+    <div class="tel">
+      <button class="fermer">✕</button>
+      <span class="signe-grand balance" data-anim="balance">🔔</span>
+      <p class="titre-fin">Temps écoulé !</p>
+      <p class="sous-fin" style="margin-bottom:var(--e3)">Les Loutres ont trouvé 6 cartes</p>
+      <div class="tiroir gagnees"><div class="resume"><span>✅ Comptées</span><span class="compte">6</span></div></div>
+      <div class="tiroir perdues"><div class="resume"><span>↩️ Non comptées</span><span class="compte">2</span></div></div>
+      <div style="flex:1"></div>
+      <button class="rejouer" data-cible="cloche">▶ Rejouer</button>
+      <button class="bouton" style="margin-top:var(--e2)">Tour suivant ▶️</button>
+    </div>
+    <p class="note">Ta cloche, à l'endroit où elle sonne pour de vrai. Le balancement
+    s'amortit en 1,4 s et s'arrête : <b>une cloche qui sonne en boucle devient un tic</b>.</p>
+  </div>
+</div>
 
-let courant = 'aujourdhui';
-const tabs = document.getElementById('tabs');
-Object.entries(ECRANS).forEach(([cle, e]) => {
-  const b = document.createElement('button');
-  b.className = 'tab';
-  b.dataset.ecran = cle;
-  b.innerHTML = `<span class="num">${e.num}</span>${e.onglet}`;
-  tabs.appendChild(b);
-});
+<div class="legende">
+  <ul>
+    <li><b>Si tu préfères la cloche partout</b>, c'est une ligne de code et je la pose. Mon
+    seul argument contre est celui du dessus : on perdrait la distinction, sur le seul écran
+    où elle est gratuite.</li>
+    <li class="question"><b>À trancher aussi :</b> « Plus de cartes ! » devient
+    « Paquet terminé ! » sur ma version. Le premier constate un manque, le second annonce une
+    fin atteinte — et c'est bien une réussite. Tu gardes l'ancien ?</li>
+    <li class="question"><b>Et la ligne ambre</b> qui annonce les secondes gardées : elle
+    n'existe nulle part aujourd'hui, le report n'est dit que sur l'écran de lancement suivant.
+    La dire ici, au moment où on la gagne, ou laisser comme c'est ?</li>
+    <li><b>Les deux emojis sont sûrs :</b> 🏁 et 🔔 datent de 2010, donc s'affichent partout,
+    y compris sur les téléphones qui ne reçoivent plus de mises à jour.</li>
+  </ul>
+</div>
 
-function rendre() {
-  const e = ECRANS[courant];
-  document.getElementById('corps').innerHTML = e.corps;
-  document.getElementById('etiquette').textContent = e.etiquette;
-  document.getElementById('notes').innerHTML = "<h3>Ce qu'il faut savoir</h3>" + e.notes;
-  document.querySelectorAll('.tab').forEach(t => t.classList.toggle('on', t.dataset.ecran === courant));
+<script>
+// Rejouer une animation : on retire la classe, on force le navigateur à
+// recalculer, on la remet. Sans le recalcul, le navigateur ne voit aucun
+// changement et ne rejoue rien.
+function rejouer(el) {
+  const nom = el.dataset.anim;
+  if (!nom) return;
+  el.classList.remove(nom);
+  void el.offsetWidth;
+  el.classList.add(nom);
 }
 
-tabs.addEventListener('click', ev => {
-  const t = ev.target.closest('.tab');
-  if (!t) return;
-  courant = t.dataset.ecran;
-  rendre();
+document.querySelectorAll('.candidat').forEach(carte => {
+  carte.addEventListener('mouseenter', () => rejouer(carte.querySelector('.signe')));
 });
 
-rendre();
+document.querySelectorAll('.rejouer').forEach(bouton => {
+  bouton.addEventListener('click', () => {
+    rejouer(bouton.closest('.tel').querySelector('.signe-grand'));
+  });
+});
+
+// Au chargement, la cloche sonne une fois : c'est elle qui est en question.
+addEventListener('load', () => {
+  document.querySelectorAll('[data-anim]').forEach(el => rejouer(el));
+});
 </script>
 </body>
 </html>

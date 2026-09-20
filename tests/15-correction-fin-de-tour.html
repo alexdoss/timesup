@@ -51,6 +51,10 @@ document.getElementById('f').addEventListener('load', async () => {
     while (ecran() !== 'screen-turn-end' && n < 60) { await wait(1000); n++; }
     check('le tour se termine sur le recapitulatif', ecran() === 'screen-turn-end');
     check('le titre indique la fin du chrono', $('turn-end-title').textContent.includes('Temps écoulé'));
+    // La cloche marque le seul des deux arrets qu on entend : le buzzer sonne
+    // quand le chrono tombe a zero, et se tait quand le paquet se vide.
+    check('la cloche annonce le buzzer', $('turn-end-emoji').textContent === '🔔');
+    check('et elle se balance', $('turn-end-emoji').classList.contains('balance'));
     check('le score du tour est annonce', $('turn-result').textContent.includes('3 carte'));
     check('une consigne explique la correction', $('turn-fix-hint').style.display !== 'none');
 
@@ -104,6 +108,11 @@ document.getElementById('f').addEventListener('load', async () => {
     check('le tour s arrete quand le paquet est vide', ecran() === 'screen-turn-end');
     log('       titre : "' + $('turn-end-title').textContent + '"');
     check('le titre le dit clairement', $('turn-end-title').textContent.includes('Plus de cartes'));
+    // Pas de cloche ici : rien n a sonne. Le damier dit une arrivee — et c en
+    // est une, cette equipe garde la main avec les secondes qui lui restaient.
+    check('le damier marque le paquet vide', $('turn-end-emoji').textContent === '🏁');
+    check('aucune cloche sur un arret silencieux',
+          !$('turn-end-emoji').classList.contains('balance'));
     check('les cartes du tour restent corrigeables', comptees().length > 0);
 
     // retirer une carte doit rouvrir la manche : il reste une carte a jouer

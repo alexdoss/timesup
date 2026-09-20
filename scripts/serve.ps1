@@ -20,7 +20,15 @@
 #>
 param(
   [string]$Root = (Split-Path $PSScriptRoot -Parent),
-  [int]$Port = 8080
+  [int]$Port = 8080,
+  # -Reseau : ecoute sur toutes les interfaces, pour essayer l app depuis un
+  # vrai telephone du meme Wi-Fi. Windows exige alors une reservation d URL,
+  # a poser une seule fois dans un terminal administrateur :
+  #   netsh http add urlacl url=http://+:8080/ user=$env:USERNAME
+  #   New-NetFirewallRule -DisplayName "Rush 8080" -Direction Inbound `
+  #     -Protocol TCP -LocalPort 8080 -Action Allow -Profile Private
+  # Sans reservation, le script bascule tout seul sur localhost et le dit.
+  [switch]$Reseau
 )
 
 $mime = @{
@@ -365,9 +373,34 @@ function Invoke-FausseSession($corps) {
 }
 
 $listener = [System.Net.HttpListener]::new()
-$listener.Prefixes.Add("http://localhost:$Port/")
-$listener.Start()
+$surLeReseau = $false
+if ($Reseau) {
+  # On tente l ecoute large, et on retombe sur localhost si Windows la refuse :
+  # mieux vaut un serveur qui demarre en expliquant ce qui manque qu une pile
+  # d exception pour toute reponse.
+  $listener.Prefixes.Add("http://+:$Port/")
+  try { $listener.Start(); $surLeReseau = $true }
+  catch {
+    Write-Output "  (ecoute reseau refusee : il manque la reservation d URL — voir l en-tete du script)"
+    $listener = [System.Net.HttpListener]::new()
+    $listener.Prefixes.Add("http://localhost:$Port/")
+    $listener.Start()
+  }
+} else {
+  $listener.Prefixes.Add("http://localhost:$Port/")
+  $listener.Start()
+}
 Write-Output "Rush est servi sur http://localhost:$Port/  (Ctrl+C pour arreter)"
+if ($surLeReseau) {
+  Get-NetIPAddress -AddressFamily IPv4 |
+    Where-Object { $_.IPAddress -notlike '127.*' -and $_.IPAddress -notlike '169.254.*' `
+                   -and $_.PrefixOrigin -ne 'WellKnown' } |
+    ForEach-Object { Write-Output "  depuis un telephone du meme Wi-Fi : http://$($_.IPAddress):$Port/" }
+  # Le service worker ne s installe pas hors HTTPS et hors localhost : sur le
+  # telephone l app tournera donc sans cache. C est une gene pour essayer le
+  # mode hors ligne, et un avantage pour tout le reste — aucun fichier perime.
+  Write-Output "  (pas de service worker sur une adresse IP : rien n est mis en cache)"
+}
 Write-Output "  /api/session est imite en memoire (saisie partagee jouable en local)"
 
 while ($listener.IsListening) {

@@ -2697,3 +2697,42 @@ h2 {
 @media (prefers-reduced-motion: reduce) {
   .monte { animation: none; }
 }
+
+/* ─── Les deux gestes de fin de tour ───
+   La cloche se balance : deux allers-retours qui s'amortissent, puis plus rien.
+   Une cloche qui sonne en boucle sur un écran qu'on lit devient un tic. Le
+   damier, lui, surgit : une arrivée, pas un balancement. */
+@keyframes cloche-balance {
+  0%   { transform: rotate(0deg) }
+  15%  { transform: rotate(16deg) }
+  35%  { transform: rotate(-13deg) }
+  55%  { transform: rotate(9deg) }
+  75%  { transform: rotate(-5deg) }
+  90%  { transform: rotate(2deg) }
+  100% { transform: rotate(0deg) }
+}
+
+@keyframes signe-surgit {
+  from { transform: scale(0.4); opacity: 0 }
+  60%  { transform: scale(1.12); opacity: 1 }
+  to   { transform: scale(1); opacity: 1 }
+}
+
+.grand-emoji.balance,
+.grand-emoji.surgit {
+  display: inline-block;   /* sans quoi la rotation n'a pas de prise */
+}
+
+.grand-emoji.balance {
+  animation: cloche-balance 1.4s ease-out;
+  transform-origin: 50% 12%;   /* elle pivote par son anneau, pas par son centre */
+}
+
+.grand-emoji.surgit {
+  animation: signe-surgit 0.5s ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .grand-emoji.balance,
+  .grand-emoji.surgit { animation: none; }
+}

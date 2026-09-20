@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head><meta charset="utf-8"><title>Test Rush — l organisateur joue aussi</title></head>
+<body>
+<pre id="log">demarrage...</pre>
+<div id="hote"></div>
+<script>
+// L ecran de fin de partie de l organisateur ne prend pas toujours parti.
+//
+// Pose au milieu de la table, il est lu par des gens qui viennent de gagner ET
+// de perdre : il nomme alors le vainqueur sans s adresser a personne. Mais des
+// que les invites suivent sur leur propre telephone, celui-ci redevient un
+// telephone parmi d autres — et son proprietaire a perdu ou gagne comme eux.
+// Lui servir la version neutre revenait a le laisser seul devant « une nette
+// victoire » alors qu il venait de se faire battre.
+const out = [];
+function log(s) { out.push(s); document.getElementById('log').textContent = out.join('\n'); }
+function check(name, cond) { log((cond ? 'PASS' : 'FAIL') + ' -- ' + name); }
+const wait = ms => new Promise(r => setTimeout(r, ms));
+
+async function api(action, donnees = {}) {
+  const r = await fetch('/api/session', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ action, ...donnees })
+  });
+  return await r.json().catch(() => ({}));
+}
+
+// Les phrases du tableau des neuf fins, par camp. Le test ne verifie pas
+// laquelle des trois sort — c est le scenario 46 qui s en charge — mais bien
+// que l ecran parle depuis le bon camp.
+const NEUTRES = ["ça s'est joué à trois cartes", 'Une nette victoire !', 'Démonstration',
+                 "Personne n'a rien lâché"];
+const GAGNANT = ['de justesse', "Vous l'emportez !", "personne n'a rien pu faire"];
+const PERDANT = ['Battus de peu. La revanche ?', 'Battus ! Demandez une revanche.',
+                 'Il y a des soirs comme ça'];
+
+localStorage.removeItem('timesup_partie_en_cours');
+localStorage.removeItem('timesup_suivi');
+
+const f = document.createElement('iframe');
+f.src = '/';
+f.style.cssText = 'width:420px;height:1100px;border:1px solid #ccc';
+document.getElementById('hote').appendChild(f);
+
+let demarre = false;
+f.addEventListener('load', async () => {
+  if (demarre) return;
+  demarre = true;
+
+  const d = f.contentDocument, w = f.contentWindow;
+  w.onerror = (m, s, l) => log('ERREUR APP: ' + m + ' @' + s + ':' + l);
+  const $ = id => d.getElementById(id);
+  const ecran = () => [...d.querySelectorAll('.screen')].find(s => s.classList.contains('active'))?.id;
+  const etat = () => JSON.parse(w.localStorage.getItem('timesup_partie_en_cours') || 'null')?.state;
+  const visible = id => $(id) && $(id).style.display !== 'none';
+
+  // La fin de manche monte en deux temps ; on la laisse finir avant de lire.
+  const MONTEES_MS = 3200;
+
+  // En mode nominatif avec des telephones connectes, le tour part chez le
+  // joueur concerne et le bouton de lancement disparait de cet appareil. Le
+  // test n a pas de vrai telephone en face : il emprunte la porte de sortie de
+  // l organisateur, celle qui sert quand un joueur ne repond pas.
+  async function reprendreSiConfie() {
+    if (visible('btn-start-turn')) return;
+    if (!visible('attente-du-joueur')) return;
+    $('btn-reprendre-tour').click();
+    await wait(300);
+    if (visible('dialog-overlay')) $('dialog-confirm').click();
+    // L app attend au plus 7 s que le telephone rende son comptage.
+    await wait(9000);
+  }
+
+  async function viderLeePaquet() {
+    await reprendreSiConfie();
+    if (!visible('btn-start-turn')) return false;
+    $('btn-start-turn').click();
+    let clics = 0;
+    while (ecran() === 'screen-game' && clics < 400) { $('btn-found').click(); clics++; }
+    $('btn-next-turn').click();
+    await wait(200);
+    if (ecran() === 'screen-round-end') await wait(MONTEES_MS);
+    return true;
+  }
+
+  try {
+    await wait(1200);
+
+    // ===== Une session de cartes, en mode nominatif =====
+    $('btn-start').click();
+    d.querySelector('[data-source="custom"]').click();
+    $('btn-ouvrir-session').click();
+    await wait(900);
+    const code = $('session-code').textContent.trim();
+    log('       session : ' + code);
+
+    // Trois invites, chacun sur son telephone.
+    for (const [prenom, cartes] of [['Marc', ['Plage', 'Valise', 'Parasol', 'Sable', 'Mer']],
+                                    ['Lea', ['Chaise', 'Table', 'Lampe', 'Rideau', 'Tapis']],
+                                    ['Nino', ['Vélo', 'Route', 'Casque', 'Pédale', 'Guidon']]]) {
+      const r = await api('rejoindre', { code, prenom });
+      await api('deposer', { code, idJoueur: r.idJoueur, cartes, fini: true });
+    }
+
+    // L organisateur s inscrit lui-meme : c est ce qui lui donne un camp.
+    await wait(2600);
+    $('btn-mes-cartes').click();
+    await wait(200);
+    $('saisie-prenom').value = 'Alex';
+    for (const mot of ['Alpha', 'Beta', 'Gamma', 'Delta', 'Epsilon']) {
+      $('saisie-carte').value = mot;
+      $('btn-saisie-ajouter').click();
+      await wait(250);
+    }
+    log('       saisie : ' + [...d.querySelectorAll('#saisie-liste .player-name')]
+          .map(e => e.textContent).join(', ')
+        + ' · bouton ' + ($('btn-saisie-fini').disabled ? 'bloque' : 'actif')
+        + ' · erreur "' + $('saisie-erreur').textContent + '"');
+    $('btn-saisie-fini').click();
+    await wait(900);
+
+    log('       avant lancement : ' + ecran());
+    $('btn-session-lancer').click();
+    await wait(600);
+    log('       apres « Suivant » : ' + ecran()
+        + (visible('dialog-overlay') ? ' + dialogue "' + $('dialog-title').textContent + '"' : ''));
+    if (visible('dialog-overlay')) { $('dialog-confirm').click(); await wait(600); }
+    log('       ecran : ' + ecran());
+
+    // Mode nominatif, puis repartition et manches.
+    if (ecran() === 'screen-jeu-mode') {
+      d.querySelector('[data-mode="nominatif"]').click();
+      await wait(500);
+      log('       apres le mode nominatif : ' + ecran());
+    }
+    if (ecran() === 'screen-players') { $('btn-next-players').click(); await wait(400); }
+    log('       ecran : ' + ecran());
+    check('on arrive a la repartition des equipes', ecran() === 'screen-repartition');
+    $('btn-repartition-jouer').click();
+    await wait(400);
+    $('btn-next-rounds').click();
+    $('btn-play').click();
+    await wait(0);
+    await wait(900);
+    check('la partie demarre', ecran() === 'screen-round');
+
+    const equipes = etat().teams.map(e => e.players.join(', '));
+    log('       equipes : ' + equipes.join('  |  '));
+    const monEquipe = etat().teams.findIndex(e => e.players.includes('Alex'));
+    check('l organisateur a bien une equipe', monEquipe >= 0);
+    check('et les invites ont leur telephone',
+          Object.keys(etat().playerPhones || {}).length > 0);
+
+    // ===== On joue jusqu au bout =====
+    // Une borne dure : mieux vaut un test qui s arrete en disant qu il n a pas
+    // atteint la fin qu un test qui epuise son budget en silence.
+    let tours = 0;
+    while (ecran() !== 'screen-final' && tours < 20) {
+      tours++;
+      if (ecran() === 'screen-round') { await viderLeePaquet(); continue; }
+      if (ecran() === 'screen-round-end') { $('btn-next-round').click(); await wait(700); continue; }
+      break;
+    }
+    log('       tours joues : ' + tours + ' · ecran : ' + ecran());
+    check('la partie est terminee', ecran() === 'screen-final');
+    await wait(MONTEES_MS);
+
+    // ===== CE QUE LIT L ORGANISATEUR =====
+    // La partie finie, la sauvegarde est effacee : on lit les scores a l ecran,
+    // comme le ferait celui qui le regarde.
+    const scores = [parseInt($('final-team1-score').textContent, 10),
+                    parseInt($('final-team2-score').textContent, 10)];
+    const ecart = scores[0] - scores[1];
+    const gagnant = ecart === 0 ? -1 : (ecart > 0 ? 0 : 1);
+    const jAiGagne = monEquipe === gagnant;
+    const phrase = $('final-phrase').textContent;
+    log('       scores ' + scores.join(' - ') + ' · Alex en equipe ' + (monEquipe + 1)
+        + ' · ' + (ecart === 0 ? 'egalite' : (jAiGagne ? 'il gagne' : 'il perd')));
+    log('       il lit : ' + $('final-emoji').textContent + ' "' + phrase + '"');
+
+    check('une phrase est affichee', phrase.length > 0);
+    if (ecart === 0) {
+      check('sur une egalite, personne n est pris a partie', NEUTRES.includes(phrase));
+    } else {
+      check('son ecran ne lui sert plus la version neutre', !NEUTRES.includes(phrase));
+      check('il parle depuis son camp',
+            (jAiGagne ? GAGNANT : PERDANT).includes(phrase));
+      check('et jamais depuis l autre',
+            !(jAiGagne ? PERDANT : GAGNANT).includes(phrase));
+    }
+
+    log('SCENARIO 47 TERMINE');
+  } catch (e) {
+    log('EXCEPTION: ' + e.message + '\n' + e.stack);
+  }
+});
+</script>
+</body>
+</html>

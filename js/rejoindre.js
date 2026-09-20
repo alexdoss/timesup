@@ -780,6 +780,8 @@ const ETAPES_RESULTAT = ['fin-manche', 'fin-partie'];
 // Vrai quand la partie est entre deux tours : c'est le seul moment où un tour
 // peut m'être confié.
 let avantUnTour = false;
+// La partie est allée à son terme : ce qui suit n'est plus un entre-deux-tours.
+let partieAchevee = false;
 // Le dernier état lu, avec son numéro de version : celui qui joue son tour
 // publie à partir de là, sans quoi sa publication serait tenue pour périmée.
 let dernierSuiviRecu = null;
@@ -793,6 +795,16 @@ function rendreConfiguration(suivi, heureServeur) {
   // vérification du tour ne le masque à nouveau — d'où un clignotement en bas
   // de l'écran, à chaque cycle.
   const aMoi = !!monTour;
+  // La partie s'achève quand le paquet de la dernière manche se vide. On le
+  // retient, parce que l'instant qui suit — le comptage rendu, les résultats pas
+  // encore publiés — ne dit plus rien de lui-même, et c'est justement là qu'il
+  // ne faut pas annoncer un tour suivant. Le lancement d'un tour l'oublie : une
+  // nouvelle partie a commencé.
+  const derniereManche = !!etat?.manche && etat.manche.numero === etat.manche.sur;
+  if (etape === 'fin-partie' || (derniereManche && Number(etat?.restantes) === 0)) {
+    partieAchevee = true;
+  }
+  if (ETAPES_LANCEMENT.includes(etape)) partieAchevee = false;
   const enAttenteDeTour = ETAPES_LANCEMENT.includes(etape) && !!etat?.manche;
   const enLancement = enAttenteDeTour && !aMoi;
   avantUnTour = enAttenteDeTour;
@@ -849,9 +861,15 @@ function rendreConfiguration(suivi, heureServeur) {
   // de finir, sans le prochain joueur ni les scores à jour. On patiente donc une
   // lecture ou deux, en le disant simplement.
   if (!enJeu && etape && etape !== 'configuration') {
-    document.getElementById('attente-titre').textContent =
-      monTourFini ? 'Tour enregistré' : 'La partie continue';
-    document.getElementById('attente-sous').textContent = 'Le tour suivant arrive.';
+    // Ce n'est pas toujours un tour qui vient de s'achever : quand le dernier
+    // paquet de la dernière manche se vide, c'est la partie. Annoncer « le tour
+    // suivant » à cet instant promet quelque chose qui n'existe plus.
+    document.getElementById('attente-titre').textContent = partieAchevee
+      ? 'Partie enregistrée'
+      : (monTourFini ? 'Tour enregistré' : 'La partie continue');
+    document.getElementById('attente-sous').textContent = partieAchevee
+      ? 'La partie suivante arrive.'
+      : 'Le tour suivant arrive.';
   }
   document.getElementById('bloc-lancement').style.display = enLancement ? '' : 'none';
   document.getElementById('bloc-tour').style.display = enTour ? '' : 'none';

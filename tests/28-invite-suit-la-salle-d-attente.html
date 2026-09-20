@@ -242,6 +242,58 @@ async function sonder(adresse) {
     await wait(200);
     check('un clic a cote la referme aussi', $('equipes-overlay').style.display === 'none');
 
+    // ===== L ENTRE-DEUX QUI SUIT LA DERNIERE CARTE =====
+    // Le comptage est rendu, les resultats pas encore publies : l ecran n a
+    // rien a montrer et le dit. Encore faut-il dire la bonne chose — sur la
+    // DERNIERE manche, paquet vide, ce n est pas un tour qui s acheve mais la
+    // partie, et promettre « le tour suivant » promet ce qui n existe plus.
+    const equipes = [
+      { nom: 'Équipe 1', couleur: '#d6336c', partie: 18, manche: 6, joueurs: ['Ana', 'Cleo'] },
+      { nom: 'Équipe 2', couleur: '#33c26a', partie: 15, manche: 4, joueurs: ['Bob', 'Dan'] }
+    ];
+
+    // D abord une manche du milieu : la langue du tour reste la bonne.
+    await api('publier', { code, jeton, v: 40, etat: {
+      etape: 'comptage', manche: { numero: 2, sur: 3, nom: 'Un mot', icone: '1️⃣' },
+      restantes: 7, equipes, tour: null
+    } });
+    await wait(2600);
+    log('       manche 2/3, 7 cartes : "' + $('attente-titre').textContent
+        + '" / "' + $('attente-sous').textContent + '"');
+    check('en cours de partie, on parle encore du tour suivant',
+          $('attente-sous').textContent === 'Le tour suivant arrive.');
+
+    // Puis la derniere manche, paquet vide : la partie est allee a son terme.
+    await api('publier', { code, jeton, v: 41, etat: {
+      etape: 'comptage', manche: { numero: 3, sur: 3, nom: 'Mime', icone: '🎭' },
+      restantes: 0, equipes, tour: null
+    } });
+    await wait(2600);
+    log('       manche 3/3, paquet vide : "' + $('attente-titre').textContent
+        + '" / "' + $('attente-sous').textContent + '"');
+    check('la fin de partie est annoncee comme telle',
+          $('attente-titre').textContent === 'Partie enregistrée');
+    check('et c est la partie suivante qui est annoncee',
+          $('attente-sous').textContent === 'La partie suivante arrive.');
+    check('plus aucune mention d un tour suivant',
+          !$('attente-sous').textContent.includes('tour'));
+
+    // Une partie neuve repart : la langue du tour revient.
+    await api('publier', { code, jeton, v: 42, etat: {
+      etape: 'attente', manche: { numero: 1, sur: 3, nom: 'Description', icone: '💬' },
+      restantes: 24, equipes: equipes.map(e => ({ ...e, partie: 0, manche: 0 })),
+      tour: null, aVenir: { equipe: 0, joueur: 'Ana' }
+    } });
+    await wait(2600);
+    await api('publier', { code, jeton, v: 43, etat: {
+      etape: 'comptage', manche: { numero: 1, sur: 3, nom: 'Description', icone: '💬' },
+      restantes: 19, equipes: equipes.map(e => ({ ...e, partie: 0, manche: 0 })), tour: null
+    } });
+    await wait(2600);
+    log('       partie suivante : "' + $('attente-sous').textContent + '"');
+    check('la partie suivante reparle du tour suivant',
+          $('attente-sous').textContent === 'Le tour suivant arrive.');
+
     log('SCENARIO 28 TERMINE');
   } catch (e) { log('EXCEPTION: ' + e.message + '\n' + e.stack); }
 })();

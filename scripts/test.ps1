@@ -53,7 +53,7 @@ $SCENARIOS = @(
   @{ f = '25-detail-par-joueur.html';              b = 200000; p = 'y' }
   @{ f = '26-suivi-de-partie.html';                b = 15000; p = 'z' }
   @{ f = '27-publication-du-suivi.html';           b = 40000; p = 'aa' }
-  @{ f = '28-invite-suit-la-salle-d-attente.html'; b = 25000; p = 'ab' }
+  @{ f = '28-invite-suit-la-salle-d-attente.html'; b = 45000; p = 'ab' }
   @{ f = '29-equipes-vues-par-l-invite.html';      b = 170000; p = 'ac' }
   @{ f = '30-equite-entre-parties.html';           b = 40000; p = 'ad' }
   @{ f = '31-cumul-par-joueur.html';               b = 50000; p = 'ae' }

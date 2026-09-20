@@ -1502,7 +1502,7 @@ const MINIMUM_JOUEURS = 4;
 
 async function ouvrirInscriptionDesJoueurs() {
   try {
-    const session = await ouvrirInscription();
+    const session = await ouvrirInscription(MINIMUM_JOUEURS);
     afficherInscription(
       creerQrSvg(adresseInvitation(), { taille: 190 }),
       session.code,

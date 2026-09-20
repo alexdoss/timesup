@@ -181,8 +181,15 @@ localStorage.removeItem('timesup_rejoint');
 
     check('il est bien dans la salle d attente', ecranInv() === 'screen-attente');
     log('       attente : "' + L('attente-titre') + '" — "' + L('attente-sous') + '"');
-    check('on n y parle pas de cartes',
-          L('attente-sous') === 'On attend que tout le monde se soit inscrit.');
+    check('on n y parle pas de cartes', !/cartes?/i.test(L('attente-sous')));
+    // Personne n est en retard sur une partie a themes : s inscrire EST la
+    // seule chose demandee. Le titre disait le contraire, en nommant tous les
+    // inscrits comme s ils faisaient attendre les autres.
+    check('aucun inscrit n est presente comme un retardataire',
+          !/^On attend /.test(L('attente-titre')));
+    check('le titre compte les inscrits', L('attente-titre') === '5 joueurs inscrits');
+    check('et la main revient a l organisateur',
+          L('attente-sous') === "La partie démarre quand l'organisateur la lance.");
     check('le decompte porte sur les inscrits',
           L('attente-total').includes('5 joueur(s) inscrit(s)'));
     check('aucun decompte de cartes par joueur',

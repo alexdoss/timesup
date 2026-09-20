@@ -1841,7 +1841,19 @@ function masquerEquipes() {
 // `manquants` : les personnes qu'on attend encore et qui ne sont même pas
 // arrivées. Sans elles, l'écran annonçait « tout le monde est prêt » à trois
 // joueurs sur six — il ne comptait que ceux qu'il voyait.
-function titreDeLAttente(enRetard, inscriptionSeule, manquants = 0) {
+function titreDeLAttente(enRetard, inscriptionSeule, manquants = 0, inscrits = 0) {
+  // Sur une partie à thèmes, s'inscrire est la seule chose demandée : il n'y a
+  // pas de « prêt » à atteindre, et « tout le monde est prêt » serait une
+  // affirmation que personne ne peut vérifier — l'organisateur lui-même ne sait
+  // pas qui manque encore. On dit donc ce qu'on sait : ce qu'il faut pour
+  // pouvoir jouer, puis combien sont là.
+  if (inscriptionSeule) {
+    if (manquants > 0) {
+      return manquants === 1
+        ? 'Il manque encore un joueur' : `Il manque encore ${manquants} joueurs`;
+    }
+    return inscrits === 1 ? '1 joueur inscrit' : `${inscrits} joueurs inscrits`;
+  }
   if (!enRetard.length && manquants > 0) {
     return manquants === 1 ? 'Il manque encore un joueur' : `Il manque encore ${manquants} joueurs`;
   }
@@ -1873,20 +1885,29 @@ function rendreAttente(etat) {
   // Nommer ceux qu'on attend plutôt que les compter : c'est ce qui permet de
   // les relancer à voix haute, la seule action utile à ce moment-là. Et les
   // grains montrent où chacun en est, donc nommer ne revient pas à accuser.
-  const enRetard = (etat.joueurs || []).filter(j => !j.fini).map(j => j.prenom);
+  // Ceux qui n'ont pas fini de saisir leurs cartes. Sur une partie à thèmes il
+  // n'y a pas de cartes du tout : personne n'est jamais marqué « fini », et
+  // compter comme ailleurs revenait à annoncer TOUS LES INSCRITS comme des
+  // retardataires — alors qu'ils venaient de faire la seule chose demandée.
+  const enRetard = inscriptionSeule
+    ? []
+    : (etat.joueurs || []).filter(j => !j.fini).map(j => j.prenom);
   // Ceux qui ne sont pas encore arrivés. L'organisateur a annoncé combien il
   // en attend ; sans ce nombre — sessions ouvertes avant cette version — on
   // retombe sur l'ancien comportement, qui ne compte que les présents.
   const manquants = Math.max(0, (Number(etat.effectifPrevu) || 0) - (etat.joueurs || []).length);
   document.getElementById('attente-titre').textContent =
     configEnCours ? 'Configuration de la partie en cours'
-                  : titreDeLAttente(enRetard, inscriptionSeule, manquants);
+                  : titreDeLAttente(enRetard, inscriptionSeule, manquants,
+                                    (etat.joueurs || []).length);
   document.getElementById('attente-sous').textContent = configEnCours
     ? "L'organisateur prépare la partie. Elle démarre juste après."
-    : (!enRetard.length
-        ? "La partie démarre quand l'organisateur la lance."
-        : (inscriptionSeule
-            ? "On attend que tout le monde se soit inscrit."
+    : (inscriptionSeule
+        ? (manquants > 0
+            ? 'Il en faut au moins quatre pour jouer.'
+            : "La partie démarre quand l'organisateur la lance.")
+        : (!enRetard.length
+            ? "La partie démarre quand l'organisateur la lance."
             : (enRetard.length === 1
                 ? 'Il saisit encore ses cartes.'
                 : 'Ils saisissent encore leurs cartes.')));

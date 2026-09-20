@@ -89,8 +89,12 @@ export async function ouvrirSuiviSeul() {
 
 // Partie à thèmes en mode nominatif : les invités donnent leur prénom, et rien
 // d'autre. La session reste ouverte le temps des inscriptions, puis sert à suivre.
-export async function ouvrirInscription() {
-  const reponse = await appeler('creer', { inscription: true });
+// effectifPrevu : le minimum qu'il faut pour jouer. L'organisateur n'annonce
+// pas combien de personnes viennent — il attend et lance quand il le sent —
+// mais les invités doivent pouvoir savoir ce qui manque pour que ce soit
+// seulement possible.
+export async function ouvrirInscription(effectifPrevu = 0) {
+  const reponse = await appeler('creer', { inscription: true, effectifPrevu });
   courante = {
     code: reponse.code,
     jeton: reponse.jeton,

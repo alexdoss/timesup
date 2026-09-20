@@ -1653,13 +1653,13 @@ function rendreComptage(etat) {
 // ce qui permet aux six états de ne plus répéter la même chose.
 
 // Un seul bouton, déplacé — plutôt que deux, qui finiraient par diverger.
-function placerLeBoutonDesEquipes(dansLeBandeau) {
+function placerLeBoutonDesEquipes(enJeu) {
   const bouton = document.getElementById('btn-voir-equipes');
   const place = document.getElementById(
-    dansLeBandeau ? 'place-equipes-bandeau' : 'place-equipes-attente');
+    enJeu ? 'place-equipes-bas' : 'place-equipes-attente');
   if (bouton.parentElement !== place) place.appendChild(bouton);
-  bouton.className = dansLeBandeau ? 'bandeau-equipes' : 'btn btn-secondary';
-  bouton.textContent = dansLeBandeau ? '👥 Équipes' : '👥 Voir les équipes';
+  bouton.className = enJeu ? 'btn-link' : 'btn btn-secondary';
+  bouton.textContent = enJeu ? '👥 Les équipes' : '👥 Voir les équipes';
 }
 
 function rendreBandeau(etat) {

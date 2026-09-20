@@ -2652,3 +2652,15 @@ h2 {
 .btn-back { position: absolute; top: 16px; left: 16px; width: 36px; height: 36px; border: none; border-radius: 50%; background: rgba(255,255,255,.08); color: var(--muted); font-size: 1.1rem; cursor: pointer; transition: background .2s; z-index: 10; display: flex; align-items: center; justify-content: center; font-family: inherit; }
 .btn-back:active { background: rgba(255,255,255,.15); }
 
+
+/* L'emplacement bas du bouton des équipes, chez les invités : sous l'état du
+   moment, comme sur l'écran de l'organisateur. Vide, il ne prend pas de place —
+   le bouton n'existe qu'une fois les équipes connues. */
+.place-equipes-bas {
+  display: flex;
+  justify-content: center;
+  width: 100%;
+  margin-top: 18px;
+}
+
+.place-equipes-bas:empty { display: none; }

@@ -200,11 +200,11 @@
              par chacun des états. -->
         <div id="suivi-bandeau" class="suivi-bandeau">
           <div class="bandeau-haut">
+            <!-- Le bandeau ne porte que l'état de la partie : la manche, puis le
+                 score. Le bouton des équipes y a logé un temps, où il disputait
+                 sa place au titre de la manche ; il vit maintenant en bas de
+                 l'écran, comme sur celui de l'organisateur. -->
             <span id="suivi-manche" class="bandeau-manche"></span>
-            <!-- Le bouton des équipes vient se loger ici une fois la partie
-                 lancée. Avant, il est en grand dans le corps de l'écran :
-                 découvrir sa composition est un moment, pas un réglage. -->
-            <span id="place-equipes-bandeau"></span>
           </div>
           <!-- Comme un tableau d'affichage de gymnase : le nom en petit,
                le chiffre en grand dessous. Les deux scores s'alignent, donc
@@ -336,6 +336,11 @@
 
         <div id="attente-joueurs" class="connectes"></div>
         <p id="attente-total" class="wizard-hint"></p>
+        <!-- L'emplacement du bouton des équipes une fois la partie lancée : tout
+             en bas, sous l'état du moment, comme sur l'écran de l'organisateur.
+             Il a vécu dans le bandeau du haut, où il disputait sa place au titre
+             de la manche : le bandeau dit où en est la partie, et rien d'autre. -->
+        <div id="place-equipes-bas" class="place-equipes-bas"></div>
       </div>
     </div>
 

@@ -34,11 +34,17 @@ document.getElementById('f').addEventListener('load', async () => {
   const equipeQuiJoue = () => sauvegarde().state.currentTeam;
 
   // Vide le paquet d'une traite : un seul tour suffit quand on ne perd pas de temps
+  // La fin de manche fait monter les chiffres en deux temps : la ligne de la
+  // manche, puis les deux totaux. On laisse la mise en scene aller au bout
+  // avant de lire — un compteur surpris en route donnerait un score faux.
+  const FIN_DES_MONTEES_MS = 3200;
+
   async function jouerLaManche() {
     $('btn-start-turn').click();
     let clics = 0;
     while (ecran() === 'screen-game' && clics < 300) { $('btn-found').click(); clics++; }
     $('btn-next-turn').click();
+    if (ecran() === 'screen-round-end') await wait(FIN_DES_MONTEES_MS);
   }
 
   try {
@@ -64,6 +70,7 @@ document.getElementById('f').addEventListener('load', async () => {
     check('la partie s ouvre sur l equipe tiree au sort', ouvre1 === sauvegarde().state.startingTeam);
     await jouerLaManche();
     check('fin de la manche 1', ecran() === 'screen-round-end');
+    await wait(FIN_DES_MONTEES_MS);
     const paquet = scoreManche(ouvre1);
     total1[ouvre1] += paquet;
     log('       cartes du paquet : ' + paquet + ', manche 1 ouverte par l equipe ' + (ouvre1 + 1));
@@ -96,6 +103,7 @@ document.getElementById('f').addEventListener('load', async () => {
     await jouerLaManche();
     total1[ouvre2] += paquet;
     check('fin de la manche 2', ecran() === 'screen-round-end');
+    await wait(FIN_DES_MONTEES_MS);
     check('la manche 2 compte ses propres points', scoreManche(ouvre2) === paquet);
     check('celle qui n a pas joue reste a zero sur la manche', scoreManche(1 - ouvre2) === 0);
     check('les totaux de partie cumulent les deux manches',
@@ -115,6 +123,7 @@ document.getElementById('f').addEventListener('load', async () => {
     await jouerLaManche();
     total1[ouvre3] += paquet;
     check('fin de la manche 3', ecran() === 'screen-round-end');
+    await wait(FIN_DES_MONTEES_MS);
     check('les totaux atteignent trois manches',
           scorePartie(0) === total1[0] && scorePartie(1) === total1[1]);
     check('le paquet complet a ete distribue', total1[0] + total1[1] === paquet * 3);
@@ -133,6 +142,16 @@ document.getElementById('f').addEventListener('load', async () => {
     // ===== FIN DE LA PREMIERE PARTIE =====
     $('btn-next-round').click();
     check('ecran de fin de partie', ecran() === 'screen-final');
+    await wait(FIN_DES_MONTEES_MS);
+
+    // L ecran pose sur la table ne prend jamais parti : il garde le trophee
+    // quel que soit l ecart, et qualifie la partie sans s adresser a personne.
+    log('       fin : ' + $('final-emoji').textContent + ' "'
+        + $('winner').textContent + '" — "' + $('final-phrase').textContent + '"');
+    check('la table garde le trophee', $('final-emoji').textContent === '🏆');
+    check('une phrase qualifie la partie', $('final-phrase').textContent.length > 0);
+    check('elle ne s adresse a personne',
+          !/\bvous\b/i.test($('final-phrase').textContent));
     check('le score de la partie est reporte',
           val('final-team1-score') === total1[0] && val('final-team2-score') === total1[1]);
     check('aucun cumul de soiree a la premiere partie', $('session-row').style.display === 'none');
@@ -177,6 +196,7 @@ document.getElementById('f').addEventListener('load', async () => {
     }
     $('btn-next-round').click();
     check('fin de la deuxieme partie', ecran() === 'screen-final');
+    await wait(FIN_DES_MONTEES_MS);
 
     // ===== CUMUL DE SOIREE =====
     check('le cumul de soiree apparait', $('session-row').style.display !== 'none');

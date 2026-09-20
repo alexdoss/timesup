@@ -2664,3 +2664,36 @@ h2 {
 }
 
 .place-equipes-bas:empty { display: none; }
+
+/* ===== LES ÉCRANS DE FIN ===== */
+
+/* La phrase qui qualifie la partie, sous le nom du vainqueur. Elle change selon
+   l'écart (js/fins.js) : c'est elle qui distingue une victoire arrachée d'une
+   démonstration, là où le seul nom du gagnant vaut pour les deux. */
+.phrase-fin {
+  font-size: 0.9rem;
+  color: var(--muted-strong);
+  margin-top: 4px;
+}
+
+.phrase-fin:empty { display: none; }
+
+/* Le chiffre qui vient d'arriver garde une seconde de chaleur. C'est ce qui
+   distingue un compteur qui a fini de monter d'un compteur qui n'a jamais
+   bougé — sans quoi la montée s'éteint sans qu'on sache qu'elle a eu lieu. */
+.monte {
+  animation: chiffre-arrive 0.9s ease-out;
+}
+
+@keyframes chiffre-arrive {
+  from {
+    color: var(--secondary);
+    transform: scale(1.18);
+  }
+}
+
+/* Personne n'a demandé ce mouvement : on ne l'impose pas. Le module de montée
+   pose déjà le chiffre final dans ce cas ; la règle est ici pour la teinte. */
+@media (prefers-reduced-motion: reduce) {
+  .monte { animation: none; }
+}

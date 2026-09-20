@@ -104,15 +104,15 @@ f.addEventListener('load', async () => {
     $('btn-found').click();
     await wait(400);
 
-    // ===== L ORDRE DE PASSAGE N EST PAS CELUI DES SCANS =====
-    // Les invites arrivent dans l ordre Ana, Bob, Cleo, Dan et sont repartis a
-    // tour de role : sans tirage, ce sont toujours les memes qui ouvrent. Le
-    // melange a lieu au demarrage de TOUTE partie, pas seulement sur
-    // « Rejouer » — une soiree qui repasse par l accueil y avait droit aussi.
-    const ordre1 = etat().teams.map(e => e.players.join(' > '));
-    log('       ordre partie 1 : ' + ordre1.join('  /  '));
-    check('l ordre de passage n est pas celui des inscriptions',
-          etat().teams[0].players[0] !== 'Ana');
+    // ===== L ORDRE DE PASSAGE =====
+    // Il est retire au demarrage de TOUTE partie, y compris celles lancees
+    // depuis l accueil. On le journalise ici pour l avoir sous les yeux ; c est
+    // le scenario 30 qui le VERIFIE, sur quatre parties enchainees et six
+    // joueurs — a deux par equipe le tirage n a qu une seule issue possible et
+    // ne prouverait rien.
+    log('       ordre joue : ' + etat().teams.map(e => e.players.join(' > ')).join('  /  '));
+    check('chaque equipe a bien ses joueurs',
+          etat().teams.every(e => e.players.length === 2));
 
     const scores1 = etat().teams.map(e => e.score);
     log('       score de la partie 1 : ' + scores1.join(' - '));

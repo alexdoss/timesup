@@ -756,16 +756,25 @@
     <div id="screen-turn-end" class="screen">
       <button class="btn-close" onclick="confirmQuit()">✕</button>
       <div class="turn-end-content">
-        <h2 id="turn-end-title">⏰ Temps écoulé !</h2>
+        <!-- Pourquoi le tour s'arrête : le paquet vidé ou le chrono. L'emoji le
+             dit avant le titre, comme sur le comptage des invités. -->
+        <div id="turn-end-emoji" class="grand-emoji">⏰</div>
+        <h2 id="turn-end-title">Temps écoulé !</h2>
         <p id="turn-result"></p>
-        <p id="turn-fix-hint" class="wizard-hint">Une erreur de comptage ? Ouvre la liste concernée pour la corriger.</p>
-        <details id="turn-found-drawer" class="drawer">
-          <summary id="turn-found-summary">✅ Cartes comptées</summary>
+        <!-- Dire ce qu'on peut faire, pas comment se servir de l'écran :
+             « ouvre la liste concernée » était l'aveu qu'il ne se comprenait
+             pas tout seul. Même phrase que chez les invités. -->
+        <p id="turn-fix-hint" class="wizard-hint">Un oubli ? Déplace la carte d'une liste à l'autre.</p>
+        <!-- Les deux tiroirs sont des contraires — ce qu'on a gagné, ce qu'on
+             n'a pas eu — et ils étaient jumeaux : même fond, même cadre, même
+             gris. Un filet vert d'un côté suffit à les séparer sans lire. -->
+        <details id="turn-found-drawer" class="drawer gagnees">
+          <summary id="turn-found-summary">✅ Comptées</summary>
           <ul id="turn-found-list" class="player-list"></ul>
         </details>
-        <details id="turn-missed-drawer" class="drawer">
-          <summary id="turn-missed-summary">↩️ Cartes non comptées</summary>
-          <p class="wizard-hint">Cartes passées, ou affichée au moment du buzzer.</p>
+        <details id="turn-missed-drawer" class="drawer perdues">
+          <summary id="turn-missed-summary">↩️ Non comptées</summary>
+          <p class="wizard-hint">Passées, ou affichée au moment du buzzer.</p>
           <ul id="turn-missed-list" class="player-list"></ul>
         </details>
         <button id="btn-next-turn" class="btn btn-primary">Tour suivant ▶️</button>
@@ -797,8 +806,13 @@
     <!-- ÉCRAN FIN DE PARTIE -->
     <div id="screen-final" class="screen">
       <div class="final-content">
-        <h2>🏆 Fin de la partie !</h2>
+        <!-- L'écran posé sur la table ne prend jamais parti : il nomme le
+             vainqueur, il ne s'adresse à personne. Les téléphones des invités,
+             eux, appartiennent à quelqu'un et reçoivent leur propre version. -->
+        <div id="final-emoji" class="grand-emoji">🏆</div>
         <div id="winner" class="winner"></div>
+        <!-- La phrase change selon l'écart : voir js/fins.js -->
+        <p id="final-phrase" class="phrase-fin"></p>
         <table class="score-table">
           <thead>
             <tr>

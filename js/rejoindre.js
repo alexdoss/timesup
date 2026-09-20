@@ -5,6 +5,7 @@
 // champ de saisie en une seconde, même sur un réseau de salle des fêtes.
 
 import { creerSablier, svgSablier } from './sablier.js';
+import { finDePartie } from './fins.js';
 import { playFound, playTick, playBuzzer, unlockAudio } from './sound.js';
 
 const ROUTE = '/api/session';
@@ -939,6 +940,17 @@ function ligneScore(libelle, valeurs, classe) {
 
 let dernierResultat = null;
 
+// Dans quel camp est ce téléphone. Sans prénom — mode simple, spectateur — ou
+// avec un prénom qui ne figure dans aucune équipe, on ne tranche pas : la
+// version neutre vaut mieux qu'une félicitation adressée au mauvais joueur.
+function monRole(etat, ecart) {
+  if (!session.prenom || ecart === 0) return 'table';
+  const index = (etat.equipes || []).findIndex(e => (e.joueurs || []).includes(session.prenom));
+  if (index < 0) return 'table';
+  const equipeGagnante = ecart > 0 ? 0 : 1;
+  return index === equipeGagnante ? 'gagnant' : 'perdant';
+}
+
 function rendreResultats(etat) {
   // Ne redessiner que sur un vrai changement. Sans cette garde, le tiroir des
   // joueurs était reconstruit à chaque lecture et se refermait tout seul toutes
@@ -960,14 +972,23 @@ function rendreResultats(etat) {
     : `Fin de la manche ${etat.manche?.numero}/${etat.manche?.sur}`;
 
   const vainqueur = document.getElementById('resultats-vainqueur');
+  const phrase = document.getElementById('resultats-phrase');
   if (finale) {
     const ecart = e1.partie - e2.partie;
     vainqueur.textContent = ecart === 0
-      ? '🤝 Égalité parfaite !'
-      : `🎉 ${(ecart > 0 ? e1 : e2).nom} gagne !`;
+      ? 'Égalité parfaite !'
+      : `${(ecart > 0 ? e1 : e2).nom} gagne !`;
     vainqueur.style.display = '';
+    // Ce téléphone appartient à quelqu'un : il ne dit pas la même chose selon
+    // qu'on a gagné ou perdu. On compare le prénom à la composition publiée.
+    // En mode simple, ou pour un spectateur, personne ne sait qui est où : on
+    // retombe sur la version neutre de la table, sans code particulier.
+    const fin = finDePartie(ecart, monRole(etat, ecart));
+    document.getElementById('resultats-emoji').textContent = fin.emoji;
+    if (phrase) { phrase.textContent = fin.phrase; phrase.style.display = ''; }
   } else {
     vainqueur.style.display = 'none';
+    if (phrase) phrase.style.display = 'none';
   }
 
   document.getElementById('resultats-eq1').textContent = e1.nom;

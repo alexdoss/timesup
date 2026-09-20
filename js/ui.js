@@ -1,6 +1,9 @@
 // ===== UI MODULE =====
 // Gère l'affichage et les interactions DOM
 
+import { monterEnsemble } from './montee.js';
+import { finDePartie } from './fins.js';
+import { playCount } from './sound.js';
 export function applyTeamAccent(teamColor) {
   document.documentElement.style.setProperty('--accent', teamColor);
 }
@@ -131,14 +134,16 @@ function fillDrawer(prefix, label, words, bouton, onAction) {
 
 // title    : « Temps écoulé » ou « plus de cartes »
 // onRemove : la carte n'aurait pas dû être comptée — onAdd : elle aurait dû l'être
-export function showTurnResult({ title, teamName, score, found, missed }, onRemove, onAdd) {
+export function showTurnResult({ title, emoji, teamName, score, found, missed }, onRemove, onAdd) {
   document.getElementById('turn-end-title').textContent = title;
+  const signe = document.getElementById('turn-end-emoji');
+  if (signe && emoji) signe.textContent = emoji;
   document.getElementById('turn-result').textContent =
     `${teamName} a trouvé ${score} carte(s) !`;
 
-  fillDrawer('turn-found', '✅ Cartes comptées', found,
+  fillDrawer('turn-found', '✅ Comptées', found,
     { icon: '✕', cssClass: 'btn-remove', title: 'Retirer cette carte du score' }, onRemove);
-  fillDrawer('turn-missed', '↩️ Cartes non comptées', missed,
+  fillDrawer('turn-missed', '↩️ Non comptées', missed,
     { icon: '＋', cssClass: 'btn-remove btn-recount', title: 'Compter cette carte' }, onAdd);
 
   const hint = document.getElementById('turn-fix-hint');
@@ -168,28 +173,55 @@ function ligneScore(libelle, valeurs, classe = '', ids = []) {
 
 // history : [{ round, scores }] pour chaque manche déjà jouée, la dernière
 // étant celle qui vient de s'achever.
-export function showRoundEnd(roundNum, teams, history) {
+// `anime` : la manche vient de se finir sous les yeux de tout le monde, et les
+// chiffres montent. Faux à la reprise d'une partie sauvegardée — rejouer une
+// montée pour un score acquis la veille ne célèbre rien.
+export function showRoundEnd(roundNum, teams, history, anime = false) {
   document.getElementById('round-end-title').textContent = `Fin de la manche ${roundNum}`;
   document.getElementById('end-team1-name').textContent = teams[0].name;
   document.getElementById('end-team2-name').textContent = teams[1].name;
 
   const corps = document.getElementById('end-scores');
   corps.innerHTML = '';
+  const lignes = [];
   history.forEach((ligne, index) => {
-    corps.appendChild(ligneScore(
+    const tr = ligneScore(
       `${ligne.round.icon} ${ligne.round.name}`,
       ligne.scores,
       index === history.length - 1 ? 'manche-en-cours' : 'manche-passee'
-    ));
+    );
+    lignes.push(tr);
+    corps.appendChild(tr);
   });
   corps.appendChild(ligneScore(
     'Total partie', teams.map(equipe => equipe.score),
     'score-total', ['end-team1-score', 'end-team2-score']
   ));
+
+  if (!anime || !history.length) return;
+
+  // EN DEUX TEMPS. D'abord la ligne de la manche qui vient de finir : seule
+  // l'équipe qui a marqué monte, l'autre s'affiche immobile — c'est la règle
+  // « on n'anime jamais un chiffre qui n'a pas changé ». Puis, une fois cette
+  // ligne arrivée, les deux totaux de la partie grimpent ensemble.
+  const derniere = lignes[lignes.length - 1];
+  const cases = [...derniere.querySelectorAll('td')];
+  const scoresManche = history[history.length - 1].scores;
+  const totaux = [document.getElementById('end-team1-score'),
+                  document.getElementById('end-team2-score')];
+  const avant = teams.map((equipe, i) => equipe.score - (scoresManche[i] || 0));
+
+  monterEnsemble(cases.map((td, i) => ({ element: td, de: 0, vers: scoresManche[i] || 0 })), {
+    surPas: playCount,
+    fini: () => setTimeout(() => {
+      monterEnsemble(totaux.map((td, i) => ({ element: td, de: avant[i], vers: teams[i].score })),
+                     { surPas: playCount });
+    }, 350)
+  });
 }
 
 // session : { totals, parties } quand plusieurs parties s'enchaînent, sinon null
-export function showFinalScreen(teams, session = null, history = []) {
+export function showFinalScreen(teams, session = null, history = [], anime = false) {
   document.getElementById('final-team1-name').textContent = teams[0].name;
   document.getElementById('final-team2-name').textContent = teams[1].name;
 
@@ -218,11 +250,31 @@ export function showFinalScreen(teams, session = null, history = []) {
 
   const diff = teams[0].score - teams[1].score;
   let winnerText;
-  if (diff > 0) winnerText = `🎉 ${teams[0].name} gagne !`;
-  else if (diff < 0) winnerText = `🎉 ${teams[1].name} gagne !`;
-  else winnerText = "🤝 Égalité parfaite !";
+  if (diff > 0) winnerText = `${teams[0].name} gagne !`;
+  else if (diff < 0) winnerText = `${teams[1].name} gagne !`;
+  else winnerText = 'Égalité parfaite !';
 
   document.getElementById('winner').textContent = winnerText;
+
+  // L'écran de la table ne prend jamais parti : il nomme le vainqueur et
+  // qualifie la partie, sans s'adresser à personne. Les invités reçoivent leur
+  // propre version, choisie dans la même table (js/fins.js).
+  const fin = finDePartie(diff, 'table');
+  const signe = document.getElementById('final-emoji');
+  const phrase = document.getElementById('final-phrase');
+  if (signe) signe.textContent = fin.emoji;
+  if (phrase) phrase.textContent = fin.phrase;
+
+  // Seul le cumul de la soirée monte : les totaux de la partie ont déjà grimpé
+  // manche après manche. Sur une première partie il n'y a pas de cumul, et
+  // l'écran reste sobre — c'est assumé.
+  if (anime && session) {
+    const cases = [document.getElementById('session-team1-score'),
+                   document.getElementById('session-team2-score')];
+    monterEnsemble(cases.map((td, i) => ({
+      element: td, de: session.totals[i] - teams[i].score, vers: session.totals[i]
+    })), { surPas: playCount });
+  }
 }
 
 // onChange : appelé après chaque clic, pour les écrans dont un bouton dépend

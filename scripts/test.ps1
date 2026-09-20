@@ -41,7 +41,7 @@ $SCENARIOS = @(
   @{ f = '13-theme-manuel.html';                   b = 15000; p = 'm' }
   @{ f = '14-regles-du-jeu.html';                  b = 15000; p = 'n' }
   @{ f = '15-correction-fin-de-tour.html';         b = 70000; p = 'o' }
-  @{ f = '16-scores-manche-partie-soiree.html';    b = 30000; p = 'p' }
+  @{ f = '16-scores-manche-partie-soiree.html';    b = 75000; p = 'p' }
   @{ f = '17-dialogues-et-suppression.html';       b = 20000; p = 'q' }
   @{ f = '18-session-partagee.html';               b = 20000; p = 'r' }
   @{ f = '19-page-invite.html';                    b = 30000; p = 's' }
@@ -73,6 +73,7 @@ $SCENARIOS = @(
   @{ f = '43-tour-perdu-au-rechargement.html';    b = 240000; p = 'aq' }
   @{ f = '44-regles-de-passe-a-distance.html';    b = 300000; p = 'ar' }
   @{ f = '45-deuxieme-partie-de-la-soiree.html';    b = 120000; p = 'as' }
+  @{ f = '46-les-neuf-fins.html';                  b = 90000; p = 'at' }
 )
 
 function Resolve-Chrome {

@@ -1,0 +1,401 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Rush — les trois écrans de fin</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root {
+  --fond: #14102B; --fond-halo: #2A1F5C; --surface: #1E1846; --surface-haut: #262055;
+  --bord: #2E2660; --texte: #FFF6F0; --doux: #A79BD6;
+  --violet: #7C3AED; --violet-clair: #B14BFF; --ambre: #FFB020;
+  --vert: #22C55E; --rouge: #EF4444;
+  --eq1: #FF4D8D; --eq2: #22C55E;
+  --e1: 4px; --e2: 8px; --e3: 16px; --e4: 24px; --e5: 32px; --e6: 48px;
+  --t1: .75rem; --t2: .875rem; --t3: 1rem; --t4: 1.375rem; --t5: 2rem; --t6: 3.2rem;
+  --r-bloc: 20px; --r-pastille: 100px; --ombre: 0 10px 30px rgba(0,0,0,.35);
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  font-family: 'Outfit', sans-serif;
+  background: radial-gradient(120% 45% at 50% 0%, var(--fond-halo) 0%, var(--fond) 58%);
+  color: var(--texte); padding: var(--e4); line-height: 1.5;
+}
+h1 { font-size: var(--t4); margin-bottom: var(--e1); }
+h2 { font-size: var(--t1); text-transform: uppercase; letter-spacing: .1em;
+     color: var(--ambre); margin: var(--e6) 0 var(--e3); font-weight: 700; }
+.intro { color: var(--doux); font-size: var(--t2); max-width: 880px; }
+.intro strong { color: var(--texte); }
+.intro + .intro { margin-top: var(--e2); }
+.rangee { display: flex; gap: var(--e4); flex-wrap: wrap; align-items: flex-start; }
+.colonne { display: flex; flex-direction: column; gap: var(--e2); }
+.etiquette { font-size: var(--t1); text-transform: uppercase; letter-spacing: .08em;
+             font-weight: 700; color: var(--doux); }
+.etiquette.avant { color: #7E7396; }
+.etiquette.apres { color: var(--vert); }
+.note { font-size: var(--t2); color: var(--doux); max-width: 320px; }
+.note b { color: var(--texte); font-weight: 600; }
+
+.tel {
+  width: 320px; height: 640px; position: relative; overflow: hidden;
+  background: radial-gradient(120% 34% at 50% 0%, var(--fond-halo) 0%, var(--fond) 62%);
+  border: 1px solid var(--bord); border-radius: 28px; box-shadow: var(--ombre);
+  display: flex; flex-direction: column; padding: var(--e4) var(--e3) var(--e3);
+}
+.tel.terne { filter: saturate(.55) brightness(.92); }
+.fermer { position: absolute; top: 14px; right: 16px; background: none; border: none;
+          color: var(--doux); font-size: var(--t3); cursor: pointer; z-index: 3; }
+
+.titre-fin { font-size: var(--t4); font-weight: 800; text-align: center; }
+.sous-fin { font-size: var(--t2); color: var(--doux); text-align: center; }
+
+/* ─── Les tiroirs de comptage ───
+   Aujourd'hui jumeaux : même fond, même cadre, même gris, pour deux contraires.
+   Un filet suffit à les séparer sans lire — c'est la règle déjà appliquée chez
+   les invités au lot 3. */
+.tiroir {
+  background: var(--surface); border: 1px solid var(--bord);
+  border-radius: 14px; padding: 12px var(--e3); font-size: var(--t2);
+}
+.tiroir + .tiroir { margin-top: var(--e2); }
+.tiroir.gagnees { border-left: 3px solid var(--vert); }
+.tiroir.perdues { border-left: 3px solid var(--bord); color: var(--doux); }
+.tiroir .resume { display: flex; justify-content: space-between; align-items: center; font-weight: 600; }
+.tiroir .compte { font-variant-numeric: tabular-nums; color: var(--doux); font-weight: 700; }
+
+/* ─── Le tableau des scores ─── */
+.tableau { width: 100%; border-collapse: collapse; font-size: var(--t2); }
+.tableau th, .tableau td { padding: 7px 4px; text-align: center; }
+.tableau thead th { font-size: var(--t1); text-transform: uppercase; letter-spacing: .06em;
+                    color: var(--doux); font-weight: 700; }
+.tableau tbody td:first-child, .tableau tbody th:first-child {
+  text-align: left; color: var(--doux); font-weight: 500; }
+.tableau tbody tr + tr td { border-top: 1px solid rgba(255,255,255,.06); }
+.tableau .total td { font-weight: 800; border-top: 1px solid var(--bord) !important; }
+.tableau .n { font-variant-numeric: tabular-nums; }
+.tableau .a { color: var(--eq1); }
+.tableau .b { color: var(--eq2); }
+/* Le chiffre qui vient de monter garde une seconde de chaleur */
+.monte { animation: chaud .9s ease-out; }
+@keyframes chaud { from { color: var(--ambre); transform: scale(1.18) } }
+
+/* ─── La fin de partie ─── */
+.coupe { font-size: var(--t6); text-align: center; line-height: 1; }
+.vainqueur { text-align: center; font-size: var(--t4); font-weight: 800; }
+.phrase-fin { text-align: center; font-size: var(--t2); color: var(--doux); }
+.cumul {
+  background: rgba(255,255,255,.04); border: 1px solid var(--bord);
+  border-radius: 14px; padding: 12px; text-align: center;
+}
+.cumul-cap { font-size: var(--t1); text-transform: uppercase; letter-spacing: .08em;
+             color: var(--doux); font-weight: 700; }
+.cumul-n { font-size: var(--t5); font-weight: 800; font-variant-numeric: tabular-nums; }
+
+.bouton {
+  flex: none; width: 100%; border: none; border-radius: var(--r-pastille);
+  padding: 14px; font-family: inherit; font-size: var(--t3); font-weight: 700;
+  color: #fff; background: linear-gradient(135deg, var(--violet), var(--violet-clair));
+  cursor: pointer; box-shadow: 0 8px 20px rgba(124,58,237,.35);
+}
+.bouton.doux { background: rgba(255,255,255,.08); color: var(--doux);
+               border: 1px solid var(--bord); box-shadow: none; }
+.lien { flex: none; background: none; border: none; color: var(--doux);
+        font-size: var(--t2); padding: var(--e2); cursor: pointer; }
+.rejouer {
+  align-self: flex-start; background: none; border: 1px dashed var(--ambre);
+  color: var(--ambre); border-radius: var(--r-pastille); font-family: inherit;
+  font-size: var(--t1); font-weight: 700; padding: 5px 12px; cursor: pointer;
+}
+.rejouer:hover { background: rgba(255,176,32,.1); }
+
+/* ─── Le tableau des neuf fins ─── */
+.neuf { width: 100%; max-width: 880px; border-collapse: collapse; font-size: var(--t2); margin-top: var(--e3); }
+.neuf th, .neuf td { padding: 10px 12px; text-align: left; vertical-align: top;
+                     border: 1px solid var(--bord); }
+.neuf thead th { background: var(--surface); font-size: var(--t1); text-transform: uppercase;
+                 letter-spacing: .06em; color: var(--ambre); }
+.neuf tbody th { background: rgba(255,255,255,.03); white-space: nowrap; }
+.neuf tbody th small { display: block; font-weight: 400; color: var(--doux); }
+.neuf .emo { font-size: 1.1rem; }
+
+.legende { margin-top: var(--e6); border-top: 1px solid var(--bord); padding-top: var(--e4); }
+.legende ul { list-style: none; display: flex; flex-direction: column; gap: var(--e2); max-width: 880px; }
+.legende li { font-size: var(--t2); color: var(--doux); padding-left: var(--e3);
+              border-left: 2px solid var(--bord); }
+.legende li b { color: var(--texte); }
+.question { border-left-color: var(--ambre) !important; }
+.question b { color: var(--ambre) !important; }
+</style>
+</head>
+<body>
+
+<h1>Les trois écrans de fin</h1>
+<p class="intro">Fin de tour, fin de manche, fin de partie. C'est le lot qui porte
+<strong>les chiffres qui montent</strong> et <strong>les neuf fins</strong> — les deux choses
+arrêtées dans le système de design et jamais implémentées.</p>
+<p class="intro">Les compteurs de cette page <strong>tournent pour de vrai</strong> : chaque
+téléphone a son bouton <em>rejouer l'animation</em>, pour juger du rythme plutôt que d'une
+description.</p>
+
+<h2>1 · La fin de tour</h2>
+<p class="intro">L'écran de correction. Deux listes s'y opposent — ce qu'on a gagné, ce qu'on
+n'a pas eu — et elles sont <strong>jumelles</strong> : même fond, même cadre, même gris. Les
+invités ont reçu au lot 3 un filet vert d'un côté, qui les sépare sans qu'on lise. L'organisateur
+ne l'a pas eu : c'est la dette laissée pour ce lot.</p>
+<p class="intro">Le texte d'aide décrivait l'écran plutôt que ce qu'on peut faire
+(« ouvre la liste concernée » était l'aveu qu'il ne se comprenait pas seul). Les invités disent
+déjà mieux : <strong>« Un oubli ? Déplace la carte d'une liste à l'autre. »</strong></p>
+
+<div class="rangee" style="margin-top:var(--e4)">
+  <div class="colonne">
+    <span class="etiquette avant">Aujourd'hui</span>
+    <div class="tel terne">
+      <button class="fermer">✕</button>
+      <p class="titre-fin">⏰ Temps écoulé !</p>
+      <p class="sous-fin" style="margin-bottom:var(--e3)">6 cartes pour Les Renards</p>
+      <p class="sous-fin" style="margin-bottom:var(--e3)">Une erreur de comptage ? Ouvre la liste
+      concernée pour la corriger.</p>
+      <div class="tiroir"><div class="resume"><span>✅ Cartes comptées</span><span class="compte">6</span></div></div>
+      <div class="tiroir"><div class="resume"><span>↩️ Cartes non comptées</span><span class="compte">2</span></div></div>
+      <div style="flex:1"></div>
+      <button class="bouton">Tour suivant ▶️</button>
+    </div>
+    <p class="note">Deux contraires présentés à l'identique. On les distingue en
+    <b>lisant</b>, jamais d'un coup d'œil.</p>
+  </div>
+
+  <div class="colonne">
+    <span class="etiquette apres">Proposition</span>
+    <div class="tel" id="tel-tour">
+      <button class="fermer">✕</button>
+      <div class="coupe" style="font-size:2.6rem">🃏</div>
+      <p class="titre-fin">Fin du tour !</p>
+      <p class="sous-fin" style="margin-bottom:var(--e3)">Camille a fait deviner
+      <b style="color:var(--texte)">6 cartes</b></p>
+      <div class="tiroir gagnees"><div class="resume"><span>✅ Comptées</span><span class="compte">6</span></div></div>
+      <div class="tiroir perdues"><div class="resume"><span>↩️ Non comptées</span><span class="compte">2</span></div></div>
+      <p class="sous-fin" style="margin-top:var(--e3)">Un oubli ? Déplace la carte d'une liste
+      à l'autre.</p>
+      <div style="flex:1"></div>
+      <button class="bouton">Tour suivant ▶️</button>
+    </div>
+    <p class="note">Le filet vert fait le tri sans lecture. L'emoji dit <b>pourquoi</b> le tour
+    s'arrête — carte ou chrono —, comme chez les invités.</p>
+  </div>
+</div>
+
+<h2>2 · La fin de manche</h2>
+<p class="intro">Le tableau s'affiche déjà complet, d'un bloc. Le système prévoit de le monter
+<strong>en deux temps</strong> : d'abord la ligne de la manche qui vient de finir, où
+<strong>seule l'équipe qui a marqué grimpe</strong> — l'autre s'affiche immobile, son chiffre
+n'ayant pas bougé —, puis les deux totaux de la partie, <strong>ensemble</strong>.</p>
+
+<div class="rangee" style="margin-top:var(--e4)">
+  <div class="colonne">
+    <span class="etiquette avant">Aujourd'hui</span>
+    <div class="tel terne">
+      <button class="fermer">✕</button>
+      <p class="titre-fin" style="margin-bottom:var(--e3)">Fin de la manche 2</p>
+      <table class="tableau">
+        <thead><tr><th></th><th class="a">Renards</th><th class="b">Loutres</th></tr></thead>
+        <tbody>
+          <tr><td>💬 Description</td><td class="n">7</td><td class="n">5</td></tr>
+          <tr><td>1️⃣ Un mot</td><td class="n">5</td><td class="n">10</td></tr>
+          <tr class="total"><td>Total</td><td class="n">12</td><td class="n">15</td></tr>
+        </tbody>
+      </table>
+      <div style="flex:1"></div>
+      <button class="bouton">Manche suivante ▶️</button>
+    </div>
+    <p class="note">Rien ne bouge. Le moment le plus chargé de la manche passe
+    <b>sans qu'on le remarque</b>.</p>
+  </div>
+
+  <div class="colonne">
+    <span class="etiquette apres">Proposition — animée</span>
+    <div class="tel">
+      <button class="fermer">✕</button>
+      <p class="titre-fin" style="margin-bottom:var(--e3)">Fin de la manche 2</p>
+      <table class="tableau">
+        <thead><tr><th></th><th class="a">Renards</th><th class="b">Loutres</th></tr></thead>
+        <tbody>
+          <tr><td>💬 Description</td><td class="n">7</td><td class="n">5</td></tr>
+          <tr><td>1️⃣ Un mot</td><td class="n" id="m-a">5</td><td class="n" id="m-b">0</td></tr>
+          <tr class="total"><td>Total</td><td class="n" id="t-a">7</td><td class="n" id="t-b">5</td></tr>
+        </tbody>
+      </table>
+      <div style="flex:1"></div>
+      <button class="rejouer" data-scene="manche">▶ Rejouer l'animation</button>
+      <button class="bouton" style="margin-top:var(--e2)">Manche suivante ▶️</button>
+    </div>
+    <p class="note"><b>Temps 1 :</b> seules les Loutres montent — ce sont elles qui viennent de
+    jouer. <b>Temps 2 :</b> les deux totaux grimpent ensemble vers 12 et 15.</p>
+  </div>
+</div>
+
+<h2>3 · La fin de partie</h2>
+<p class="intro">Le dernier écran de la soirée, et le plus plat aujourd'hui : un trophée fixe,
+un nom, un tableau. Le système prévoit <strong>une phrase choisie selon l'écart</strong> et
+<strong>le cumul de la soirée qui monte</strong> — les totaux de la partie, eux, ont déjà grimpé
+manche après manche, donc ils ne rejouent pas. Sur une première partie il n'y a pas de cumul :
+l'écran reste sobre, et c'est assumé.</p>
+
+<div class="rangee" style="margin-top:var(--e4)">
+  <div class="colonne">
+    <span class="etiquette avant">Aujourd'hui</span>
+    <div class="tel terne">
+      <button class="fermer">✕</button>
+      <p class="titre-fin">🏆 Fin de la partie !</p>
+      <p class="vainqueur" style="margin:var(--e2) 0 var(--e3)">Les Loutres l'emportent</p>
+      <table class="tableau">
+        <thead><tr><th></th><th class="a">Renards</th><th class="b">Loutres</th></tr></thead>
+        <tbody>
+          <tr><td>💬 Description</td><td class="n">7</td><td class="n">5</td></tr>
+          <tr><td>1️⃣ Un mot</td><td class="n">5</td><td class="n">10</td></tr>
+          <tr><td>🎭 Mime</td><td class="n">6</td><td class="n">9</td></tr>
+          <tr class="total"><td>Total</td><td class="n">18</td><td class="n">24</td></tr>
+        </tbody>
+      </table>
+      <div style="flex:1"></div>
+      <button class="bouton">🔄 Rejouer avec les mêmes joueurs</button>
+      <button class="bouton doux" style="margin-top:var(--e2)">Nouvelle partie</button>
+    </div>
+    <p class="note">« Les Loutres l'emportent » vaut pour six points comme pour vingt.
+    Rien ne dit <b>comment</b> ça s'est joué.</p>
+  </div>
+
+  <div class="colonne">
+    <span class="etiquette apres">Proposition — animée</span>
+    <div class="tel">
+      <button class="fermer">✕</button>
+      <div class="coupe">🏆</div>
+      <p class="vainqueur">Les Loutres</p>
+      <p class="phrase-fin" id="f-phrase" style="margin-bottom:var(--e3)">Une nette victoire !</p>
+      <table class="tableau">
+        <thead><tr><th></th><th class="a">Renards</th><th class="b">Loutres</th></tr></thead>
+        <tbody>
+          <tr><td>💬 Description</td><td class="n">7</td><td class="n">5</td></tr>
+          <tr><td>1️⃣ Un mot</td><td class="n">5</td><td class="n">10</td></tr>
+          <tr><td>🎭 Mime</td><td class="n">6</td><td class="n">9</td></tr>
+          <tr class="total"><td>Total</td><td class="n">18</td><td class="n">24</td></tr>
+        </tbody>
+      </table>
+      <div class="cumul" style="margin-top:var(--e3)">
+        <p class="cumul-cap">Cumul de la soirée · 3 parties</p>
+        <p class="cumul-n"><span class="a" id="c-a">0</span> – <span class="b" id="c-b">0</span></p>
+      </div>
+      <div style="flex:1"></div>
+      <button class="rejouer" data-scene="partie">▶ Rejouer l'animation</button>
+      <button class="bouton" style="margin-top:var(--e2)">🔄 Rejouer</button>
+    </div>
+    <p class="note">Seul le <b>cumul de la soirée</b> monte. La phrase change selon l'écart :
+    ici « net ». Le tiroir du détail par joueur reste sous le bouton, inchangé.</p>
+  </div>
+</div>
+
+<h2>4 · Les neuf fins — à revoir</h2>
+<p class="intro">Ces phrases ont été écrites d'un jet pendant la séance de conception du
+28 août, et c'est le seul endroit du système qui relève du <strong>ton</strong> plutôt que de la
+règle. Tu voulais les relire à froid : les voici. Rien n'est implémenté, donc les changer ne
+coûte rien.</p>
+<p class="intro">Trois écarts × trois points de vue. <strong>La table</strong>, c'est l'appareil
+de l'organisateur, que tout le monde regarde ; <strong>le gagnant</strong> et
+<strong>le perdant</strong>, ce sont les téléphones des invités, qui savent dans quelle équipe
+ils sont.</p>
+
+<table class="neuf">
+  <thead>
+    <tr><th>Écart</th><th>Sur la table</th><th>Chez le gagnant</th><th>Chez le perdant</th></tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>Serré<small>≤ 3 points</small></th>
+      <td><span class="emo">🏆</span> « ça s'est joué à trois cartes »</td>
+      <td><span class="emo">😅</span> « de justesse »</td>
+      <td><span class="emo">🥲</span> « Battus de peu. La revanche ? »</td>
+    </tr>
+    <tr>
+      <th>Net<small>4 à 15</small></th>
+      <td><span class="emo">🏆</span> « Une nette victoire ! »</td>
+      <td><span class="emo">🎉</span> « Vous l'emportez ! »</td>
+      <td><span class="emo">😤</span> « Battus ! Demandez une revanche. »</td>
+    </tr>
+    <tr>
+      <th>Écrasant<small>&gt; 15</small></th>
+      <td><span class="emo">🏆</span> « Démonstration »</td>
+      <td><span class="emo">🔥</span> « personne n'a rien pu faire »</td>
+      <td><span class="emo">🙈</span> « Il y a des soirs comme ça »</td>
+    </tr>
+  </tbody>
+</table>
+
+<div class="legende">
+  <ul>
+    <li><b>Ce que je relis de travers.</b> « rattrapable en une manche » est dit au
+    <em>perdant</em> d'une partie <em>finie</em> : il n'y a plus de manche à rattraper. Et
+    « 9 points d'écart » sur la table est un constat, pas une fin — les deux autres lignes de
+    cette colonne ont un ton, celle-là n'en a pas.</li>
+    <li><b>Un manque.</b> Rien n'est prévu pour l'<b>égalité parfaite</b>. Elle arrive, et c'est
+    la fin la plus mémorable d'une soirée : elle mérite sa propre phrase.</li>
+    <li class="question"><b>À trancher : les bornes.</b> « Net » va de 4 à 15, ce qui est large —
+    une partie gagnée de 4 points ne ressemble pas à une gagnée de 15. Faut-il resserrer, ou
+    l'écart compte-t-il moins que le fait de gagner ?</li>
+    <li class="question"><b>À trancher : le rythme.</b> Les compteurs de cette page montent en
+    1,1 s. Plus lent tient la table en haleine mais fait attendre ; plus rapide se remarque à
+    peine. Juge à l'œil, c'est fait pour.</li>
+    <li><b>Ce que ça coûte.</b> Les trois écrans existent et gardent leurs identifiants : ce lot
+    ajoute une fonction de comptage animé, une table de phrases, et le filet des tiroirs déjà
+    écrit pour les invités. Le moteur de jeu n'est pas touché.</li>
+  </ul>
+</div>
+
+<script>
+// Le compteur : on part du chiffre affiché et on monte jusqu'à la cible. La
+// courbe ralentit à l'arrivée — un compteur linéaire paraît mécanique, et le
+// dernier chiffre est celui qu'on attend.
+function monter(el, de, vers, duree = 1100, fini) {
+  const debut = performance.now();
+  function pas(t) {
+    const p = Math.min(1, (t - debut) / duree);
+    const adouci = 1 - Math.pow(1 - p, 3);
+    el.textContent = Math.round(de + (vers - de) * adouci);
+    if (p < 1) requestAnimationFrame(pas);
+    else { el.classList.remove('monte'); void el.offsetWidth; el.classList.add('monte'); if (fini) fini(); }
+  }
+  requestAnimationFrame(pas);
+}
+
+const scenes = {
+  // Fin de manche, en deux temps : la ligne de la manche d'abord — seule
+  // l'équipe qui vient de jouer bouge —, puis les deux totaux ensemble.
+  manche() {
+    const mA = document.getElementById('m-a'), mB = document.getElementById('m-b');
+    const tA = document.getElementById('t-a'), tB = document.getElementById('t-b');
+    mA.textContent = 5; mB.textContent = 0; tA.textContent = 7; tB.textContent = 5;
+    monter(mB, 0, 10, 900, () => {
+      setTimeout(() => {
+        monter(tA, 7, 12, 1100);
+        monter(tB, 5, 15, 1100);
+      }, 350);
+    });
+  },
+  // Fin de partie : seul le cumul de la soirée monte.
+  partie() {
+    const a = document.getElementById('c-a'), b = document.getElementById('c-b');
+    a.textContent = 0; b.textContent = 0;
+    monter(a, 0, 47, 1100);
+    monter(b, 0, 52, 1100);
+  }
+};
+
+document.querySelectorAll('.rejouer').forEach(bouton => {
+  bouton.addEventListener('click', () => scenes[bouton.dataset.scene]());
+});
+// Au chargement, une fois, pour qu'on voie de quoi il s'agit sans rien cliquer.
+addEventListener('load', () => { scenes.manche(); setTimeout(scenes.partie, 400); });
+</script>
+</body>
+</html>

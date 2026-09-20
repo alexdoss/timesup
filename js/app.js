@@ -27,7 +27,8 @@ let resumeCountdown = null;
 let settingsReturn = 'home';   // d'où on a ouvert les paramètres, pour savoir où revenir
 let pausedAuto = false;        // la pause en cours vient-elle d'un passage en arrière-plan
 let puppetAnswer = null;       // réponse à la question d'effectif en mode simple (null / true / false)
-let turnEndTitle = '';         // titre du récapitulatif de tour (temps écoulé / plus de cartes)
+let turnEndTitle = '';         // titre du recapitulatif de tour (temps ecoule / plus de cartes)
+let turnEndEmoji = '';         // et l emoji qui dit pourquoi le tour s arrete
 let turnEndLabel = '';         // qui vient de jouer, conservé pour les re-rendus après correction
 let tourAcheve = null;         // équipe et joueur du tour qu'on est en train de compter, notés avant la rotation
 let editingThemeId = null;     // thème maison ouvert dans la fiche d'édition
@@ -2478,7 +2479,9 @@ function endTurn(paquetVide = false) {
   stopTimer();
   closeTurn();
 
-  turnEndTitle = paquetVide ? '🃏 Plus de cartes !' : '⏰ Temps écoulé !';
+  // L emoji vit à part du titre : il est posé en grand au-dessus de lui.
+  turnEndEmoji = paquetVide ? '🃏' : '⏰';
+  turnEndTitle = paquetVide ? 'Plus de cartes !' : 'Temps écoulé !';
   const teamName = game.teams[game.turnTeam].name;
   turnEndLabel = game.nominativeMode && game.turnPlayer
     ? `${game.turnPlayer} (${teamName})`
@@ -2516,6 +2519,7 @@ function renderTurnEnd() {
   showTurnResult(
     {
       title: turnEndTitle,
+      emoji: turnEndEmoji,
       teamName: turnEndLabel,
       score: game.turnScore,
       found: game.turnFound || [],
@@ -2576,7 +2580,7 @@ function endRound() {
   recordRound();
   saveGame(game);
   publierEtat('fin-manche');
-  showRoundEnd(`${game.currentRound + 1}/${game.activeRounds.length}`, game.teams, getRoundHistory());
+  showRoundEnd(`${game.currentRound + 1}/${game.activeRounds.length}`, game.teams, getRoundHistory(), true);
   afficherRetourCorrection();
 
   const btnNext = document.getElementById('btn-next-round');
@@ -2589,7 +2593,7 @@ function endRound() {
         ? { totals: getSessionScores(), parties: game.gamesPlayed + 1 }
         : null;
       publierEtat('fin-partie');
-      showFinalScreen(game.teams, session, getRoundHistory());
+      showFinalScreen(game.teams, session, getRoundHistory(), true);
       if (game.nominativeMode) {
         renderPlayerStats(getPlayerBreakdown(), game.teams, getRoundHistory(),
                           session ? session.parties : 0);

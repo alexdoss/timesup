@@ -114,6 +114,19 @@ export function playFound() {
   vibrate(18);
 }
 
+// Un point qui monte, sur les écrans de fin : une note, un peu plus haute à
+// chaque pas. Elle se joue jusqu'à douze fois en une seconde — elle doit donc
+// rester très courte et très discrète, sinon la montée devient un vacarme au
+// moment où tout le monde regarde l'écran.
+export function playCount(pas = 1, total = 1) {
+  if (soundEnabled) {
+    unlockAudio();
+    const montee = total > 1 ? (pas - 1) / (total - 1) : 0;
+    tone({ freq: 520 + montee * 340, type: 'triangle', dur: 0.05, gain: 0.11 });
+  }
+  vibrate(12);
+}
+
 // Tic sec du décompte, joué à chaque seconde sous les 5 secondes restantes.
 export function playTick() {
   if (soundEnabled) {

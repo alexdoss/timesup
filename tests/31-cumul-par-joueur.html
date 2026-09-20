@@ -101,6 +101,7 @@ f.addEventListener('load', async () => {
     // ===== Partie 1 : rien de nouveau, le tableau est celui de la partie =====
     await jouerLaPartie();
     check('fin de la partie 1', ecran() === 'screen-final');
+    await wait(2000);   // le cumul de la soiree monte : on lit une fois arrive
     let t = lireTableau();
     log('       colonnes partie 1 : ' + t.enTetes.join(' | '));
     check('une colonne par manche, plus le total', t.enTetes.length === 5);
@@ -152,6 +153,7 @@ f.addEventListener('load', async () => {
 
       await jouerLaPartie();
       check(`fin de la partie ${numero}`, ecran() === 'screen-final');
+      await wait(2000);
 
       t = lireTableau();
       check(`partie ${numero} : le tableau garde sa forme`, t.enTetes.length === 5);

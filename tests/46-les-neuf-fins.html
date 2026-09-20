@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head><meta charset="utf-8"><title>Test Rush — les neuf fins</title></head>
+<body>
+<pre id="log">demarrage...</pre>
+<div id="hote"></div>
+<script>
+// Trois ecarts x trois points de vue. L ecran de la table ne prend jamais
+// parti ; les telephones des invites, eux, appartiennent a quelqu un et doivent
+// dire la bonne chose a la bonne personne. Se tromper de camp est le seul
+// defaut de cet ecran qu un joueur ne pardonnerait pas : feliciter celui qui
+// vient de perdre.
+const out = [];
+function log(s) { out.push(s); document.getElementById('log').textContent = out.join('\n'); }
+function check(name, cond) { log((cond ? 'PASS' : 'FAIL') + ' -- ' + name); }
+const wait = ms => new Promise(r => setTimeout(r, ms));
+
+async function api(action, donnees = {}) {
+  const r = await fetch('/api/session', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ action, ...donnees })
+  });
+  return await r.json().catch(() => ({}));
+}
+
+(async () => {
+  // Session d INSCRIPTION : chacun donne son prenom, personne ne saisit de
+  // cartes. C est le cas des parties a themes — et le seul qui permette de
+  // rejouer plusieurs fins de suite au meme telephone. Avec des cartes, un
+  // invite qui a vu « fin de partie » se met a guetter la session suivante et
+  // cesse de lire l etat publie : c est voulu, mais ça ferme ce banc d essai.
+  const s = await api('creer', { mode: 'nominatif', inscription: true });
+  const code = s.code, jeton = s.jeton;
+  const moi = await api('rejoindre', { code, prenom: 'Cleo' });
+  await api('rejoindre', { code, prenom: 'Bob' });
+  const ferme = await api('fermer', { code, jeton });
+  log('       session d inscription ' + code + ' fermee : ' + JSON.stringify(ferme));
+
+  // Cleo est dans l equipe 1. On fera donc varier le signe de l ecart pour la
+  // faire gagner ou perdre, sans toucher a la composition.
+  const equipes = (s1, s2) => ([
+    { nom: 'Les Renards', couleur: '#d6336c', partie: s1, manche: s1, joueurs: ['Cleo'] },
+    { nom: 'Les Loutres', couleur: '#33c26a', partie: s2, manche: s2, joueurs: ['Bob'] }
+  ]);
+
+  localStorage.setItem('timesup_rejoint', JSON.stringify({
+    code, idJoueur: moi.idJoueur, prenom: 'Cleo', cartes: [],
+    cartesParJoueur: 0, mode: 'nominatif', fini: true, inscription: true
+  }));
+
+  const f = document.createElement('iframe');
+  f.src = '/rejoindre.html';
+  f.style.cssText = 'width:390px;height:900px;border:1px solid #ccc';
+  document.getElementById('hote').appendChild(f);
+
+  f.addEventListener('load', async () => {
+    const d = f.contentDocument;
+    const L = id => d.getElementById(id)?.textContent || '';
+    let v = 10;
+
+    // Publie une fin de partie et rend ce que l invite affiche.
+    async function finir(s1, s2) {
+      await api('publier', { code, jeton, v: ++v, etat: {
+        etape: 'fin-partie',
+        manche: { numero: 3, sur: 3, nom: 'Mime', icone: '🎭' },
+        restantes: 0, equipes: equipes(s1, s2), tour: null,
+        historique: [{ nom: 'Mime', icone: '🎭', scores: [s1, s2] }]
+      } });
+      await wait(3000);
+      return { emoji: L('resultats-emoji'), phrase: L('resultats-phrase'),
+               vainqueur: L('resultats-vainqueur') };
+    }
+
+    try {
+      await wait(1500);
+
+      // ===== CLEO GAGNE =====
+      let r = await finir(22, 20);
+      log('       serre, gagnante : ' + r.emoji + ' "' + r.phrase + '"');
+      check('victoire serree : l emoji du soulagement', r.emoji === '😅');
+      check('victoire serree : la phrase le dit', r.phrase === 'de justesse');
+
+      r = await finir(24, 18);
+      log('       net, gagnante : ' + r.emoji + ' "' + r.phrase + '"');
+      check('victoire nette : l emoji de la fete', r.emoji === '🎉');
+      check('victoire nette : la phrase s adresse a elle',
+            r.phrase === "Vous l'emportez !");
+
+      r = await finir(40, 10);
+      log('       ecrasant, gagnante : ' + r.emoji + ' "' + r.phrase + '"');
+      check('demonstration : l emoji du feu', r.emoji === '🔥');
+      check('demonstration : la phrase le dit', r.phrase === "personne n'a rien pu faire");
+
+      // ===== CLEO PERD =====
+      r = await finir(20, 22);
+      log('       serre, perdante : ' + r.emoji + ' "' + r.phrase + '"');
+      check('defaite serree : la larme', r.emoji === '🥲');
+      check('defaite serree : la revanche est proposee',
+            r.phrase === 'Battus de peu. La revanche ?');
+
+      r = await finir(18, 24);
+      log('       net, perdante : ' + r.emoji + ' "' + r.phrase + '"');
+      check('defaite nette : la vapeur', r.emoji === '😤');
+      check('defaite nette : on reclame la revanche',
+            r.phrase === 'Battus ! Demandez une revanche.');
+
+      r = await finir(10, 40);
+      log('       ecrasant, perdante : ' + r.emoji + ' "' + r.phrase + '"');
+      check('deroute : le singe qui se cache', r.emoji === '🙈');
+      check('deroute : la phrase console sans consoler',
+            r.phrase === 'Il y a des soirs comme ça');
+
+      // ===== PERSONNE NE GAGNE =====
+      r = await finir(21, 21);
+      log('       egalite : ' + r.emoji + ' "' + r.phrase + '" — "' + r.vainqueur + '"');
+      check('egalite : la poignee de main', r.emoji === '🤝');
+      check('egalite : aucune des deux versions de camp',
+            !/emportez|Battus/.test(r.phrase));
+      check('egalite : le titre ne nomme pas de vainqueur',
+            r.vainqueur.includes('Égalité'));
+
+      // ===== LES BORNES =====
+      // 3 points : encore serre. 4 : deja net. La frontiere doit tomber juste,
+      // sinon une partie gagnee d une carte serait annoncee comme une nette
+      // victoire — et l inverse.
+      r = await finir(23, 20);
+      check('3 points d ecart restent une victoire serree', r.emoji === '😅');
+      r = await finir(24, 20);
+      check('4 points basculent en victoire nette', r.emoji === '🎉');
+      r = await finir(35, 20);
+      check('15 points restent une victoire nette', r.emoji === '🎉');
+      r = await finir(36, 20);
+      check('16 points deviennent une demonstration', r.emoji === '🔥');
+
+      // ===== UN SPECTATEUR N EST DANS AUCUN CAMP =====
+      // Il n a pas de prenom dans les equipes : lui adresser des felicitations
+      // ou des condoleances serait une erreur. Il lit la version de la table.
+      const equipesSansElle = [
+        { nom: 'Les Renards', couleur: '#d6336c', partie: 30, manche: 30, joueurs: ['Ana'] },
+        { nom: 'Les Loutres', couleur: '#33c26a', partie: 20, manche: 20, joueurs: ['Bob'] }
+      ];
+      await api('publier', { code, jeton, v: ++v, etat: {
+        etape: 'fin-partie',
+        manche: { numero: 3, sur: 3, nom: 'Mime', icone: '🎭' },
+        restantes: 0, equipes: equipesSansElle, tour: null,
+        historique: [{ nom: 'Mime', icone: '🎭', scores: [30, 20] }]
+      } });
+      await wait(3000);
+      log('       hors des equipes : ' + L('resultats-emoji') + ' "' + L('resultats-phrase') + '"');
+      check('qui n est dans aucune equipe voit la version neutre',
+            L('resultats-emoji') === '🏆');
+      check('et aucune phrase ne lui est adressee',
+            !/\bVous\b|Battus/.test(L('resultats-phrase')));
+
+      log('SCENARIO 46 TERMINE');
+    } catch (e) {
+      log('EXCEPTION: ' + e.message + '\n' + e.stack);
+    }
+  });
+})();
+</script>
+</body>
+</html>

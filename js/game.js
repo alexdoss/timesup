@@ -90,6 +90,11 @@ export function resetGame({ keepSession = false } = {}) {
   game.turnPlayer = null;
   game.roundStartScores = [0, 0];
   game.roundHistory = [];
+  // L'ordre de passage se retire à chaque partie, et pas seulement sur
+  // « Rejouer ». Une soirée où l'on revient à l'accueil entre deux parties
+  // reconduisait sinon l'ordre d'arrivée des scans : les mêmes ouvraient
+  // toujours, les mêmes fermaient toujours.
+  melangerOrdreDesJoueurs();
   game.reportTemps = 0;
   game.turnDuree = 0;
   if (!keepSession) {
@@ -153,8 +158,7 @@ export function replayGame() {
   game.startingTeam = 1 - ouvreurPrecedent;
   game.currentTeam = game.startingTeam;
   game.turnTeam = game.startingTeam;
-
-  melangerOrdreDesJoueurs();
+  // Le tirage de l'ordre est fait par resetGame, juste au-dessus.
 }
 
 // Refuse les doublons sans tenir compte de la casse : « Marc » et « marc »

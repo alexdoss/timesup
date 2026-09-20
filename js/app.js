@@ -2257,7 +2257,7 @@ async function suivreLeTourDistant() {
     const T = (id, texte) => { document.getElementById(id).textContent = texte; };
     const m = suivi.etat.manche;
     const surLePaquet = suivi.etat.tour.raison === 'paquet';
-    T('dc-emoji', surLePaquet ? '🃏' : '⏰');
+    T('dc-emoji', surLePaquet ? '🏁' : '🔔');
     T('dc-titre', surLePaquet ? 'Fin du tour !' : 'Temps écoulé !');
     T('dc-qui', `${suivi.etat.tour.joueur} compte ses cartes`);
   }

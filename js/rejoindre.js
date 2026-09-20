@@ -1583,7 +1583,7 @@ function rendreMonComptage() {
   if (!p) return;
   const T = (id, texte) => { document.getElementById(id).textContent = texte; };
 
-  T('mon-fin-titre', p.paquetVide ? '🃏 Plus de cartes !' : '⏰ Temps écoulé !');
+  T('mon-fin-titre', p.paquetVide ? '🏁 Plus de cartes !' : '🔔 Temps écoulé !');
 
   // Le score du tour est ce que le joueur est venu voir : le chiffre porte,
   // le reste de la phrase l'accompagne. Le texte complet ne change pas.
@@ -1681,7 +1681,7 @@ function rendreComptage(etat) {
 
   // La manche et le score sont dans le bandeau : cet écran dit seulement ce
   // qu'on attend, et de qui.
-  T('comptage-emoji', surLePaquet ? '🃏' : '⏰');
+  T('comptage-emoji', surLePaquet ? '🏁' : '🔔');
   T('comptage-titre', surLePaquet ? 'Fin du tour !' : 'Temps écoulé !');
   T('comptage-qui', `${etat.tour.joueur} compte ses cartes`);
 }

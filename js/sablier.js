@@ -91,7 +91,7 @@ export function creerSablier({ prefixe, chrono, blocChrono, manche, qui, mention
 
     // Entre la fin du temps et le moment où l'organisateur passe à la suite,
     // il s'écoule quelques secondes : mieux vaut le dire qu'afficher un zéro nu.
-    T(mention, ancre.gele ? '⏸ Partie en pause' : (restant <= 0 ? '⏰ Temps écoulé !' : ''));
+    T(mention, ancre.gele ? '⏸ Partie en pause' : (restant <= 0 ? '🔔 Temps écoulé !' : ''));
   }
 
   // Le décompte tourne en local, sans rien demander au serveur

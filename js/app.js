@@ -138,8 +138,8 @@ function getRoundLabel() {
 }
 
 function syncTeamNamesFromInputs() {
-  game.teams[0].name = document.getElementById('team1-name').value.trim() || "Équipe 1";
-  game.teams[1].name = document.getElementById('team2-name').value.trim() || "Équipe 2";
+  game.teams[0].name = document.getElementById('team1-name').value.trim() || "Équipe A";
+  game.teams[1].name = document.getElementById('team2-name').value.trim() || "Équipe B";
 }
 
 function refreshPlayerList() {

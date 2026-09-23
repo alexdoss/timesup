@@ -703,12 +703,18 @@ const ECART_TOLERE = 2;
 export function renderRepartition(joueurs, teams, onBasculer, bouge = null) {
   teams.forEach((equipe, camp) => {
     const boite = document.getElementById(`camp${camp + 1}-gens`);
-    const compte = document.getElementById(`camp${camp + 1}-compte`);
     if (!boite) return;
     boite.innerHTML = '';
 
+    // Le nom prend la couleur de SON équipe, celle que le moteur porte et qu'on
+    // retrouve partout ailleurs — pas le violet de la marque, qui disparaissait
+    // sur le fond sombre au point qu'on ne voyait plus « Équipe A ».
+    const tete = document.getElementById(`team${camp + 1}-name`);
+    if (tete) tete.style.color = equipe.color;
+
+    // Pas d'effectif affiché : la colonne le montre déjà. Seul le déséquilibre
+    // mérite d'être dit, et il l'est une fois, plus bas.
     const siens = joueurs.filter(j => j.equipe === camp);
-    if (compte) compte.textContent = siens.length;
 
     if (!siens.length) {
       const rien = document.createElement('p');

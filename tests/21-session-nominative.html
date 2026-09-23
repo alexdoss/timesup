@@ -139,7 +139,7 @@ f.addEventListener('load', async () => {
     $('btn-repartition-jouer').click();
     await wait(300);
     check('une equipe vide est refusee', $('dialog-overlay').style.display !== 'none');
-    check('elle est nommee', $('dialog-message').textContent.includes('Équipe 2'));
+    check('elle est nommee', $('dialog-message').textContent.includes('Équipe B'));
     $('dialog-confirm').click();
     await wait(200);
     check('on reste sur la repartition', ecran() === 'screen-repartition');

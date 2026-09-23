@@ -30,7 +30,6 @@
           </svg>
           <h1 class="title">RUSH</h1>
         </div>
-        <p class="subtitle">Le jeu de devinettes</p>
         <!-- Une partie laissée en plan passe devant : c'est elle qu'on vient
              chercher, et elle dit où l'on s'était arrêté. Le geste neuf devient
              second, pour qu'on ne recommence pas par accident. -->
@@ -382,10 +381,10 @@
              parlait le langage d'un règlement, pas celui d'une table. -->
         <details id="pass-replace-section" class="repli-reglage">
           <summary>Un réglage de plus</summary>
-          <span class="field-label">Une carte passée revient…</span>
+          <span class="field-label">Une carte passée est replacée</span>
           <div id="pass-replace" class="pillgroup">
             <button type="button" class="pill active" data-remise="bottom">sous le paquet</button>
-            <button type="button" class="pill" data-remise="random">plus loin, au hasard</button>
+            <button type="button" class="pill" data-remise="random">au hasard</button>
           </div>
           <p class="wizard-hint">Sous le paquet, elle ne revient qu'à la fin du tour. Au hasard,
             elle peut retomber quelques cartes plus loin.</p>
@@ -602,24 +601,23 @@
       </div>
       <div class="config-form">
         <!-- Deux colonnes, gauche contre droite : la composition se lit sans
-             qu'on ait à trier des étiquettes de tête. Le nom de chaque équipe
-             coiffe sa colonne, avec son effectif juste à côté — l'équilibre se
-             voit en même temps que les joueurs.
+             qu'on ait à trier des étiquettes de tête. Pas d'effectif affiché —
+             on voit combien il y a de noms dans chaque colonne, et le chiffre
+             ne faisait que répéter ce que la mise en page montre déjà. Ce qui
+             reste utile, c'est le déséquilibre, et il se dit plus bas.
              En mode simple il n'y a personne à répartir : la classe
              « sans-joueurs » ne garde que les deux noms. -->
         <div id="bloc-repartition" class="deux-camps">
           <div class="camp a">
             <div class="camp-tete">
-              <input type="text" id="team1-name" class="camp-nom" value="Équipe 1" maxlength="15">
-              <span class="camp-n" id="camp1-compte"></span>
+              <input type="text" id="team1-name" class="camp-nom" value="Équipe A" maxlength="15">
             </div>
             <div class="camp-gens" id="camp1-gens"></div>
           </div>
           <span class="camp-filet" aria-hidden="true"></span>
           <div class="camp b">
             <div class="camp-tete">
-              <span class="camp-n" id="camp2-compte"></span>
-              <input type="text" id="team2-name" class="camp-nom" value="Équipe 2" maxlength="15">
+              <input type="text" id="team2-name" class="camp-nom" value="Équipe B" maxlength="15">
             </div>
             <div class="camp-gens" id="camp2-gens"></div>
           </div>
@@ -655,12 +653,12 @@
                comparent d'un coup d'œil. -->
           <div class="bandeau-score">
             <div class="bandeau-eq">
-              <span id="round-team1-name" class="bandeau-nom">Équipe 1</span>
+              <span id="round-team1-name" class="bandeau-nom">Équipe A</span>
               <b id="round-team1-score">0</b>
             </div>
             <span class="bandeau-tiret" aria-hidden="true"></span>
             <div class="bandeau-eq">
-              <span id="round-team2-name" class="bandeau-nom">Équipe 2</span>
+              <span id="round-team2-name" class="bandeau-nom">Équipe B</span>
               <b id="round-team2-score">0</b>
             </div>
           </div>
@@ -768,11 +766,11 @@
           <p id="pause-info" class="pause-info"></p>
           <div class="score-board">
             <div class="score-team">
-              <span id="pause-team1-name">Équipe 1</span>
+              <span id="pause-team1-name">Équipe A</span>
               <span id="pause-team1-score" class="score">0</span>
             </div>
             <div class="score-team">
-              <span id="pause-team2-name">Équipe 2</span>
+              <span id="pause-team2-name">Équipe B</span>
               <span id="pause-team2-score" class="score">0</span>
             </div>
           </div>
@@ -825,8 +823,8 @@
           <thead>
             <tr>
               <th></th>
-              <th id="end-team1-name">Équipe 1</th>
-              <th id="end-team2-name">Équipe 2</th>
+              <th id="end-team1-name">Équipe A</th>
+              <th id="end-team2-name">Équipe B</th>
             </tr>
           </thead>
           <!-- Une ligne par manche jouée, puis le total : rempli par showRoundEnd() -->
@@ -850,8 +848,8 @@
           <thead>
             <tr>
               <th></th>
-              <th id="final-team1-name">Équipe 1</th>
-              <th id="final-team2-name">Équipe 2</th>
+              <th id="final-team1-name">Équipe A</th>
+              <th id="final-team2-name">Équipe B</th>
             </tr>
           </thead>
           <!-- Détail par manche, total, puis cumul des parties : showFinalScreen() -->

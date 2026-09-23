@@ -1064,12 +1064,6 @@ input[readonly] {
 .camp-nom:hover { border-bottom-color: var(--line); }
 .camp-nom:focus { outline: none; border-bottom-color: currentColor; }
 
-.camp-n {
-  font-size: 0.72rem;
-  font-weight: 700;
-  color: var(--muted);
-  font-variant-numeric: tabular-nums;
-}
 
 .camp-gens {
   display: flex;
@@ -1143,8 +1137,7 @@ input[readonly] {
 }
 
 /* Mode simple : deux équipes, personne à répartir. Les noms restent. */
-.deux-camps.sans-joueurs .camp-gens,
-.deux-camps.sans-joueurs .camp-n { display: none; }
+.deux-camps.sans-joueurs .camp-gens { display: none; }
 
 .deux-camps.sans-joueurs .camp-tete { border-bottom: none; }
 

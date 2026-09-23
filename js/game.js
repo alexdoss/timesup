@@ -12,8 +12,8 @@ export const ROUNDS = [
 
 export const game = {
   teams: [
-    { name: "Équipe 1", score: 0, players: [], currentPlayerIndex: 0, color: "#d6336c" },
-    { name: "Équipe 2", score: 0, players: [], currentPlayerIndex: 0, color: "#33c26a" }
+    { name: "Équipe A", score: 0, players: [], currentPlayerIndex: 0, color: "#d6336c" },
+    { name: "Équipe B", score: 0, players: [], currentPlayerIndex: 0, color: "#33c26a" }
   ],
   players: [],             // liste de tous les joueurs
   playerStats: {},         // { playerName: { found: 0, parManche: { <indice de manche>: n } } }

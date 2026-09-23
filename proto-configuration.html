@@ -1,0 +1,777 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Rush — l'accueil et la configuration</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root {
+  --fond: #14102B; --fond-halo: #2A1F5C; --surface: #1E1846; --surface-haut: #262055;
+  --bord: #2E2660; --texte: #FFF6F0; --doux: #A79BD6;
+  --violet: #7C3AED; --violet-clair: #B14BFF; --ambre: #FFB020;
+  --vert: #22C55E; --rouge: #EF4444;
+  --eq1: #FF4D8D; --eq2: #22C55E;
+  --e1: 4px; --e2: 8px; --e3: 16px; --e4: 24px; --e5: 32px; --e6: 48px;
+  --t1: .75rem; --t2: .875rem; --t3: 1rem; --t4: 1.375rem; --t5: 2rem;
+  --r-bloc: 20px; --r-pastille: 100px; --ombre: 0 10px 30px rgba(0,0,0,.35);
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  font-family: 'Outfit', sans-serif;
+  background: radial-gradient(120% 45% at 50% 0%, var(--fond-halo) 0%, var(--fond) 58%);
+  color: var(--texte); padding: var(--e4); line-height: 1.5;
+}
+h1 { font-size: var(--t4); margin-bottom: var(--e1); }
+h2 { font-size: var(--t1); text-transform: uppercase; letter-spacing: .1em;
+     color: var(--ambre); margin: var(--e6) 0 var(--e3); font-weight: 700; }
+.intro { color: var(--doux); font-size: var(--t2); max-width: 900px; }
+.intro strong { color: var(--texte); }
+.intro + .intro { margin-top: var(--e2); }
+.rangee { display: flex; gap: var(--e4); flex-wrap: wrap; align-items: flex-start; }
+.colonne { display: flex; flex-direction: column; gap: var(--e2); }
+.etiquette { font-size: var(--t1); text-transform: uppercase; letter-spacing: .08em;
+             font-weight: 700; color: var(--doux); }
+.etiquette.avant { color: #7E7396; }
+.etiquette.apres { color: var(--vert); }
+.note { font-size: var(--t2); color: var(--doux); max-width: 320px; }
+.note b { color: var(--texte); font-weight: 600; }
+
+/* ═══════ LE PARCOURS ═══════ */
+.parcours { display: flex; flex-direction: column; gap: var(--e2); margin-top: var(--e3); }
+.chemin { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.pas { background: var(--surface); border: 1px solid var(--bord); border-radius: var(--r-pastille);
+       padding: 6px 13px; font-size: var(--t2); font-weight: 600; white-space: nowrap; }
+.pas.refait { background: rgba(34,197,94,.16); border-color: var(--vert); color: #A7F3C0; }
+.pas.lot8 { opacity: .45; }
+.fleche { color: var(--bord); font-size: var(--t2); }
+
+/* ═══════ LE TÉLÉPHONE ═══════ */
+.tel {
+  width: 320px; height: 600px; position: relative; overflow: hidden;
+  background: radial-gradient(120% 34% at 50% 0%, var(--fond-halo) 0%, var(--fond) 62%);
+  border: 1px solid var(--bord); border-radius: 28px; box-shadow: var(--ombre);
+  display: flex; flex-direction: column; padding: var(--e4) var(--e3) var(--e3);
+}
+.tel.terne { filter: saturate(.6) brightness(.93); }
+.tel.petit { height: 470px; }
+.fermer, .retour { position: absolute; top: 14px; background: none; border: none;
+                   color: var(--doux); font-size: var(--t3); cursor: pointer; z-index: 2; }
+.fermer { right: 16px } .retour { left: 16px }
+.etape { font-size: var(--t1); font-weight: 700; letter-spacing: .1em;
+         text-transform: uppercase; color: var(--ambre); text-align: center; }
+.tel h3 { font-size: var(--t4); font-weight: 800; text-align: center; margin-top: var(--e1); }
+.tel .aide { font-size: var(--t2); color: var(--doux); text-align: center; margin-top: 2px; }
+
+.bouton { flex: none; width: 100%; border: none; border-radius: var(--r-pastille);
+          padding: 13px; font-family: inherit; font-size: var(--t3); font-weight: 700;
+          color: #fff; background: linear-gradient(135deg, var(--violet), var(--violet-clair));
+          cursor: pointer; box-shadow: 0 8px 20px rgba(124,58,237,.35); }
+.bouton.doux { background: none; color: var(--doux); border: 1px solid var(--bord);
+               box-shadow: none; font-size: var(--t2); padding: 10px; }
+
+/* L'accueil */
+.logo { display: flex; flex-direction: column; align-items: center; gap: 2px; }
+.logo .marque { font-size: 2.6rem; font-weight: 800; letter-spacing: -.02em; }
+.logo .quoi { font-size: var(--t2); color: var(--doux); }
+.reprise { background: rgba(255,176,32,.1); border: 1px solid rgba(255,176,32,.4);
+           border-radius: var(--r-bloc); padding: var(--e3); text-align: center; }
+.reprise .cap { font-size: var(--t1); font-weight: 700; text-transform: uppercase;
+                letter-spacing: .07em; color: var(--ambre); }
+.reprise .detail { font-size: var(--t2); color: var(--doux); margin: 2px 0 var(--e2); }
+
+/* Les tuiles de choix, inchangées */
+.tuile { width: 100%; text-align: left; background: var(--surface); border: 1.5px solid var(--bord);
+         border-radius: var(--r-bloc); padding: 13px var(--e3); cursor: pointer; color: inherit;
+         font-family: inherit; display: flex; flex-direction: column; gap: 2px; }
+.tuile + .tuile { margin-top: var(--e2); }
+.tuile .ico { font-size: 1.4rem; }
+.tuile .nom { font-weight: 700; font-size: var(--t3); }
+.tuile .desc { font-size: var(--t2); color: var(--doux); line-height: 1.35; }
+
+/* ═══════ LES DEUX CAMPS — option A améliorée ═══════ */
+.deux-col { flex: 1; display: grid; grid-template-columns: 1fr 1px 1fr;
+            gap: 0 10px; margin-top: var(--e3); min-height: 0; }
+.filet { background: linear-gradient(var(--bord), transparent); }
+.col-eq { display: flex; flex-direction: column; min-height: 0; }
+.tete { display: flex; align-items: baseline; gap: 5px; justify-content: center;
+        padding-bottom: 7px; border-bottom: 1px solid var(--bord); }
+.tete input { background: none; border: none; color: inherit; font-family: inherit;
+              font-size: var(--t2); font-weight: 800; text-transform: uppercase;
+              letter-spacing: .06em; text-align: right; width: 86px; padding: 0;
+              border-bottom: 1px dashed transparent; cursor: text; }
+.tete input:hover { border-bottom-color: var(--bord); }
+.tete input:focus { outline: none; border-bottom-color: currentColor; }
+.col-eq.a .tete { color: var(--eq1); } .col-eq.b .tete { color: var(--eq2); }
+.tete .n { font-size: var(--t1); font-weight: 700; color: var(--doux);
+           font-variant-numeric: tabular-nums; }
+.col-gens { display: flex; flex-direction: column; gap: 4px; overflow: auto; padding-top: 7px; }
+.qui { display: flex; align-items: center; gap: 4px; width: 100%; background: none;
+       border: none; color: var(--texte); font-family: inherit; font-size: var(--t3);
+       padding: 8px 6px; border-radius: 9px; cursor: pointer; transition: background .15s; }
+.qui:hover { background: rgba(255,255,255,.07); }
+.qui:active { transform: scale(.97); }
+.qui .nom { flex: 1; text-align: left; }
+.qui .chev { color: var(--doux); font-size: var(--t2); opacity: .55; flex: none; }
+.qui:hover .chev { opacity: 1; }
+.col-eq.b .qui { flex-direction: row-reverse; }
+.col-eq.b .qui .nom { text-align: right; }
+@keyframes vient-de-gauche { from { transform: translateX(-36px); opacity: 0 } }
+@keyframes vient-de-droite { from { transform: translateX(36px); opacity: 0 } }
+.qui.de-gauche { animation: vient-de-gauche .28s ease-out; }
+.qui.de-droite { animation: vient-de-droite .28s ease-out; }
+@media (prefers-reduced-motion: reduce) { .qui.de-gauche, .qui.de-droite { animation: none } }
+.vide { font-size: var(--t2); color: var(--doux); opacity: .5; text-align: center;
+        padding: var(--e3) 4px; font-style: italic; }
+.desequilibre { text-align: center; font-size: var(--t1); color: var(--ambre); padding: 6px 0 2px; }
+.desequilibre:empty { display: none; }
+
+/* ═══════ LES RÉGLAGES ═══════ */
+.groupe-titre { font-size: var(--t1); font-weight: 800; text-transform: uppercase;
+                letter-spacing: .08em; color: var(--ambre); margin-top: var(--e3); }
+.reglage { margin-top: 10px; }
+.reglage .quoi { font-size: var(--t2); font-weight: 600; }
+.reglage .pourquoi { font-size: var(--t1); color: var(--doux); line-height: 1.35; }
+.pilules { display: flex; gap: 6px; margin-top: 6px; }
+.pilule {
+  flex: 1; background: var(--surface); border: 1px solid var(--bord); border-radius: 12px;
+  color: var(--doux); font-family: inherit; font-size: var(--t2); font-weight: 600;
+  padding: 9px 4px; cursor: pointer; text-align: center;
+}
+.pilule.on { background: var(--violet); border-color: var(--violet-clair); color: #fff; }
+.pilule:hover:not(.on) { border-color: var(--violet-clair); }
+.marche { display: flex; align-items: center; gap: var(--e2); margin-top: 8px; }
+.marche button { width: 34px; height: 34px; border-radius: 10px; border: 1px solid var(--bord);
+                 background: var(--surface); color: var(--texte); font-size: var(--t3);
+                 font-weight: 700; cursor: pointer; }
+.marche .val { font-size: var(--t4); font-weight: 800; min-width: 28px; text-align: center;
+               font-variant-numeric: tabular-nums; }
+.marche .unite { font-size: var(--t2); color: var(--doux); }
+.replie { margin-top: var(--e3); border-top: 1px solid var(--bord); padding-top: 10px; }
+.replie summary { font-size: var(--t2); color: var(--doux); cursor: pointer; list-style: none; }
+.replie summary::-webkit-details-marker { display: none; }
+.replie summary::before { content: '▸ '; }
+.replie[open] summary::before { content: '▾ '; }
+.faux-select { width: 100%; background: var(--surface); border: 1px solid var(--bord);
+               border-radius: 10px; color: var(--texte); font-family: inherit;
+               font-size: var(--t2); padding: 9px 11px; margin-top: 6px; }
+
+/* Les manches */
+.manche-l { display: flex; align-items: center; gap: 10px; background: var(--surface);
+            border: 1px solid var(--bord); border-radius: 14px; padding: 10px 12px; margin-top: 6px; }
+.manche-l .ic { font-size: 1.3rem; flex: none; }
+.manche-l .txt { flex: 1; }
+.manche-l .t { font-size: var(--t2); font-weight: 700; }
+.manche-l .d { font-size: var(--t1); color: var(--doux); line-height: 1.3; }
+.manche-l .fixe { font-size: var(--t1); color: var(--doux); }
+.bascule-i { width: 42px; height: 24px; border-radius: 100px; border: 1px solid var(--bord);
+             background: var(--surface-haut); position: relative; cursor: pointer; flex: none; }
+.bascule-i::after { content: ''; position: absolute; top: 2px; left: 2px; width: 18px; height: 18px;
+                    border-radius: 50%; background: var(--doux); transition: all .18s; }
+.bascule-i.on { background: var(--violet); border-color: var(--violet-clair); }
+.bascule-i.on::after { left: 21px; background: #fff; }
+.manche-l.eteinte { opacity: .55; }
+
+/* Les thèmes */
+.theme-g { display: grid; grid-template-columns: 1fr 1fr; gap: 7px; margin-top: var(--e2); }
+.theme-c { background: var(--surface); border: 1.5px solid var(--bord); border-radius: 14px;
+           padding: 11px 9px; text-align: center; cursor: pointer; font-family: inherit;
+           color: inherit; }
+.theme-c .ic { font-size: 1.5rem; }
+.theme-c .n { font-size: var(--t2); font-weight: 600; display: block; margin-top: 2px; }
+.theme-c .c { font-size: var(--t1); color: var(--doux); }
+.theme-c.on { border-color: var(--violet-clair); background: var(--surface-haut); }
+.recap { text-align: center; font-size: var(--t2); color: var(--doux); margin-top: var(--e2); }
+.recap b { color: var(--ambre); }
+
+.legende { margin-top: var(--e6); border-top: 1px solid var(--bord); padding-top: var(--e4); }
+.legende ul { list-style: none; display: flex; flex-direction: column; gap: var(--e2); max-width: 900px; }
+.legende li { font-size: var(--t2); color: var(--doux); padding-left: var(--e3);
+              border-left: 2px solid var(--bord); }
+.legende li b { color: var(--texte); }
+.question { border-left-color: var(--ambre) !important; }
+.question b { color: var(--ambre) !important; }
+.retire { border-left-color: #7E7396 !important; opacity: .7; }
+.fait { border-left-color: var(--vert) !important; }
+.fait b { color: #A7F3C0 !important; }
+</style>
+</head>
+<body>
+
+<h1>L'accueil et la configuration — le lot 7</h1>
+<p class="intro">État arrêté après nos échanges. Deux écrans sont refaits, les autres gardent
+leur forme. <strong>Le proto fonctionne</strong> : sur l'écran des équipes, touche un prénom.</p>
+
+<h2>1 · Ce que le lot touche</h2>
+<div class="parcours">
+  <div class="chemin">
+    <span class="pas refait">Accueil</span><span class="fleche">›</span>
+    <span class="pas">Type de partie</span><span class="fleche">›</span>
+    <span class="pas">Thèmes</span><span class="fleche">›</span>
+    <span class="pas">Comment on joue</span><span class="fleche">›</span>
+    <span class="pas">Les joueurs <span style="opacity:.6">— ou le QR</span></span><span class="fleche">›</span>
+    <span class="pas refait">Les équipes</span><span class="fleche">›</span>
+    <span class="pas lot8">Manches</span><span class="fleche">›</span>
+    <span class="pas lot8">Déroulement</span>
+  </div>
+</div>
+<p class="intro" style="margin-top:var(--e3)">En vert, les deux écrans refaits. En gris, ceux du
+lot 8. Les autres sont conservés tels quels : chacun pose une question distincte, et les fusionner
+coûtait plus qu'il ne rapportait.</p>
+
+<h2>2 · L'accueil</h2>
+
+<div class="rangee" style="margin-top:var(--e4)">
+  <div class="colonne">
+    <span class="etiquette avant">Aujourd'hui</span>
+    <div class="tel terne">
+      <button class="fermer">⚙️</button>
+      <div style="flex:1"></div>
+      <div class="logo"><span class="marque">RUSH</span><span class="quoi">Le jeu de devinettes</span></div>
+      <div style="flex:1"></div>
+      <button class="bouton">Nouvelle partie 🎮</button>
+      <button class="bouton doux" style="margin-top:var(--e2);font-size:var(--t3);padding:13px">📚 Bibliothèque de cartes</button>
+      <button class="bouton doux" style="margin-top:var(--e2);font-size:var(--t3);padding:13px">📖 Règles du jeu</button>
+    </div>
+    <p class="note">Trois boutons de même poids. Celui qu'on vient chercher neuf fois sur dix
+    est <b>au même rang</b> que les deux autres.</p>
+  </div>
+
+  <div class="colonne">
+    <span class="etiquette apres">Retenu</span>
+    <div class="tel">
+      <button class="fermer">⚙️</button>
+      <div style="flex:1"></div>
+      <div class="logo"><span class="marque">RUSH</span><span class="quoi">Le jeu de devinettes</span></div>
+      <div style="flex:1"></div>
+      <button class="bouton" style="padding:18px;font-size:var(--t4)">Jouer</button>
+      <div style="display:flex;gap:var(--e2);margin-top:var(--e3)">
+        <button class="bouton doux">📚 Mes cartes</button>
+        <button class="bouton doux">📖 Règles</button>
+      </div>
+    </div>
+    <p class="note">Un geste dominant, deux recours côte à côte. L'écran dit <b>ce qu'on vient
+    y faire</b>.</p>
+  </div>
+
+  <div class="colonne">
+    <span class="etiquette apres">Retenu — avec une partie en cours</span>
+    <div class="tel">
+      <button class="fermer">⚙️</button>
+      <div style="flex:1"></div>
+      <div class="logo"><span class="marque">RUSH</span><span class="quoi">Le jeu de devinettes</span></div>
+      <div style="flex:1"></div>
+      <div class="reprise">
+        <p class="cap">Partie en cours</p>
+        <p class="detail">Manche 2/3 · Les Renards 12 – 15 Les Loutres</p>
+        <button class="bouton">Reprendre ▶️</button>
+      </div>
+      <button class="bouton doux" style="margin-top:var(--e3);font-size:var(--t3);padding:13px">Nouvelle partie</button>
+      <div style="display:flex;gap:var(--e2);margin-top:var(--e2)">
+        <button class="bouton doux">📚 Mes cartes</button>
+        <button class="bouton doux">📖 Règles</button>
+      </div>
+    </div>
+    <p class="note">La reprise passe première et <b>dit où on en était</b> — aujourd'hui elle
+    annonce seulement « partie en cours ». On ne recommence plus par accident.</p>
+  </div>
+</div>
+
+<h2>3 · Les équipes — option A</h2>
+<p class="intro">L'écran arrive <strong>déjà rempli</strong> : le tirage a eu lieu aux
+inscriptions, au hasard et non chacun son tour — l'ordre des scans n'est pas neutre, ce sont
+toujours les mêmes qui dégainent leur téléphone en premier.</p>
+<p class="intro">Ne rien faire est une réponse valable. <strong>Touche un prénom</strong> pour le
+voir traverser.</p>
+
+<div class="rangee" style="margin-top:var(--e4)">
+  <div class="colonne">
+    <span class="etiquette avant">Aujourd'hui</span>
+    <div class="tel terne">
+      <button class="retour">←</button><button class="fermer">✕</button>
+      <p class="etape">Étape 5/7</p>
+      <h3>Les équipes</h3>
+      <p class="aide">Nomme-les, et répartis les joueurs.</p>
+      <div style="margin-top:var(--e3)">
+        <p style="font-size:var(--t1);font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--doux)">Noms des équipes</p>
+        <div style="display:flex;align-items:center;gap:var(--e2);margin-top:6px">
+          <span style="width:12px;height:12px;border-radius:50%;background:var(--eq1)"></span>
+          <input value="Équipe 1" style="flex:1;background:var(--surface);border:1px solid var(--bord);
+            border-radius:10px;color:var(--texte);font-family:inherit;font-size:var(--t2);padding:8px 10px"></div>
+        <div style="display:flex;align-items:center;gap:var(--e2);margin-top:6px">
+          <span style="width:12px;height:12px;border-radius:50%;background:var(--eq2)"></span>
+          <input value="Équipe 2" style="flex:1;background:var(--surface);border:1px solid var(--bord);
+            border-radius:10px;color:var(--texte);font-family:inherit;font-size:var(--t2);padding:8px 10px"></div>
+      </div>
+      <div style="margin-top:var(--e3)">
+        <p style="font-size:var(--t1);font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--doux)">Qui joue avec qui</p>
+        <div style="display:flex;justify-content:space-between;background:var(--surface);border:1px solid var(--bord);border-radius:12px;padding:7px 8px 7px 12px;font-size:var(--t2);margin-top:6px"><span>Camille</span><button style="border:none;border-radius:100px;font-family:inherit;font-size:var(--t1);font-weight:700;padding:4px 11px;color:#12091B;background:var(--eq1)">Équipe 1</button></div>
+        <div style="display:flex;justify-content:space-between;background:var(--surface);border:1px solid var(--bord);border-radius:12px;padding:7px 8px 7px 12px;font-size:var(--t2);margin-top:6px"><span>Sacha</span><button style="border:none;border-radius:100px;font-family:inherit;font-size:var(--t1);font-weight:700;padding:4px 11px;color:#12091B;background:var(--eq2)">Équipe 2</button></div>
+        <div style="display:flex;justify-content:space-between;background:var(--surface);border:1px solid var(--bord);border-radius:12px;padding:7px 8px 7px 12px;font-size:var(--t2);margin-top:6px"><span>Lou</span><button style="border:none;border-radius:100px;font-family:inherit;font-size:var(--t1);font-weight:700;padding:4px 11px;color:#12091B;background:var(--eq1)">Équipe 1</button></div>
+        <div style="display:flex;justify-content:space-between;background:var(--surface);border:1px solid var(--bord);border-radius:12px;padding:7px 8px 7px 12px;font-size:var(--t2);margin-top:6px"><span>Dan</span><button style="border:none;border-radius:100px;font-family:inherit;font-size:var(--t1);font-weight:700;padding:4px 11px;color:#12091B;background:var(--eq2)">Équipe 2</button></div>
+      </div>
+      <div style="flex:1"></div>
+      <button class="bouton doux" style="margin-bottom:var(--e2)">🎲 Mélanger</button>
+      <button class="bouton">Suivant ▶️</button>
+    </div>
+    <p class="note">Pour savoir qui joue avec qui, <b>il faut lire les quatre lignes</b> et les
+    trier de tête. Le remplissage suit l'ordre d'arrivée.</p>
+  </div>
+
+  <div class="colonne">
+    <span class="etiquette apres">Retenu — 4 joueurs</span>
+    <div class="tel" data-vue="quatre">
+      <button class="retour">←</button><button class="fermer">✕</button>
+      <p class="etape">Étape 5/7</p>
+      <h3>Les équipes</h3>
+      <p class="aide">Tirées au sort. Change qui tu veux.</p>
+      <div class="deux-col">
+        <div class="col-eq a">
+          <div class="tete"><input value="Renards"><span class="n" data-compte="0"></span></div>
+          <div class="col-gens" data-camp="0"></div>
+        </div>
+        <div class="filet"></div>
+        <div class="col-eq b">
+          <div class="tete"><span class="n" data-compte="1"></span><input value="Loutres" style="text-align:left"></div>
+          <div class="col-gens" data-camp="1"></div>
+        </div>
+      </div>
+      <p class="desequilibre" data-ecart></p>
+      <button class="bouton doux" data-melanger style="margin-bottom:var(--e2)">🎲 Mélanger</button>
+      <button class="bouton">Suivant ▶️</button>
+    </div>
+    <p class="note">La séparation est <b>spatiale</b> : gauche contre droite. Le chevron pointe
+    vers l'autre camp, le prénom traverse sous les yeux, et le compte est collé au nom.</p>
+  </div>
+
+  <div class="colonne">
+    <span class="etiquette apres">Retenu — 10 joueurs</span>
+    <div class="tel" data-vue="dix">
+      <button class="retour">←</button><button class="fermer">✕</button>
+      <p class="etape">Étape 5/7</p>
+      <h3>Les équipes</h3>
+      <p class="aide">Tirées au sort. Change qui tu veux.</p>
+      <div class="deux-col">
+        <div class="col-eq a">
+          <div class="tete"><input value="Renards"><span class="n" data-compte="0"></span></div>
+          <div class="col-gens" data-camp="0"></div>
+        </div>
+        <div class="filet"></div>
+        <div class="col-eq b">
+          <div class="tete"><span class="n" data-compte="1"></span><input value="Loutres" style="text-align:left"></div>
+          <div class="col-gens" data-camp="1"></div>
+        </div>
+      </div>
+      <p class="desequilibre" data-ecart></p>
+      <button class="bouton doux" data-melanger style="margin-bottom:var(--e2)">🎲 Mélanger</button>
+      <button class="bouton">Suivant ▶️</button>
+    </div>
+    <p class="note">Déplace quelqu'un jusqu'à <b>7 contre 3</b> : l'écart s'annonce en ambre,
+    sans rien interdire. Certaines tablées le veulent.</p>
+  </div>
+</div>
+
+<h2>4 · Ce qui ne change pas</h2>
+<p class="intro">Pour mémoire, les trois écrans conservés. Ils gardent leur question, leur tuile
+qui fait avancer d'un seul geste, et leur place dans le parcours.</p>
+
+<div class="rangee" style="margin-top:var(--e4)">
+  <div class="colonne">
+    <span class="etiquette">Type de partie</span>
+    <div class="tel petit">
+      <button class="fermer">✕</button>
+      <p class="etape">Étape 1/7</p>
+      <h3>Type de partie</h3>
+      <p class="aide">Thèmes existants ou cartes maison ?</p>
+      <div style="margin-top:var(--e3)">
+        <button class="tuile"><span class="ico">✍️</span><span class="nom">Cartes personnalisées</span>
+          <span class="desc">Chacun saisit ses cartes sur son téléphone, en scannant un QR.</span></button>
+        <button class="tuile"><span class="ico">🎴</span><span class="nom">Thèmes prédéfinis</span>
+          <span class="desc">Thèmes officiels, et les tiens.</span></button>
+      </div>
+      <div style="flex:1"></div>
+    </div>
+  </div>
+
+  <div class="colonne">
+    <span class="etiquette">Comment on joue</span>
+    <div class="tel petit">
+      <button class="retour">←</button><button class="fermer">✕</button>
+      <p class="etape">Étape 3/7</p>
+      <h3>Comment on joue ?</h3>
+      <p class="aide">Un choix, et on avance.</p>
+      <div style="margin-top:var(--e3)">
+        <button class="tuile"><span class="ico">🙋</span><span class="nom">Avec les prénoms</span>
+          <span class="desc">Rotation des joueurs et scores individuels. Minimum 4 joueurs.</span></button>
+        <button class="tuile"><span class="ico">👥</span><span class="nom">Juste deux équipes</span>
+          <span class="desc">Pas de prénoms. On note les points de chaque équipe.</span></button>
+      </div>
+      <div style="flex:1"></div>
+    </div>
+  </div>
+
+  <div class="colonne">
+    <span class="etiquette">Les joueurs</span>
+    <div class="tel petit">
+      <button class="retour">←</button><button class="fermer">✕</button>
+      <p class="etape">Étape 4/7</p>
+      <h3>Les joueurs</h3>
+      <p class="aide">Minimum 4 joueurs.</p>
+      <div style="display:flex;gap:6px;margin-top:var(--e3)">
+        <input placeholder="Prénom du joueur" style="flex:1;background:var(--surface);border:1px solid var(--bord);
+          border-radius:12px;color:var(--texte);font-family:inherit;font-size:var(--t2);padding:9px 11px">
+        <button style="width:42px;border:none;border-radius:12px;background:var(--violet);color:#fff;
+          font-size:var(--t4);font-weight:700;cursor:pointer">+</button>
+      </div>
+      <div style="margin-top:var(--e2)">
+        <div style="background:var(--surface);border:1px solid var(--bord);border-radius:12px;padding:8px 12px;font-size:var(--t2);margin-top:6px">Camille</div>
+        <div style="background:var(--surface);border:1px solid var(--bord);border-radius:12px;padding:8px 12px;font-size:var(--t2);margin-top:6px">Sacha</div>
+        <div style="background:var(--surface);border:1px solid var(--bord);border-radius:12px;padding:8px 12px;font-size:var(--t2);margin-top:6px">Lou</div>
+        <div style="background:var(--surface);border:1px solid var(--bord);border-radius:12px;padding:8px 12px;font-size:var(--t2);margin-top:6px">Dan</div>
+      </div>
+      <div style="flex:1"></div>
+      <button class="bouton">Suivant ▶️</button>
+    </div>
+    <p class="note">Une seule retouche : la phrase « Tu les répartiras en équipes juste après »
+    disparaît. <b>L'écran suivant le fait tout seul</b>, il n'a plus à s'en excuser.</p>
+  </div>
+</div>
+
+<h2>5 · Les thèmes</h2>
+<p class="intro">L'écran fonctionne, mais il ne dit pas ce qu'on est en train de construire :
+on coche des thèmes sans savoir combien de cartes ça fera, alors que c'est ce chiffre qui décide
+de la longueur de la soirée. <strong>Le bouton porte désormais le résultat.</strong></p>
+
+<div class="rangee" style="margin-top:var(--e4)">
+  <div class="colonne">
+    <span class="etiquette avant">Aujourd'hui</span>
+    <div class="tel terne petit">
+      <button class="retour">←</button><button class="fermer">✕</button>
+      <p class="etape">Étape 2/7</p>
+      <h3>Choisis tes thèmes</h3>
+      <p class="aide">Sélectionne un ou plusieurs thèmes</p>
+      <div class="theme-g">
+        <button class="theme-c on"><span class="ic">🎬</span><span class="n">Films & séries</span></button>
+        <button class="theme-c"><span class="ic">🐾</span><span class="n">Animaux</span></button>
+        <button class="theme-c on"><span class="ic">🏛️</span><span class="n">Histoire</span></button>
+        <button class="theme-c"><span class="ic">🧙</span><span class="n">Fantastique</span></button>
+      </div>
+      <div style="flex:1"></div>
+      <button class="bouton">Suivant ▶️</button>
+    </div>
+    <p class="note">Rien ne dit combien de cartes on a réunies, ni si c'est assez pour le
+    nombre de joueurs.</p>
+  </div>
+
+  <div class="colonne">
+    <span class="etiquette apres">Proposition</span>
+    <div class="tel petit">
+      <button class="retour">←</button><button class="fermer">✕</button>
+      <p class="etape">Étape 2/7</p>
+      <h3>Choisis tes thèmes</h3>
+      <p class="aide">Un ou plusieurs : les cartes s'additionnent.</p>
+      <div class="theme-g">
+        <button class="theme-c on"><span class="ic">🎬</span><span class="n">Films & séries</span><span class="c">40 cartes</span></button>
+        <button class="theme-c"><span class="ic">🐾</span><span class="n">Animaux</span><span class="c">36 cartes</span></button>
+        <button class="theme-c on"><span class="ic">🏛️</span><span class="n">Histoire</span><span class="c">32 cartes</span></button>
+        <button class="theme-c"><span class="ic">🧙</span><span class="n">Fantastique</span><span class="c">40 cartes</span></button>
+      </div>
+      <p class="recap"><b>72 cartes</b> dans le paquet</p>
+      <div style="flex:1"></div>
+      <button class="bouton">Suivant ▶️</button>
+    </div>
+    <p class="note">Chaque thème annonce son poids, et le total se met à jour sous la grille.
+    <b>On sait ce qu'on emporte</b> avant de partir.</p>
+  </div>
+</div>
+
+<h2>6 · Les manches</h2>
+<p class="intro">Trois manches obligatoires, deux optionnelles. Aujourd'hui les premières sont
+des étiquettes et les secondes des pastilles : <strong>deux formes pour une même liste</strong>,
+et rien ne dit ce que chaque manche demande de faire.</p>
+
+<div class="rangee" style="margin-top:var(--e4)">
+  <div class="colonne">
+    <span class="etiquette avant">Aujourd'hui</span>
+    <div class="tel terne petit">
+      <button class="retour">←</button><button class="fermer">✕</button>
+      <p class="etape">Étape 6/7</p>
+      <h3>Manches</h3>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:var(--e3)">
+        <span style="background:var(--surface);border:1px solid var(--bord);border-radius:100px;padding:5px 12px;font-size:var(--t2)">💬 Description</span>
+        <span style="background:var(--surface);border:1px solid var(--bord);border-radius:100px;padding:5px 12px;font-size:var(--t2)">1️⃣ Un mot</span>
+        <span style="background:var(--surface);border:1px solid var(--bord);border-radius:100px;padding:5px 12px;font-size:var(--t2)">🎭 Mime</span>
+      </div>
+      <p style="font-size:var(--t2);color:var(--doux);margin:10px 0 6px">Optionnelles :</p>
+      <div style="display:flex;gap:6px;flex-wrap:wrap">
+        <button style="background:var(--surface);border:1px solid var(--bord);border-radius:100px;padding:5px 12px;font-size:var(--t2);color:var(--doux);font-family:inherit;cursor:pointer">🗿 Pose figée</button>
+        <button style="background:var(--surface);border:1px solid var(--bord);border-radius:100px;padding:5px 12px;font-size:var(--t2);color:var(--doux);font-family:inherit;cursor:pointer">🤸 Faire bouger</button>
+      </div>
+      <div style="flex:1"></div>
+      <button class="bouton">Suivant ▶️</button>
+    </div>
+    <p class="note">On choisit des manches <b>sans savoir ce qu'elles demandent</b>. « Pose
+    figée », pour qui n'a jamais joué, ne veut rien dire.</p>
+  </div>
+
+  <div class="colonne">
+    <span class="etiquette apres">Proposition</span>
+    <div class="tel petit">
+      <button class="retour">←</button><button class="fermer">✕</button>
+      <p class="etape">Étape 6/7</p>
+      <h3>Les manches</h3>
+      <p class="aide">Le même paquet, trois fois plus dur.</p>
+      <div style="margin-top:var(--e2)">
+        <div class="manche-l"><span class="ic">💬</span>
+          <span class="txt"><span class="t">Description</span>
+          <span class="d">Tout dire, sauf le mot.</span></span>
+          <span class="fixe">toujours</span></div>
+        <div class="manche-l"><span class="ic">1️⃣</span>
+          <span class="txt"><span class="t">Un seul mot</span>
+          <span class="d">Un mot, et c'est tout.</span></span>
+          <span class="fixe">toujours</span></div>
+        <div class="manche-l"><span class="ic">🎭</span>
+          <span class="txt"><span class="t">Mime</span>
+          <span class="d">Sans parler, ni bruit.</span></span>
+          <span class="fixe">toujours</span></div>
+        <div class="manche-l"><span class="ic">🗿</span>
+          <span class="txt"><span class="t">Pose figée</span>
+          <span class="d">Une seule position, immobile.</span></span>
+          <button class="bascule-i" data-inter></button></div>
+        <div class="manche-l eteinte"><span class="ic">🤸</span>
+          <span class="txt"><span class="t">Faire bouger un partenaire</span>
+          <span class="d">Il faut 3 joueurs par équipe.</span></span>
+          <button class="bascule-i" data-inter></button></div>
+      </div>
+      <div style="flex:1"></div>
+      <button class="bouton">Suivant ▶️</button>
+    </div>
+    <p class="note">Une seule liste, une ligne par manche, <b>chacune dit sa règle</b>. Les trois
+    obligatoires portent « toujours » au lieu d'un interrupteur ; la dernière est éteinte tant
+    qu'on n'est pas assez nombreux, et dit pourquoi.</p>
+  </div>
+</div>
+
+<h2>7 · Le déroulement</h2>
+<p class="intro">C'est l'écran le plus chargé du parcours, et le seul à utiliser des
+<strong>listes déroulantes</strong> — trois, empilées. Une liste déroulante cache ses options,
+demande deux gestes, et donne à un écran de jeu l'air d'un formulaire administratif.</p>
+<p class="intro">Deux règles de passe sur trois ne sont presque jamais touchées.
+<strong>Elles passent sous un repli</strong> ; ce qu'on change vraiment reste visible.</p>
+
+<div class="rangee" style="margin-top:var(--e4)">
+  <div class="colonne">
+    <span class="etiquette avant">Aujourd'hui</span>
+    <div class="tel terne">
+      <button class="retour">←</button><button class="fermer">✕</button>
+      <p class="etape">Étape 7/7</p>
+      <h3>Déroulement</h3>
+      <div style="margin-top:var(--e3)">
+        <p class="quoi">Temps par tour (secondes)</p>
+        <div class="pilules"><span class="pilule">30s</span><span class="pilule on">40s</span><span class="pilule">60s</span></div>
+      </div>
+      <div style="margin-top:var(--e3)">
+        <p class="quoi">Nombre de cartes</p>
+        <div class="pilules"><span class="pilule">20</span><span class="pilule on">30</span><span class="pilule">40</span></div>
+      </div>
+      <div style="margin-top:var(--e3)">
+        <p class="quoi">Passer une carte</p>
+        <select class="faux-select"><option>Autorisé — illimité</option></select>
+      </div>
+      <div style="margin-top:var(--e3)">
+        <p class="quoi">Carte passée</p>
+        <select class="faux-select"><option>Replacée sous le paquet</option></select>
+      </div>
+      <div style="flex:1"></div>
+      <button class="bouton">C'est parti ! 🚀</button>
+    </div>
+    <p class="note">« Carte passée · Replacée sous le paquet » : du vocabulaire de règlement.
+    Et trois listes déroulantes pour un réglage qu'on <b>touche une fois sur dix parties</b>.</p>
+  </div>
+
+  <div class="colonne">
+    <span class="etiquette apres">Proposition</span>
+    <div class="tel" data-reglages>
+      <button class="retour">←</button><button class="fermer">✕</button>
+      <p class="etape">Étape 7/7</p>
+      <h3>Déroulement</h3>
+
+      <p class="groupe-titre">Le tour</p>
+      <div class="reglage">
+        <p class="quoi">Durée</p>
+        <div class="pilules" data-groupe="temps">
+          <button class="pilule">30 s</button><button class="pilule on">40 s</button><button class="pilule">60 s</button>
+        </div>
+      </div>
+      <div class="reglage">
+        <p class="quoi">Cartes dans le paquet</p>
+        <div class="pilules" data-groupe="cartes">
+          <button class="pilule">20</button><button class="pilule on">30</button><button class="pilule">40</button>
+        </div>
+      </div>
+
+      <p class="groupe-titre">Passer une carte</p>
+      <div class="reglage">
+        <div class="pilules" data-groupe="passe">
+          <button class="pilule on" data-passe="illimite">Autant qu'on veut</button>
+          <button class="pilule" data-passe="limite">Compté</button>
+          <button class="pilule" data-passe="interdit">Jamais</button>
+        </div>
+        <div class="marche" data-limite style="display:none">
+          <button data-moins>−</button><span class="val" data-val>2</span>
+          <span class="unite">passes par tour</span><button data-plus>+</button>
+        </div>
+      </div>
+
+      <details class="replie">
+        <summary>Un réglage de plus</summary>
+        <div class="reglage">
+          <p class="quoi">Une carte passée revient…</p>
+          <div class="pilules" data-groupe="retour">
+            <button class="pilule on">sous le paquet</button>
+            <button class="pilule">plus loin, au hasard</button>
+          </div>
+          <p class="pourquoi" style="margin-top:6px">Sous le paquet, elle ne revient qu'à la fin
+          du tour. Au hasard, elle peut retomber quelques cartes plus loin.</p>
+        </div>
+      </details>
+
+      <div style="flex:1"></div>
+      <button class="bouton">C'est parti ! 🚀</button>
+    </div>
+    <p class="note">Les mêmes réglages, sans une seule liste déroulante : <b>tout est visible
+    et se change d'un doigt</b>. « Compté » fait apparaître le nombre de passes. Deux titres
+    séparent ce qui touche au tour de ce qui touche aux règles.</p>
+  </div>
+</div>
+
+<div class="legende">
+  <ul>
+    <li class="fait"><b>Décidé :</b> pas de fusion. « Type de partie » et « Comment on joue »
+    restent séparés ; l'inscription et la composition des équipes aussi.</li>
+    <li class="fait"><b>Décidé :</b> les équipes sont tirées au sort à l'inscription, et non
+    remplies dans l'ordre d'arrivée. Même règle que le tirage de l'ordre de passage.</li>
+    <li class="fait"><b>Décidé :</b> l'écran des équipes passe en deux colonnes, avec le chevron
+    dans la ligne, le prénom qui traverse, le compte contre le nom et l'alerte d'écart.</li>
+    <li><b>Ce que ça coûte.</b> L'accueil : du CSS et deux libellés. Les équipes : un écran
+    redessiné, et le tirage qui remplace la répartition à tour de rôle dans le moteur. Les
+    identifiants ne bougent pas — les scénarios de test les visent.</li>
+    <li class="question"><b>Reste à trancher : les noms d'équipe.</b> L'app propose « Équipe 1 »
+    et « Équipe 2 », que personne ne prend le temps de changer. Faut-il <b>tirer deux noms
+    d'animaux au sort</b> — Renards, Loutres, Blaireaux… — quitte à ce qu'ils soient renommés ?</li>
+    <li class="question"><b>Reste à trancher : le seuil de l'alerte d'écart.</b> Elle se déclenche
+    au-delà de deux joueurs de différence. À trois, elle ne dirait presque jamais rien ; à un,
+    elle crierait pour un 3 contre 4, qui est le cas normal à sept.</li>
+    <li class="question"><b>Reste à trancher : le repli du déroulement.</b> J'ai mis « une carte
+    passée revient… » sous un repli, parce que personne n'y touche. Le risque est que personne
+    ne le trouve non plus. L'alternative est de le laisser visible et d'accepter un écran plus
+    long.</li>
+    <li class="question"><b>Reste à trancher : « Compté ».</b> Le mot remplace « Autorisé —
+    limité ». Il est plus court et plus clair à l'oral, mais moins précis : compté <em>combien</em>
+    ne se lit qu'une fois le réglage choisi.</li>
+  </ul>
+</div>
+
+<script>
+const PETIT = ['Camille', 'Sacha', 'Lou', 'Dan'];
+const GRAND = ['Camille', 'Sacha', 'Lou', 'Dan', 'Inès', 'Malo', 'Ana', 'Bob', 'Cléo', 'Théo'];
+const vues = {};
+
+function creer(vue, noms) {
+  vues[vue] = { gens: noms.map(n => ({ nom: n, camp: 0 })), bouge: null };
+  melanger(vue);
+}
+
+// Au hasard, pas chacun son tour : l'ordre d'arrivée n'est pas neutre.
+function melanger(vue) {
+  const e = vues[vue];
+  const ordre = [...e.gens].sort(() => Math.random() - 0.5);
+  ordre.forEach((g, i) => { g.camp = i < Math.ceil(ordre.length / 2) ? 0 : 1; });
+  e.bouge = null;
+  dessiner(vue);
+}
+
+function basculer(vue, g) {
+  vues[vue].bouge = g;   // lui seul s'animera à l'arrivée
+  g.camp = 1 - g.camp;
+  dessiner(vue);
+}
+
+function dessiner(vue) {
+  const e = vues[vue];
+  const tel = document.querySelector(`[data-vue="${vue}"]`);
+  const parCamp = [e.gens.filter(g => g.camp === 0), e.gens.filter(g => g.camp === 1)];
+
+  [0, 1].forEach(camp => {
+    const boite = tel.querySelector(`.col-gens[data-camp="${camp}"]`);
+    boite.innerHTML = '';
+    if (!parCamp[camp].length) {
+      const rien = document.createElement('p');
+      rien.className = 'vide';
+      rien.textContent = 'personne';
+      boite.appendChild(rien);
+    }
+    parCamp[camp].forEach(g => {
+      const b = document.createElement('button');
+      b.className = 'qui';
+      const nom = document.createElement('span');
+      nom.className = 'nom';
+      nom.textContent = g.nom;
+      const chev = document.createElement('span');
+      chev.className = 'chev';
+      chev.textContent = camp === 0 ? '›' : '‹';
+      b.append(nom, chev);
+      if (e.bouge === g) b.classList.add(camp === 0 ? 'de-droite' : 'de-gauche');
+      b.addEventListener('click', () => basculer(vue, g));
+      boite.appendChild(b);
+    });
+    tel.querySelector(`[data-compte="${camp}"]`).textContent = parCamp[camp].length;
+  });
+
+  const ecart = tel.querySelector('[data-ecart]');
+  const d = Math.abs(parCamp[0].length - parCamp[1].length);
+  ecart.textContent = d > 2
+    ? `Équipes déséquilibrées : ${parCamp[0].length} contre ${parCamp[1].length}` : '';
+}
+
+creer('quatre', PETIT);
+creer('dix', GRAND);
+
+// ═══ Les réglages : des pilules plutôt que des listes déroulantes ═══
+document.querySelectorAll('[data-groupe]').forEach(groupe => {
+  groupe.querySelectorAll('.pilule').forEach(p => {
+    p.addEventListener('click', () => {
+      groupe.querySelectorAll('.pilule').forEach(a => a.classList.remove('on'));
+      p.classList.add('on');
+      // « Compté » est le seul choix qui demande un nombre : il le fait
+      // apparaître sous lui, au lieu d'occuper l'écran en permanence.
+      if (groupe.dataset.groupe === 'passe') {
+        const marche = document.querySelector('[data-limite]');
+        marche.style.display = p.dataset.passe === 'limite' ? '' : 'none';
+      }
+    });
+  });
+});
+
+const marche = document.querySelector('[data-limite]');
+if (marche) {
+  const val = marche.querySelector('[data-val]');
+  const borner = n => Math.max(1, Math.min(9, n));
+  marche.querySelector('[data-moins]').addEventListener('click',
+    () => { val.textContent = borner(+val.textContent - 1); });
+  marche.querySelector('[data-plus]').addEventListener('click',
+    () => { val.textContent = borner(+val.textContent + 1); });
+}
+
+// Les manches optionnelles : un interrupteur, pas une pastille a cocher.
+document.querySelectorAll('[data-inter]').forEach(i => {
+  i.addEventListener('click', () => {
+    if (i.closest('.manche-l').classList.contains('eteinte')) return;
+    i.classList.toggle('on');
+  });
+});
+</script>
+</body>
+</html>

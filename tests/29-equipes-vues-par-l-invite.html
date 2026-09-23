@@ -150,7 +150,7 @@ localStorage.removeItem('timesup_rejoint');
     da.querySelector('#screen-rounds .btn-back').click();
     await wait(400);
     check('l organisateur retrouve la repartition', ecranApp() === 'screen-repartition');
-    da.querySelector('#repartition-liste .equipier button').click();   // un joueur change d equipe
+    da.querySelector('#camp1-gens .equipier').click();   // un joueur change d equipe
     A('btn-repartition-jouer').click();
     await wait(500);
 

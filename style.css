@@ -133,21 +133,66 @@ body {
 }
 
 /* Bloc « Reprendre la partie » : le bouton et son résumé restent solidaires */
+/* La partie laissée en plan se présente comme une carte, pas comme un bouton
+   de plus : elle porte ce qu'on a besoin de savoir avant de la reprendre. */
 .resume-block {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 8px;
+  gap: 4px;
   width: 100%;
   max-width: 320px;
+  background: var(--secondary-soft);
+  border: 1px solid rgba(245, 158, 11, 0.4);
+  border-radius: var(--r-lg);
+  padding: 16px;
+}
+
+.resume-cap {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--secondary);
 }
 
 .resume-detail {
   font-size: 0.85rem;
   line-height: 1.5;
-  color: var(--muted);
+  color: var(--muted-strong);
   text-align: center;
   white-space: pre-line;   /* le résumé tient sur deux lignes */
+}
+
+.resume-block .btn { margin-top: 8px; }
+
+/* Le geste qu'on vient chercher neuf fois sur dix. Il domine par la taille,
+   pas par la couleur : les deux recours en dessous restent lisibles. */
+.btn-jouer {
+  font-size: 1.25rem;
+  padding: 18px;
+}
+
+/* La bibliothèque et les règles tiennent sur une ligne, à deux : ce sont des
+   recours, pas des propositions. */
+.home-recours {
+  display: flex;
+  gap: 8px;
+  width: 100%;
+  max-width: 320px;
+}
+
+.home-recours .btn { flex: 1; font-size: 0.85rem; padding: 11px 8px; }
+
+/* Quand une partie attend, « Jouer » cède la première place et redevient un
+   choix parmi d'autres : on ne recommence pas par accident. */
+.resume-block ~ .btn-jouer {
+  font-size: 1rem;
+  padding: 14px;
+  background: var(--surface);
+  color: var(--muted-strong);
+  border: 1px solid var(--line);
+  box-shadow: none;
 }
 
 .logo-wrap {
@@ -965,36 +1010,154 @@ input[readonly] {
 }
 
 /* Répartition des équipes */
-.equipes {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
+/* ===== LES DEUX CAMPS — écran des équipes =====
+   Gauche contre droite : la composition se lit d'un coup d'œil, sans trier des
+   étiquettes de tête. C'est aussi ce qu'on griffonne sur un coin de table. */
+.deux-camps {
+  display: grid;
+  grid-template-columns: 1fr 1px 1fr;
+  gap: 0 10px;
   width: 100%;
 }
 
+.camp {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;   /* sans quoi un prénom long élargit la colonne */
+}
+
+.camp-filet {
+  background: linear-gradient(var(--line), transparent);
+}
+
+/* Le nom de l'équipe coiffe sa colonne, l'effectif juste à côté : l'équilibre
+   se lit en même temps que les joueurs, au lieu d'être un chiffre orphelin. */
+.camp-tete {
+  display: flex;
+  align-items: baseline;
+  gap: 5px;
+  justify-content: center;
+  padding-bottom: 7px;
+  border-bottom: 1px solid var(--line);
+}
+
+.camp.a .camp-tete { color: var(--brand); }
+.camp.b .camp-tete { color: var(--good); }
+
+.camp-nom {
+  background: none;
+  border: none;
+  border-bottom: 1px dashed transparent;
+  color: inherit;
+  font-family: inherit;
+  font-size: 0.8rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  text-align: right;
+  width: 92px;
+  padding: 0;
+  min-width: 0;
+}
+
+.camp.b .camp-nom { text-align: left; }
+.camp-nom:hover { border-bottom-color: var(--line); }
+.camp-nom:focus { outline: none; border-bottom-color: currentColor; }
+
+.camp-n {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.camp-gens {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding-top: 7px;
+}
+
+.camp-vide {
+  font-size: 0.8rem;
+  color: var(--muted);
+  opacity: 0.6;
+  text-align: center;
+  font-style: italic;
+  padding: 14px 4px;
+}
+
+/* Un joueur. Le chevron pointe vers l'autre camp : l'objet dit ce qu'il fait,
+   sans texte d'aide — et toute la ligne est la cible, un doigt suffit. */
 .equipier {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 11px 14px;
-  background: var(--surface);
-  border: 1px solid var(--line);
-  border-radius: var(--r-sm);
-  font-size: 0.9rem;
-}
-
-.equipier span { flex: 1; text-align: left; }
-
-.equipier button {
+  gap: 4px;
+  width: 100%;
+  background: none;
   border: none;
-  border-radius: 100px;
-  padding: 6px 14px;
-  cursor: pointer;
+  color: var(--text);
   font-family: inherit;
-  font-size: 0.72rem;
-  font-weight: 700;
-  color: #fff;
+  font-size: 0.95rem;
+  padding: 9px 6px;
+  border-radius: var(--r-sm);
+  cursor: pointer;
+  transition: background var(--transition);
 }
+
+.equipier:hover { background: rgba(255, 255, 255, 0.07); }
+.equipier:active { transform: scale(0.97); }
+
+.equipier-nom {
+  flex: 1;
+  text-align: left;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.equipier-chevron {
+  flex: none;
+  color: var(--muted);
+  font-size: 0.85rem;
+  opacity: 0.55;
+}
+
+.equipier:hover .equipier-chevron { opacity: 1; }
+
+.camp.b .equipier { flex-direction: row-reverse; }
+.camp.b .equipier-nom { text-align: right; }
+
+/* Le prénom qui vient de traverser entre par le côté d'où il vient. Sans ce
+   mouvement, on doute d'avoir touché le bon — et on s'en aperçoit souvent
+   après avoir rendu le téléphone à quelqu'un d'autre. */
+@keyframes equipier-de-gauche { from { transform: translateX(-36px); opacity: 0 } }
+@keyframes equipier-de-droite { from { transform: translateX(36px); opacity: 0 } }
+
+.equipier.de-gauche { animation: equipier-de-gauche 0.28s ease-out; }
+.equipier.de-droite { animation: equipier-de-droite 0.28s ease-out; }
+
+@media (prefers-reduced-motion: reduce) {
+  .equipier.de-gauche, .equipier.de-droite { animation: none; }
+}
+
+/* Mode simple : deux équipes, personne à répartir. Les noms restent. */
+.deux-camps.sans-joueurs .camp-gens,
+.deux-camps.sans-joueurs .camp-n { display: none; }
+
+.deux-camps.sans-joueurs .camp-tete { border-bottom: none; }
+
+/* L'écart se dit, il n'interdit rien : jouer à 3 contre 5 est parfois
+   exactement ce que la table veut. */
+.ecart-equipes {
+  text-align: center;
+  font-size: 0.78rem;
+  color: var(--secondary);
+  margin-top: 10px;
+}
+
+.ecart-equipes:empty { display: none; }
 
 /* Composition du paquet, sur l'écran d'ouverture de session.
    Titre et stepper centrés ensemble. Sans ces règles, .field-label reste un
@@ -2736,3 +2899,48 @@ h2 {
   .grand-emoji.balance,
   .grand-emoji.surgit { animation: none; }
 }
+
+/* ===== LE DÉROULEMENT : réglages ===== */
+
+/* Le nombre de passes, en chiffre plutôt qu'en champ : on l'ajuste d'un pas,
+   et personne ne peut écrire 40 — ce qui reviendrait à ne plus jouer. */
+.stepper-valeur {
+  font-size: 1.5rem;
+  font-weight: 800;
+  min-width: 40px;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Un réglage que personne ne touche ne mérite pas une place permanente : il se
+   replie, et reste trouvable pour qui le cherche. */
+.repli-reglage {
+  border-top: 1px solid var(--line);
+  padding-top: 12px;
+  margin-top: 4px;
+}
+
+.repli-reglage summary {
+  font-size: 0.85rem;
+  color: var(--muted);
+  cursor: pointer;
+  list-style: none;
+  padding: 2px 0;
+}
+
+.repli-reglage summary::-webkit-details-marker { display: none; }
+.repli-reglage summary::before { content: '▸ '; }
+.repli-reglage[open] summary::before { content: '▾ '; }
+.repli-reglage .field-label { margin-top: 10px; display: block; }
+.repli-reglage .pillgroup { margin-top: 6px; }
+
+/* Le poids du paquet, sous la grille des thèmes. Vide tant que rien n'est
+   coché : une ligne à zéro n'apprend rien. */
+.themes-total {
+  text-align: center;
+  font-size: 0.85rem;
+  color: var(--muted-strong);
+  margin-top: 4px;
+}
+
+.themes-total:empty { display: none; }

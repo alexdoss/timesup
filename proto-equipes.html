@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Rush — voir et corriger les équipes</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root {
+  --fond: #14102B; --fond-halo: #2A1F5C; --surface: #1E1846; --bord: #2E2660;
+  --texte: #FFF6F0; --doux: #A79BD6;
+  --violet: #7C3AED; --violet-clair: #B14BFF; --ambre: #FFB020;
+  --eq1: #FF4D8D; --eq2: #22C55E;
+  --e1: 4px; --e2: 8px; --e3: 16px; --e4: 24px; --e5: 32px; --e6: 48px;
+  --t1: .75rem; --t2: .875rem; --t3: 1rem; --t4: 1.375rem; --t5: 2rem;
+  --r-pastille: 100px;
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  font-family: 'Outfit', sans-serif;
+  background: radial-gradient(120% 45% at 50% 0%, var(--fond-halo) 0%, var(--fond) 58%);
+  color: var(--texte); padding: var(--e4); line-height: 1.5;
+}
+h1 { font-size: var(--t4); margin-bottom: var(--e1); }
+.intro { color: var(--doux); font-size: var(--t2); max-width: 860px; }
+.intro strong { color: var(--texte); }
+.intro + .intro { margin-top: var(--e2); }
+.rangee { display: flex; gap: var(--e4); flex-wrap: wrap; align-items: flex-start;
+          margin-top: var(--e5); }
+.colonne { display: flex; flex-direction: column; gap: var(--e2); width: 320px; }
+.titre-v { display: flex; align-items: baseline; gap: var(--e2); }
+.titre-v .n { font-size: var(--t2); font-weight: 800; color: var(--ambre); }
+.titre-v .nom { font-size: var(--t2); font-weight: 700; }
+.note { font-size: var(--t2); color: var(--doux); }
+.note b { color: var(--texte); font-weight: 600; }
+
+.tel {
+  width: 320px; height: 560px; position: relative; overflow: hidden;
+  background: radial-gradient(120% 34% at 50% 0%, var(--fond-halo) 0%, var(--fond) 62%);
+  border: 1px solid var(--bord); border-radius: 28px;
+  box-shadow: 0 10px 30px rgba(0,0,0,.35);
+  display: flex; flex-direction: column; padding: var(--e4) var(--e3) var(--e3);
+}
+.retour, .fermer { position: absolute; top: 14px; background: none; border: none;
+                   color: var(--doux); font-size: var(--t3); cursor: pointer; }
+.retour { left: 16px } .fermer { right: 16px }
+.tel h3 { font-size: var(--t4); font-weight: 800; text-align: center; }
+.tel .aide { font-size: var(--t2); color: var(--doux); text-align: center; margin-top: 2px; }
+
+.bouton { flex: none; width: 100%; border: none; border-radius: var(--r-pastille);
+          padding: 13px; font-family: inherit; font-size: var(--t3); font-weight: 700;
+          color: #fff; background: linear-gradient(135deg, var(--violet), var(--violet-clair));
+          cursor: pointer; box-shadow: 0 8px 20px rgba(124,58,237,.35); }
+.bouton.doux { background: none; color: var(--doux); border: 1px solid var(--bord);
+               box-shadow: none; font-size: var(--t2); padding: 10px; }
+
+/* ═══════ A — DEUX COLONNES ═══════ */
+.deux-col { flex: 1; display: grid; grid-template-columns: 1fr 1px 1fr;
+            gap: 0 var(--e2); margin-top: var(--e4); min-height: 0; }
+.filet { background: var(--bord); }
+.col-eq { display: flex; flex-direction: column; min-height: 0; }
+.col-nom {
+  width: 100%; background: none; border: none; border-bottom: 1px dashed transparent;
+  color: var(--texte); font-family: inherit; font-size: var(--t2); font-weight: 800;
+  text-transform: uppercase; letter-spacing: .06em; text-align: center; padding: 2px 0 6px;
+}
+.col-nom:focus { outline: none; border-bottom-color: var(--bord); }
+.col-eq.a .col-nom { color: var(--eq1); } .col-eq.b .col-nom { color: var(--eq2); }
+.col-gens { display: flex; flex-direction: column; gap: 5px; overflow: auto; }
+.nom-simple {
+  background: none; border: none; color: var(--texte); font-family: inherit;
+  font-size: var(--t3); text-align: center; padding: 9px 4px; cursor: pointer;
+  border-radius: 10px; transition: background .15s;
+}
+.nom-simple:hover { background: rgba(255,255,255,.06); }
+.nom-simple:active { transform: scale(.96); }
+.col-compte { text-align: center; font-size: var(--t1); color: var(--doux);
+              padding-top: 6px; margin-top: auto; }
+
+/* ═══════ B — UNE LISTE, UNE BASCULE ═══════ */
+.liste { flex: 1; display: flex; flex-direction: column; gap: 6px;
+         margin-top: var(--e4); overflow: auto; }
+.ligne { display: flex; align-items: center; justify-content: space-between;
+         font-size: var(--t3); padding: 3px 2px 3px 6px; }
+.inter { display: flex; background: var(--surface); border: 1px solid var(--bord);
+         border-radius: var(--r-pastille); padding: 2px; }
+.inter button {
+  border: none; background: none; color: var(--doux); font-family: inherit;
+  font-size: var(--t1); font-weight: 700; padding: 4px 11px;
+  border-radius: var(--r-pastille); cursor: pointer;
+}
+.inter button.on { color: #12091B; }
+.inter button.on.a { background: var(--eq1); } .inter button.on.b { background: var(--eq2); }
+
+/* ═══════ C — RIEN QUE DES NOMS ═══════ */
+.nuage { flex: 1; display: flex; flex-direction: column; justify-content: center;
+         gap: var(--e4); margin-top: var(--e3); }
+.groupe { display: flex; flex-wrap: wrap; gap: 7px; justify-content: center; }
+.gnom {
+  border: 1.5px solid; background: none; font-family: inherit; font-size: var(--t3);
+  font-weight: 600; padding: 7px 15px; border-radius: var(--r-pastille); cursor: pointer;
+  transition: transform .12s;
+}
+.gnom:active { transform: scale(.94); }
+.gnom.a { color: var(--eq1); border-color: color-mix(in srgb, var(--eq1) 50%, transparent); }
+.gnom.b { color: var(--eq2); border-color: color-mix(in srgb, var(--eq2) 50%, transparent); }
+.entete-g { display: flex; align-items: center; justify-content: center; gap: var(--e2); }
+.entete-g input {
+  background: none; border: none; font-family: inherit; font-size: var(--t2);
+  font-weight: 800; text-transform: uppercase; letter-spacing: .07em; text-align: center;
+  width: 130px; padding: 2px 0;
+}
+.entete-g.a input { color: var(--eq1); } .entete-g.b input { color: var(--eq2); }
+.entete-g input:focus { outline: none; border-bottom: 1px dashed var(--bord); }
+.entete-g .n { font-size: var(--t1); color: var(--doux); font-weight: 700; }
+
+.legende { margin-top: var(--e6); border-top: 1px solid var(--bord); padding-top: var(--e4); }
+.legende ul { list-style: none; display: flex; flex-direction: column; gap: var(--e2); max-width: 860px; }
+.legende li { font-size: var(--t2); color: var(--doux); padding-left: var(--e3);
+              border-left: 2px solid var(--bord); }
+.legende li b { color: var(--texte); }
+.question { border-left-color: var(--ambre) !important; }
+.question b { color: var(--ambre) !important; }
+</style>
+</head>
+<body>
+
+<h1>Voir et corriger les équipes</h1>
+<p class="intro">Trois façons minimales de faire la même chose. <strong>Elles marchent :
+touche un prénom, il change de camp.</strong> Le bouton « Mélanger » rebat tout.</p>
+<p class="intro">L'écran arrive déjà rempli — le tirage a eu lieu aux inscriptions. Le seul
+travail restant est de corriger, et souvent il n'y en a aucun.</p>
+
+<div class="rangee">
+  <!-- ═══ A ═══ -->
+  <div class="colonne">
+    <div class="titre-v"><span class="n">A</span><span class="nom">Deux colonnes</span></div>
+    <div class="tel" data-vue="a">
+      <button class="retour">←</button><button class="fermer">✕</button>
+      <h3>Les équipes</h3>
+      <p class="aide">Touche un prénom pour le changer de camp.</p>
+      <div class="deux-col">
+        <div class="col-eq a">
+          <input class="col-nom" value="Renards">
+          <div class="col-gens" data-camp="0"></div>
+          <p class="col-compte" data-compte="0"></p>
+        </div>
+        <div class="filet"></div>
+        <div class="col-eq b">
+          <input class="col-nom" value="Loutres">
+          <div class="col-gens" data-camp="1"></div>
+          <p class="col-compte" data-compte="1"></p>
+        </div>
+      </div>
+      <button class="bouton doux" data-melanger style="margin-bottom:var(--e2)">🎲 Mélanger</button>
+      <button class="bouton">Suivant ▶️</button>
+    </div>
+    <p class="note">La séparation est <b>spatiale</b> : gauche contre droite, comme une feuille
+    de match. Rien à lire pour comprendre qui joue avec qui.</p>
+  </div>
+
+  <!-- ═══ B ═══ -->
+  <div class="colonne">
+    <div class="titre-v"><span class="n">B</span><span class="nom">Une liste, une bascule</span></div>
+    <div class="tel" data-vue="b">
+      <button class="retour">←</button><button class="fermer">✕</button>
+      <h3>Les équipes</h3>
+      <p class="aide">Une ligne par joueur.</p>
+      <div style="display:flex;justify-content:space-between;margin-top:var(--e3);font-size:var(--t1);
+                  font-weight:800;text-transform:uppercase;letter-spacing:.07em">
+        <input class="col-nom" style="text-align:left;color:var(--eq1);width:auto" value="Renards">
+        <input class="col-nom" style="text-align:right;color:var(--eq2);width:auto" value="Loutres">
+      </div>
+      <div class="liste" data-liste></div>
+      <p class="col-compte" data-duo></p>
+      <button class="bouton doux" data-melanger style="margin-bottom:var(--e2)">🎲 Mélanger</button>
+      <button class="bouton">Suivant ▶️</button>
+    </div>
+    <p class="note">Le plus proche de l'existant. L'interrupteur dit <b>où l'on est et où l'on
+    peut aller</b> d'un seul objet — mais il faut lire chaque ligne.</p>
+  </div>
+
+  <!-- ═══ C ═══ -->
+  <div class="colonne">
+    <div class="titre-v"><span class="n">C</span><span class="nom">Rien que des noms</span></div>
+    <div class="tel" data-vue="c">
+      <button class="retour">←</button><button class="fermer">✕</button>
+      <h3>Les équipes</h3>
+      <p class="aide">Touche un prénom pour le changer de camp.</p>
+      <div class="nuage">
+        <div>
+          <div class="entete-g a"><input value="Renards"><span class="n" data-compte="0"></span></div>
+          <div class="groupe" data-camp="0" style="margin-top:var(--e2)"></div>
+        </div>
+        <div>
+          <div class="entete-g b"><input value="Loutres"><span class="n" data-compte="1"></span></div>
+          <div class="groupe" data-camp="1" style="margin-top:var(--e2)"></div>
+        </div>
+      </div>
+      <button class="bouton doux" data-melanger style="margin-bottom:var(--e2)">🎲 Mélanger</button>
+      <button class="bouton">Suivant ▶️</button>
+    </div>
+    <p class="note">Aucun cadre, aucun bouton : <b>la couleur du prénom est l'équipe</b>. Les
+    noms s'enroulent, donc dix joueurs tiennent sans allonger l'écran.</p>
+  </div>
+</div>
+
+<div class="legende">
+  <ul>
+    <li><b>Essaie-les à dix joueurs</b> — le bouton ci-dessous en ajoute. C'est là que les trois
+    se séparent : A s'allonge en deux colonnes, B gagne une ligne par personne, C s'enroule.</li>
+    <li><b>Aucune des trois ne demande de valider une équipe.</b> Le tirage est fait, « Suivant »
+    est toujours la bonne réponse — corriger reste facultatif.</li>
+    <li class="question"><b>Mon classement :</b> C, puis A. C est le plus léger et le seul qui
+    tient dix joueurs sans bouger ; A est le plus lisible d'un coup d'œil, et le plus proche de
+    ce qu'on griffonne sur un coin de table. B est le plus sage, et le plus lourd à l'usage.</li>
+  </ul>
+  <div style="margin-top:var(--e3);display:flex;gap:var(--e2)">
+    <button class="bouton doux" style="width:auto;padding:9px 16px" id="btn-dix">Passer à 10 joueurs</button>
+    <button class="bouton doux" style="width:auto;padding:9px 16px" id="btn-quatre">Revenir à 4</button>
+  </div>
+</div>
+
+<script>
+const PETIT = ['Camille', 'Sacha', 'Lou', 'Dan'];
+const GRAND = ['Camille', 'Sacha', 'Lou', 'Dan', 'Inès', 'Malo', 'Ana', 'Bob', 'Cléo', 'Théo'];
+
+// Une seule source de vérité pour les trois vues : chacun porte son camp, 0 ou 1.
+let gens = [];
+
+function garnir(noms) {
+  gens = noms.map((nom, i) => ({ nom, camp: i % 2 }));
+  melanger();
+}
+
+// Au hasard, pas chacun son tour : l'ordre d'arrivée n'est pas neutre.
+function melanger() {
+  const ordre = [...gens].sort(() => Math.random() - 0.5);
+  ordre.forEach((g, i) => { g.camp = i < Math.ceil(ordre.length / 2) ? 0 : 1; });
+  dessiner();
+}
+
+function basculer(g) { g.camp = 1 - g.camp; dessiner(); }
+
+function dessiner() {
+  const parCamp = [gens.filter(g => g.camp === 0), gens.filter(g => g.camp === 1)];
+
+  // A — deux colonnes
+  const a = document.querySelector('[data-vue="a"]');
+  [0, 1].forEach(c => {
+    const boite = a.querySelector(`.col-gens[data-camp="${c}"]`);
+    boite.innerHTML = '';
+    parCamp[c].forEach(g => {
+      const b = document.createElement('button');
+      b.className = 'nom-simple';
+      b.textContent = g.nom;
+      b.addEventListener('click', () => basculer(g));
+      boite.appendChild(b);
+    });
+    a.querySelector(`.col-compte[data-compte="${c}"]`).textContent = parCamp[c].length;
+  });
+
+  // B — une liste, une bascule
+  const b = document.querySelector('[data-vue="b"]');
+  const liste = b.querySelector('[data-liste]');
+  liste.innerHTML = '';
+  gens.forEach(g => {
+    const ligne = document.createElement('div');
+    ligne.className = 'ligne';
+    const nom = document.createElement('span');
+    nom.textContent = g.nom;
+    const inter = document.createElement('div');
+    inter.className = 'inter';
+    [0, 1].forEach(c => {
+      const bouton = document.createElement('button');
+      bouton.textContent = c === 0 ? 'R' : 'L';
+      bouton.className = (g.camp === c ? 'on ' : '') + (c === 0 ? 'a' : 'b');
+      bouton.addEventListener('click', () => { g.camp = c; dessiner(); });
+      inter.appendChild(bouton);
+    });
+    ligne.append(nom, inter);
+    liste.appendChild(ligne);
+  });
+  b.querySelector('[data-duo]').textContent = `${parCamp[0].length} contre ${parCamp[1].length}`;
+
+  // C — rien que des noms
+  const c = document.querySelector('[data-vue="c"]');
+  [0, 1].forEach(camp => {
+    const boite = c.querySelector(`.groupe[data-camp="${camp}"]`);
+    boite.innerHTML = '';
+    parCamp[camp].forEach(g => {
+      const bouton = document.createElement('button');
+      bouton.className = 'gnom ' + (camp === 0 ? 'a' : 'b');
+      bouton.textContent = g.nom;
+      bouton.addEventListener('click', () => basculer(g));
+      boite.appendChild(bouton);
+    });
+    c.querySelector(`.n[data-compte="${camp}"]`).textContent = parCamp[camp].length;
+  });
+}
+
+document.querySelectorAll('[data-melanger]').forEach(b => b.addEventListener('click', melanger));
+document.getElementById('btn-dix').addEventListener('click', () => garnir(GRAND));
+document.getElementById('btn-quatre').addEventListener('click', () => garnir(PETIT));
+garnir(PETIT);
+</script>
+</body>
+</html>

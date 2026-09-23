@@ -201,8 +201,8 @@ localStorage.removeItem('timesup_rejoint');
     A('btn-inscription-suivant').click();
     await wait(900);
     check('on arrive sur les equipes', ecranApp() === 'screen-repartition');
-    const equipiers = [...da.querySelectorAll('#repartition-liste .equipier')]
-      .map(e => e.querySelector('span').textContent);
+    const equipiers = [...da.querySelectorAll('#bloc-repartition .equipier-nom')]
+      .map(e => e.textContent);
     log('       a repartir : ' + equipiers.join(', '));
     check('les cinq prenoms viennent des inscriptions', equipiers.length === 5);
     check('ce sont bien ceux qui se sont inscrits',
@@ -213,11 +213,15 @@ localStorage.removeItem('timesup_rejoint');
     const apres = (await api('etat', { code })).corps;
     check('la session est fermee aux nouveaux venus', apres.ouverte === false);
 
+    // Le nom de l equipe coiffe sa colonne : le renommer se voit la, et dans
+    // l infobulle qui annonce ou part un joueur qu on touche.
     A('team1-name').value = 'Les Bleus';
     A('team1-name').dispatchEvent(new wa.Event('input', { bubbles: true }));
-    check('renommer une equipe se voit sur les boutons',
-          [...da.querySelectorAll('#repartition-liste .equipier button')]
-            .some(b => b.textContent === 'Les Bleus'));
+    check('le nom saisi reste dans sa colonne', A('team1-name').value === 'Les Bleus');
+    A('btn-repartition-melanger').click();
+    check('et il suit la composition qu on rebat',
+          [...da.querySelectorAll('#camp2-gens .equipier')]
+            .every(b => b.title.includes('Les Bleus')));
 
     // ===== L invite ne doit pas croire que la partie a demarre =====
     // Le suivi vient d etre active ; ses battements republient toutes les

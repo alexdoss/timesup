@@ -36,8 +36,11 @@ f.addEventListener('load', async () => {
   const $ = id => d.getElementById(id);
   const ecran = () => [...d.querySelectorAll('.screen')].find(s => s.classList.contains('active'))?.id;
   const visible = id => $(id).style.display !== 'none';
-  const equipiers = () => [...d.querySelectorAll('#repartition-liste .equipier')]
-    .map(e => ({ prenom: e.querySelector('span').textContent, equipe: e.querySelector('button').textContent }));
+  // Deux colonnes depuis le lot 7 : le camp est la colonne, plus une etiquette
+  // portee par chaque ligne. On lit donc les deux boites separement.
+  const equipiers = () => [0, 1].flatMap(camp =>
+    [...d.querySelectorAll(`#camp${camp + 1}-gens .equipier`)].map(e =>
+      ({ prenom: e.querySelector('.equipier-nom').textContent, equipe: String(camp + 1) })));
 
   // Un invite complet : il rejoint et depose ses cartes
   async function invite(code, prenom, cartes) {
@@ -105,29 +108,34 @@ f.addEventListener('load', async () => {
     check('les 4 prenoms viennent des scans', liste.length === 4);
     check('ils sont ceux saisis par les joueurs',
           liste.map(e => e.prenom).sort().join(',') === 'Inès,Jo,Marc,Sam');
-    check('les equipes sont pre-remplies', liste.every(e => e.equipe.includes('Équipe')));
+    check('les equipes sont pre-remplies', liste.length === 4);
     check('elles sont equilibrees',
-          liste.filter(e => e.equipe.includes('1')).length === 2);
+          liste.filter(e => e.equipe === '1').length === 2);
 
     // ===== On bascule un joueur d equipe =====
-    const avant = equipiers()[0].equipe;
-    d.querySelector('#repartition-liste .equipier button').click();
-    check('un tap change l equipe du joueur', equipiers()[0].equipe !== avant);
-    d.querySelector('#repartition-liste .equipier button').click();
-    check('un second tap la remet', equipiers()[0].equipe === avant);
+    // Toute la ligne est la cible : le chevron vit dedans, il n y a plus de
+    // bouton separe a viser.
+    const premier = equipiers()[0].prenom;
+    const campDe = nom => equipiers().find(e => e.prenom === nom).equipe;
+    const avant = campDe(premier);
+    d.querySelector('#camp1-gens .equipier').click();
+    check('un tap change l equipe du joueur', campDe(premier) !== avant);
+    d.querySelector('#camp2-gens .equipier').click();
+    check('un second tap la remet', campDe(premier) === avant);
 
     $('btn-repartition-melanger').click();
     check('melanger garde les 4 joueurs', equipiers().length === 4);
     check('et garde l equilibre',
-          equipiers().filter(e => e.equipe.includes('1')).length === 2);
+          equipiers().filter(e => e.equipe === '1').length === 2);
 
     // ===== Une equipe vide est refusee =====
-    equipiers().forEach((_, i) => {
-      const boutons = [...d.querySelectorAll('#repartition-liste .equipier button')];
-      if (boutons[i].textContent.includes('2')) boutons[i].click();
-    });
+    // On vide la colonne de droite en tapant toujours son premier joueur.
+    let garde = 0;
+    while (d.querySelector('#camp2-gens .equipier') && garde++ < 10) {
+      d.querySelector('#camp2-gens .equipier').click();
+    }
     check('tous les joueurs sont dans la meme equipe',
-          equipiers().every(e => e.equipe.includes('1')));
+          equipiers().every(e => e.equipe === '1'));
     $('btn-repartition-jouer').click();
     await wait(300);
     check('une equipe vide est refusee', $('dialog-overlay').style.display !== 'none');

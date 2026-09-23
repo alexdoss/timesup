@@ -31,7 +31,7 @@ try {
 
   // --- Place dans le menu d'accueil ---
   check('le menu propose les regles du jeu', !!$('btn-rules'));
-  check('le libelle est explicite', $('btn-rules').textContent.includes('Règles du jeu'));
+  check('le libelle est explicite', $('btn-rules').textContent.includes('Règles'));
   const menu = [...$('screen-home').querySelectorAll('.btn')].map(b => b.id);
   check('les regles sont placees sous la bibliotheque',
         menu.indexOf('btn-rules') === menu.indexOf('btn-library') + 1);

@@ -39,7 +39,7 @@ f.addEventListener('load', async () => {
     d.querySelector('[data-mode="simple"]').click();
     check('etape 4 : les equipes', screen() === 'screen-repartition');
     check('aucune repartition a faire sans prenoms',
-          $('bloc-repartition').style.display === 'none');
+          $('bloc-repartition').classList.contains('sans-joueurs'));
     check('mais les deux noms d equipes sont la',
           !!$('team1-name') && !!$('team2-name'));
     click('btn-repartition-jouer');  check('etape 5 : manches', screen() === 'screen-rounds');

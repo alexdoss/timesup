@@ -392,23 +392,39 @@ function setupListeners() {
   stepInput.addEventListener('input', applyStep);
   stepInput.addEventListener('blur', applyStep);
 
-  // Pass mode selector
-  document.getElementById('pass-mode').addEventListener('change', (e) => {
-    game.passMode = e.target.value;
-    document.getElementById('pass-limit-section').style.display =
-      game.passMode === 'limited' ? '' : 'none';
-    document.getElementById('pass-replace-section').style.display =
-      game.passMode === 'forbidden' ? 'none' : '';
+  // La règle de passe : trois pastilles au lieu d'une liste déroulante. Le
+  // nombre de passes n'apparaît qu'avec « Compté », et la règle de remise
+  // disparaît quand passer est interdit — elle n'aurait plus d'objet.
+  document.querySelectorAll('#pass-mode [data-passe]').forEach(pastille => {
+    pastille.addEventListener('click', () => {
+      game.passMode = pastille.dataset.passe;
+      document.querySelectorAll('#pass-mode [data-passe]')
+        .forEach(p => p.classList.toggle('active', p === pastille));
+      document.getElementById('pass-limit-section').style.display =
+        game.passMode === 'limited' ? '' : 'none';
+      document.getElementById('pass-replace-section').style.display =
+        game.passMode === 'forbidden' ? 'none' : '';
+    });
   });
 
-  // Pass limit selector
-  document.getElementById('pass-limit').addEventListener('change', (e) => {
-    game.passLimit = parseInt(e.target.value);
-  });
+  // Le nombre de passes : un pas à la fois, borné. Un champ libre laissait
+  // écrire 40, ce qui revient à ne plus jouer.
+  const PASSES_MIN = 1, PASSES_MAX = 9;
+  const valeurPasses = document.getElementById('pass-limit');
+  const reglerPasses = pas => {
+    game.passLimit = Math.max(PASSES_MIN, Math.min(PASSES_MAX, game.passLimit + pas));
+    valeurPasses.textContent = game.passLimit;
+    valeurPasses.dataset.valeur = game.passLimit;
+  };
+  document.getElementById('btn-passes-moins').addEventListener('click', () => reglerPasses(-1));
+  document.getElementById('btn-passes-plus').addEventListener('click', () => reglerPasses(1));
 
-  // Pass replace selector
-  document.getElementById('pass-replace').addEventListener('change', (e) => {
-    game.passReplace = e.target.value;
+  document.querySelectorAll('#pass-replace [data-remise]').forEach(pastille => {
+    pastille.addEventListener('click', () => {
+      game.passReplace = pastille.dataset.remise;
+      document.querySelectorAll('#pass-replace [data-remise]')
+        .forEach(p => p.classList.toggle('active', p === pastille));
+    });
   });
 
   // Son : préférence mémorisée d'une partie à l'autre. La vibration l'accompagne
@@ -789,13 +805,27 @@ function ouvrirEcranDesEquipes() {
     // équipe : elle porte aussi l'identifiant de leur téléphone, sans lequel on
     // ne saurait plus à qui confier leur tour.
     const connus = new Map(repartition.map(j => [j.prenom, j]));
-    repartition = game.players.map((prenom, index) =>
-      connus.get(prenom) || { prenom, equipe: index % game.teams.length });
+    if (!connus.size) {
+      repartition = repartirAuHasard(game.players.map(prenom => ({ prenom })));
+    } else {
+      // Premier passage pour les uns, retour pour les autres : on garde les
+      // équipes déjà décidées et on ne place que les nouveaux.
+      const garde = [];
+      game.players.forEach(prenom => {
+        const connu = connus.get(prenom);
+        garde.push(connu || placerLeNouveau({ prenom }, garde));
+      });
+      repartition = garde;
+    }
   }
-  document.getElementById('bloc-repartition').style.display =
+  // En mode simple il n'y a personne à répartir, mais les deux noms restent à
+  // régler : on ne masque donc pas le bloc, on lui retire ses joueurs.
+  document.getElementById('bloc-repartition').classList
+    .toggle('sans-joueurs', !game.nominativeMode);
+  document.getElementById('btn-repartition-melanger').style.display =
     game.nominativeMode ? '' : 'none';
   document.getElementById('equipes-hint').textContent = game.nominativeMode
-    ? 'Nomme-les, et répartis les joueurs.'
+    ? 'Tirées au sort. Change qui tu veux.'
     : "Deux équipes s'affrontent. Donne-leur un nom si tu veux.";
   afficherRepartition();
   updateWizardLabels();
@@ -1386,7 +1416,7 @@ async function terminerSaisieEtConfigurer() {
 
     // Le paquet est figé et l'effectif enfin connu : les étapes suivantes
     // raisonnent dessus comme dans une partie ordinaire.
-    repartition = resultat.joueurs.map((j, index) => ({ ...j, equipe: index % game.teams.length }));
+    repartition = repartirAuHasard(resultat.joueurs);
     updateBlocJoueurs();
     updateWizardLabels();
     showScreen('screen-jeu-mode');
@@ -1402,15 +1432,34 @@ async function terminerSaisieEtConfigurer() {
   }
 }
 
-function afficherRepartition() {
+// Les équipes se constituent AU HASARD, pas dans l'ordre d'arrivée. Ce sont
+// toujours les mêmes qui dégainent leur téléphone en premier : un tour de rôle
+// les remettrait ensemble soir après soir, ce qui n'est un choix de personne.
+function repartirAuHasard(joueurs) {
+  return shuffle(joueurs).map((j, index) => ({ ...j, equipe: index % game.teams.length }));
+}
+
+// Un retardataire, lui, ne rebat pas les cartes : il rejoint l'équipe la moins
+// fournie. À égalité, le sort tranche — sinon le troisième arrivé irait
+// toujours du même côté.
+function placerLeNouveau(joueur, deja) {
+  const tailles = game.teams.map((_, camp) => deja.filter(j => j.equipe === camp).length);
+  const equipe = tailles[0] === tailles[1]
+    ? (Math.random() < 0.5 ? 0 : 1)
+    : (tailles[0] < tailles[1] ? 0 : 1);
+  return { ...joueur, equipe };
+}
+
+// `bouge` : celui qui vient de changer de camp, pour que lui seul s'anime.
+function afficherRepartition(bouge = null) {
   renderRepartition(repartition, game.teams, joueur => {
     joueur.equipe = (joueur.equipe + 1) % game.teams.length;
-    afficherRepartition();
-  });
+    afficherRepartition(joueur);
+  }, bouge);
 }
 
 function melangerRepartition() {
-  repartition = shuffle(repartition).map((j, index) => ({ ...j, equipe: index % game.teams.length }));
+  repartition = repartirAuHasard(repartition);
   afficherRepartition();
 }
 
@@ -2648,7 +2697,22 @@ function endRound() {
 // ===== LIBRARY FUNCTIONS =====
 function refreshThemeSelector() {
   renderThemeButtons(THEMES, game.selectedThemes, document.getElementById('theme-selector'),
-                     rejeuThemes ? majBoutonRejeuThemes : null);
+                     selection => {
+                       majTotalDesThemes();
+                       if (rejeuThemes) majBoutonRejeuThemes(selection);
+                     });
+  majTotalDesThemes();
+}
+
+// Ce qu'on est en train de constituer. On cochait des thèmes sans savoir
+// combien de cartes ça faisait, alors que c'est ce chiffre qui décide de la
+// longueur de la soirée — et les thèmes s'additionnent sans qu'on y pense.
+function majTotalDesThemes() {
+  const total = [...game.selectedThemes]
+    .reduce((somme, cle) => somme + (THEMES[cle]?.words.length || 0), 0);
+  const ligne = document.getElementById('themes-total');
+  if (!ligne) return;
+  ligne.textContent = total ? `${total} cartes dans le paquet` : '';
 }
 
 function renderCustomThemesList() {

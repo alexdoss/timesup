@@ -31,13 +31,22 @@
           <h1 class="title">RUSH</h1>
         </div>
         <p class="subtitle">Le jeu de devinettes</p>
+        <!-- Une partie laissée en plan passe devant : c'est elle qu'on vient
+             chercher, et elle dit où l'on s'était arrêté. Le geste neuf devient
+             second, pour qu'on ne recommence pas par accident. -->
         <div id="resume-block" class="resume-block" style="display:none">
-          <button id="btn-resume" class="btn btn-primary">▶️ Reprendre la partie</button>
+          <p class="resume-cap">Partie en cours</p>
           <p id="resume-detail" class="resume-detail"></p>
+          <button id="btn-resume" class="btn btn-primary">Reprendre ▶️</button>
         </div>
-        <button id="btn-start" class="btn btn-primary">Nouvelle partie 🎮</button>
-        <button id="btn-library" class="btn btn-secondary">📚 Bibliothèque de cartes</button>
-        <button id="btn-rules" class="btn btn-secondary">📖 Règles du jeu</button>
+        <!-- Neuf fois sur dix, on ouvre l'app pour jouer. Un seul geste domine
+             donc l'écran ; la bibliothèque et les règles sont des recours, et
+             tiennent sur une ligne à deux. -->
+        <button id="btn-start" class="btn btn-primary btn-jouer">Jouer</button>
+        <div class="home-recours">
+          <button id="btn-library" class="btn btn-secondary">📚 Mes cartes</button>
+          <button id="btn-rules" class="btn btn-secondary">📖 Règles</button>
+        </div>
       </div>
     </div>
 
@@ -253,6 +262,9 @@
       </div>
       <div class="config-form">
         <div id="theme-selector" class="theme-selector"></div>
+        <!-- Le poids du paquet, mis à jour à chaque thème coché : c est lui qui
+             décide de la longueur de la soirée. -->
+        <p id="themes-total" class="themes-total"></p>
         <button id="btn-next-step" class="btn btn-primary">Suivant ▶️</button>
       </div>
     </div>
@@ -264,7 +276,7 @@
       <div class="wizard-header">
         <span class="wizard-step" data-step="players">Étape 4/7</span>
         <h2>Les joueurs</h2>
-        <p class="wizard-hint">Minimum 4 joueurs. Tu les répartiras en équipes juste après.</p>
+        <p class="wizard-hint">Minimum 4 joueurs.</p>
       </div>
       <div class="config-form">
         <div id="nominatif-block">
@@ -342,32 +354,42 @@
           <p id="cards-count-hint" class="wizard-hint" style="display:none"></p>
         </label>
 
+        <!-- Trois listes déroulantes vivaient ici. Une liste déroulante cache
+             ses options, demande deux gestes, et donne à un écran de jeu l'air
+             d'un formulaire. Tout se voit et se touche d'un doigt maintenant. -->
         <div class="config-section">
           <span class="field-label">Passer une carte</span>
-          <select id="pass-mode" class="config-select">
-            <option value="unlimited" selected>Autorisé — illimité</option>
-            <option value="limited">Autorisé — limité</option>
-            <option value="forbidden">Interdit</option>
-          </select>
+          <div id="pass-mode" class="pillgroup">
+            <button type="button" class="pill active" data-passe="unlimited">Autant qu'on veut</button>
+            <button type="button" class="pill" data-passe="limited">Compté</button>
+            <button type="button" class="pill" data-passe="forbidden">Jamais</button>
+          </div>
         </div>
 
+        <!-- Le nombre n'a de sens qu'avec « Compté » : il apparaît sous le
+             choix qui l'appelle, au lieu d'occuper l'écran en permanence. -->
         <div id="pass-limit-section" class="config-section" style="display:none">
-          <span class="field-label">Passages max. par tour</span>
-          <select id="pass-limit" class="config-select">
-            <option value="1">1</option>
-            <option value="2" selected>2</option>
-            <option value="3">3</option>
-            <option value="5">5</option>
-          </select>
+          <div class="stepper">
+            <button type="button" id="btn-passes-moins" class="stepper-btn">−</button>
+            <span id="pass-limit" class="stepper-valeur" data-valeur="2">2</span>
+            <button type="button" id="btn-passes-plus" class="stepper-btn">+</button>
+          </div>
+          <p class="wizard-hint">passes par tour</p>
         </div>
 
-        <div id="pass-replace-section" class="config-section">
-          <span class="field-label">Carte passée</span>
-          <select id="pass-replace" class="config-select">
-            <option value="bottom" selected>Replacée sous le paquet</option>
-            <option value="random">Replacée aléatoirement</option>
-          </select>
-        </div>
+        <!-- Réglage que personne ne touche : il se replie plutôt que de
+             s'ajouter à la pile. « Carte passée · replacée sous le paquet »
+             parlait le langage d'un règlement, pas celui d'une table. -->
+        <details id="pass-replace-section" class="repli-reglage">
+          <summary>Un réglage de plus</summary>
+          <span class="field-label">Une carte passée revient…</span>
+          <div id="pass-replace" class="pillgroup">
+            <button type="button" class="pill active" data-remise="bottom">sous le paquet</button>
+            <button type="button" class="pill" data-remise="random">plus loin, au hasard</button>
+          </div>
+          <p class="wizard-hint">Sous le paquet, elle ne revient qu'à la fin du tour. Au hasard,
+            elle peut retomber quelques cartes plus loin.</p>
+        </details>
 
         <button id="btn-play" class="btn btn-primary">C'est parti ! 🚀</button>
       </div>
@@ -579,22 +601,33 @@
         <p id="equipes-hint" class="wizard-hint">Nomme-les, et répartis les joueurs.</p>
       </div>
       <div class="config-form">
-        <div class="config-section">
-          <span class="field-label">Noms des équipes</span>
-          <div class="team-row">
-            <span class="swatch" style="background:var(--brand)"></span>
-            <input type="text" id="team1-name" value="Équipe 1" maxlength="15">
+        <!-- Deux colonnes, gauche contre droite : la composition se lit sans
+             qu'on ait à trier des étiquettes de tête. Le nom de chaque équipe
+             coiffe sa colonne, avec son effectif juste à côté — l'équilibre se
+             voit en même temps que les joueurs.
+             En mode simple il n'y a personne à répartir : la classe
+             « sans-joueurs » ne garde que les deux noms. -->
+        <div id="bloc-repartition" class="deux-camps">
+          <div class="camp a">
+            <div class="camp-tete">
+              <input type="text" id="team1-name" class="camp-nom" value="Équipe 1" maxlength="15">
+              <span class="camp-n" id="camp1-compte"></span>
+            </div>
+            <div class="camp-gens" id="camp1-gens"></div>
           </div>
-          <div class="team-row">
-            <span class="swatch" style="background:var(--good)"></span>
-            <input type="text" id="team2-name" value="Équipe 2" maxlength="15">
+          <span class="camp-filet" aria-hidden="true"></span>
+          <div class="camp b">
+            <div class="camp-tete">
+              <span class="camp-n" id="camp2-compte"></span>
+              <input type="text" id="team2-name" class="camp-nom" value="Équipe 2" maxlength="15">
+            </div>
+            <div class="camp-gens" id="camp2-gens"></div>
           </div>
         </div>
-        <div id="bloc-repartition" class="config-section">
-          <span class="field-label">Qui joue avec qui</span>
-          <div id="repartition-liste" class="equipes"></div>
-          <button id="btn-repartition-melanger" class="btn btn-secondary">🎲 Mélanger</button>
-        </div>
+        <!-- L'écart se signale sans rien interdire : jouer à 3 contre 5 est
+             parfois exactement ce que la table veut. -->
+        <p id="repartition-ecart" class="ecart-equipes"></p>
+        <button id="btn-repartition-melanger" class="btn btn-secondary">🎲 Mélanger</button>
         <button id="btn-repartition-jouer" class="btn btn-primary">Suivant ▶️</button>
       </div>
     </div>

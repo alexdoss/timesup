@@ -689,26 +689,66 @@ export function showSaisieError(message) {
 }
 
 // Répartition des équipes, en mode nominatif : les prénoms viennent des scans.
-export function renderRepartition(joueurs, teams, onBasculer) {
-  const bloc = document.getElementById('repartition-liste');
-  bloc.innerHTML = '';
+//
+// Deux colonnes plutôt qu'une liste étiquetée : la séparation devient spatiale,
+// et on lit qui joue avec qui sans trier de tête. Le chevron vit DANS la ligne
+// et pointe vers l'autre camp — c'est ce qui dit que le prénom se touche, à la
+// place d'un texte d'aide que personne ne lit au milieu d'une soirée.
+//
+// `bouge` : le joueur qui vient de traverser. Lui seul entre en glissant, par le
+// côté qu'il a quitté. Sans ce mouvement on doute d'avoir touché le bon — et on
+// s'en aperçoit souvent après avoir rendu le téléphone à quelqu'un d'autre.
+const ECART_TOLERE = 2;
 
-  joueurs.forEach(joueur => {
-    const ligne = document.createElement('div');
-    ligne.className = 'equipier';
+export function renderRepartition(joueurs, teams, onBasculer, bouge = null) {
+  teams.forEach((equipe, camp) => {
+    const boite = document.getElementById(`camp${camp + 1}-gens`);
+    const compte = document.getElementById(`camp${camp + 1}-compte`);
+    if (!boite) return;
+    boite.innerHTML = '';
 
-    const nom = document.createElement('span');
-    nom.textContent = joueur.prenom;
+    const siens = joueurs.filter(j => j.equipe === camp);
+    if (compte) compte.textContent = siens.length;
 
-    const bouton = document.createElement('button');
-    bouton.type = 'button';
-    bouton.textContent = teams[joueur.equipe].name;
-    bouton.style.background = teams[joueur.equipe].color;
-    bouton.addEventListener('click', () => onBasculer(joueur));
+    if (!siens.length) {
+      const rien = document.createElement('p');
+      rien.className = 'camp-vide';
+      rien.textContent = 'personne';
+      boite.appendChild(rien);
+      return;
+    }
 
-    ligne.append(nom, bouton);
-    bloc.appendChild(ligne);
+    siens.forEach(joueur => {
+      const ligne = document.createElement('button');
+      ligne.type = 'button';
+      ligne.className = 'equipier';
+      if (joueur === bouge) ligne.classList.add(camp === 0 ? 'de-droite' : 'de-gauche');
+
+      const nom = document.createElement('span');
+      nom.className = 'equipier-nom';
+      nom.textContent = joueur.prenom;
+
+      const chevron = document.createElement('span');
+      chevron.className = 'equipier-chevron';
+      chevron.setAttribute('aria-hidden', 'true');
+      chevron.textContent = camp === 0 ? '›' : '‹';
+
+      ligne.append(nom, chevron);
+      ligne.title = `Envoyer ${joueur.prenom} chez ${teams[1 - camp].name}`;
+      ligne.addEventListener('click', () => onBasculer(joueur));
+      boite.appendChild(ligne);
+    });
   });
+
+  // L'écart se dit, il ne bloque pas.
+  const ecart = document.getElementById('repartition-ecart');
+  if (ecart) {
+    const tailles = teams.map((_, camp) => joueurs.filter(j => j.equipe === camp).length);
+    const diff = Math.abs(tailles[0] - tailles[1]);
+    ecart.textContent = diff > ECART_TOLERE
+      ? `Équipes déséquilibrées : ${tailles[0]} contre ${tailles[1]}`
+      : '';
+  }
 }
 
 // ===== COMPOSITION DES ÉQUIPES =====

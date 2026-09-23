@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Rush — les deux colonnes, améliorées</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root {
+  --fond: #14102B; --fond-halo: #2A1F5C; --surface: #1E1846; --bord: #2E2660;
+  --texte: #FFF6F0; --doux: #A79BD6;
+  --violet: #7C3AED; --violet-clair: #B14BFF; --ambre: #FFB020;
+  --eq1: #FF4D8D; --eq2: #22C55E;
+  --e1: 4px; --e2: 8px; --e3: 16px; --e4: 24px; --e5: 32px; --e6: 48px;
+  --t1: .75rem; --t2: .875rem; --t3: 1rem; --t4: 1.375rem; --t5: 2rem;
+  --r-pastille: 100px;
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  font-family: 'Outfit', sans-serif;
+  background: radial-gradient(120% 45% at 50% 0%, var(--fond-halo) 0%, var(--fond) 58%);
+  color: var(--texte); padding: var(--e4); line-height: 1.5;
+}
+h1 { font-size: var(--t4); margin-bottom: var(--e1); }
+h2 { font-size: var(--t1); text-transform: uppercase; letter-spacing: .1em;
+     color: var(--ambre); margin: var(--e6) 0 var(--e3); font-weight: 700; }
+.intro { color: var(--doux); font-size: var(--t2); max-width: 860px; }
+.intro strong { color: var(--texte); }
+.intro + .intro { margin-top: var(--e2); }
+.rangee { display: flex; gap: var(--e4); flex-wrap: wrap; align-items: flex-start;
+          margin-top: var(--e3); }
+.colonne { display: flex; flex-direction: column; gap: var(--e2); width: 320px; }
+.etiquette { font-size: var(--t1); text-transform: uppercase; letter-spacing: .08em;
+             font-weight: 700; color: var(--doux); }
+.etiquette.avant { color: #7E7396; }
+.etiquette.apres { color: var(--vert, #22C55E); }
+.note { font-size: var(--t2); color: var(--doux); }
+.note b { color: var(--texte); font-weight: 600; }
+
+.tel {
+  width: 320px; height: 580px; position: relative; overflow: hidden;
+  background: radial-gradient(120% 34% at 50% 0%, var(--fond-halo) 0%, var(--fond) 62%);
+  border: 1px solid var(--bord); border-radius: 28px;
+  box-shadow: 0 10px 30px rgba(0,0,0,.35);
+  display: flex; flex-direction: column; padding: var(--e4) var(--e3) var(--e3);
+}
+.tel.terne { filter: saturate(.6) brightness(.93); }
+.retour, .fermer { position: absolute; top: 14px; background: none; border: none;
+                   color: var(--doux); font-size: var(--t3); cursor: pointer; }
+.retour { left: 16px } .fermer { right: 16px }
+.tel h3 { font-size: var(--t4); font-weight: 800; text-align: center; }
+.tel .aide { font-size: var(--t2); color: var(--doux); text-align: center; margin-top: 2px; }
+
+.bouton { flex: none; width: 100%; border: none; border-radius: var(--r-pastille);
+          padding: 13px; font-family: inherit; font-size: var(--t3); font-weight: 700;
+          color: #fff; background: linear-gradient(135deg, var(--violet), var(--violet-clair));
+          cursor: pointer; box-shadow: 0 8px 20px rgba(124,58,237,.35); }
+.bouton.doux { background: none; color: var(--doux); border: 1px solid var(--bord);
+               box-shadow: none; font-size: var(--t2); padding: 10px; }
+
+/* ═══════ LA GRILLE DES DEUX CAMPS ═══════ */
+.deux-col { flex: 1; display: grid; grid-template-columns: 1fr 1px 1fr;
+            gap: 0 10px; margin-top: var(--e3); min-height: 0; }
+.filet { background: linear-gradient(var(--bord), transparent); }
+.col-eq { display: flex; flex-direction: column; min-height: 0; }
+
+/* L'en-tête : le nom modifiable, et le compte juste à côté. Le compte en haut
+   plutôt qu'en bas — l'équilibre se lit en même temps que les noms. */
+.tete { display: flex; align-items: baseline; gap: 5px; justify-content: center;
+        padding-bottom: 7px; border-bottom: 1px solid var(--bord); }
+.tete input {
+  background: none; border: none; color: inherit; font-family: inherit;
+  font-size: var(--t2); font-weight: 800; text-transform: uppercase;
+  letter-spacing: .06em; text-align: right; width: 88px; padding: 0;
+  border-bottom: 1px dashed transparent; cursor: text;
+}
+.tete input:hover { border-bottom-color: var(--bord); }
+.tete input:focus { outline: none; border-bottom-color: currentColor; }
+.col-eq.a .tete { color: var(--eq1); } .col-eq.b .tete { color: var(--eq2); }
+.tete .n { font-size: var(--t1); font-weight: 700; color: var(--doux);
+           font-variant-numeric: tabular-nums; }
+
+.col-gens { display: flex; flex-direction: column; gap: 4px; overflow: auto;
+            padding-top: 7px; }
+
+/* Un joueur. Le chevron pointe vers l'autre camp : l'objet dit ce qu'il fait,
+   sans texte d'aide. Toute la ligne est la cible — un doigt, pas une visée. */
+.qui {
+  display: flex; align-items: center; gap: 4px; width: 100%;
+  background: none; border: none; color: var(--texte); font-family: inherit;
+  font-size: var(--t3); padding: 8px 6px; border-radius: 9px; cursor: pointer;
+  transition: background .15s;
+}
+.qui:hover { background: rgba(255,255,255,.07); }
+.qui:active { transform: scale(.97); }
+.qui .nom { flex: 1; text-align: left; }
+.qui .chev { color: var(--doux); font-size: var(--t2); opacity: .55; flex: none; }
+.qui:hover .chev { opacity: 1; }
+.col-eq.b .qui { flex-direction: row-reverse; }
+.col-eq.b .qui .nom { text-align: right; }
+
+/* Le prénom qui vient de traverser entre par le côté d'où il vient. */
+@keyframes vient-de-gauche { from { transform: translateX(-36px); opacity: 0 } }
+@keyframes vient-de-droite { from { transform: translateX(36px); opacity: 0 } }
+.qui.de-gauche { animation: vient-de-gauche .28s ease-out; }
+.qui.de-droite { animation: vient-de-droite .28s ease-out; }
+@media (prefers-reduced-motion: reduce) { .qui.de-gauche, .qui.de-droite { animation: none } }
+
+.vide { font-size: var(--t2); color: var(--doux); opacity: .5; text-align: center;
+        padding: var(--e3) 4px; font-style: italic; }
+.desequilibre { text-align: center; font-size: var(--t1); color: var(--ambre);
+                padding: 6px 0 2px; }
+.desequilibre:empty { display: none; }
+
+/* La version d'origine, pour comparer */
+.simple { background: none; border: none; color: var(--texte); font-family: inherit;
+          font-size: var(--t3); text-align: center; padding: 9px 4px; cursor: pointer;
+          border-radius: 10px; width: 100%; }
+.simple:hover { background: rgba(255,255,255,.06); }
+.compte-bas { text-align: center; font-size: var(--t1); color: var(--doux);
+              padding-top: 6px; margin-top: auto; }
+
+.legende { margin-top: var(--e6); border-top: 1px solid var(--bord); padding-top: var(--e4); }
+.legende ul { list-style: none; display: flex; flex-direction: column; gap: var(--e2); max-width: 860px; }
+.legende li { font-size: var(--t2); color: var(--doux); padding-left: var(--e3);
+              border-left: 2px solid var(--bord); }
+.legende li b { color: var(--texte); }
+.question { border-left-color: var(--ambre) !important; }
+.question b { color: var(--ambre) !important; }
+</style>
+</head>
+<body>
+
+<h1>Les deux colonnes, améliorées</h1>
+<p class="intro">Le défaut de la version A n'était pas ce qu'elle montre, mais ce qu'elle
+<strong>ne dit pas</strong> : rien n'indiquait qu'un prénom se touche. Quatre corrections, toutes
+visibles ci-dessous. <strong>Les trois téléphones fonctionnent</strong> — touche un prénom.</p>
+
+<div class="rangee">
+  <div class="colonne">
+    <span class="etiquette avant">A d'origine</span>
+    <div class="tel terne" data-vue="avant">
+      <button class="retour">←</button><button class="fermer">✕</button>
+      <h3>Les équipes</h3>
+      <p class="aide">Touche un prénom pour le changer de camp.</p>
+      <div class="deux-col">
+        <div class="col-eq a">
+          <input class="tete-simple" value="Renards" style="background:none;border:none;color:var(--eq1);
+            font-family:inherit;font-size:var(--t2);font-weight:800;text-transform:uppercase;
+            letter-spacing:.06em;text-align:center;padding:2px 0 6px;width:100%">
+          <div class="col-gens" data-camp="0"></div>
+          <p class="compte-bas" data-compte="0"></p>
+        </div>
+        <div class="filet"></div>
+        <div class="col-eq b">
+          <input class="tete-simple" value="Loutres" style="background:none;border:none;color:var(--eq2);
+            font-family:inherit;font-size:var(--t2);font-weight:800;text-transform:uppercase;
+            letter-spacing:.06em;text-align:center;padding:2px 0 6px;width:100%">
+          <div class="col-gens" data-camp="1"></div>
+          <p class="compte-bas" data-compte="1"></p>
+        </div>
+      </div>
+      <button class="bouton doux" data-melanger style="margin-bottom:var(--e2)">🎲 Mélanger</button>
+      <button class="bouton">Suivant ▶️</button>
+    </div>
+    <p class="note">Rien ne dit que ça se touche. Le compte est <b>tout en bas</b>, loin des
+    noms. Et il faut une ligne d'aide pour expliquer l'écran.</p>
+  </div>
+
+  <div class="colonne">
+    <span class="etiquette apres">Améliorée</span>
+    <div class="tel" data-vue="apres">
+      <button class="retour">←</button><button class="fermer">✕</button>
+      <h3>Les équipes</h3>
+      <p class="aide">Tirées au sort. Change qui tu veux.</p>
+      <div class="deux-col">
+        <div class="col-eq a">
+          <div class="tete"><input value="Renards"><span class="n" data-compte="0"></span></div>
+          <div class="col-gens" data-camp="0"></div>
+        </div>
+        <div class="filet"></div>
+        <div class="col-eq b">
+          <div class="tete"><span class="n" data-compte="1"></span><input value="Loutres" style="text-align:left"></div>
+          <div class="col-gens" data-camp="1"></div>
+        </div>
+      </div>
+      <p class="desequilibre" data-ecart></p>
+      <button class="bouton doux" data-melanger style="margin-bottom:var(--e2)">🎲 Mélanger</button>
+      <button class="bouton">Suivant ▶️</button>
+    </div>
+    <p class="note">Le chevron <b>pointe vers l'autre camp</b> : l'objet dit ce qu'il fait. Le
+    prénom traverse sous les yeux. Le compte est monté près du nom.</p>
+  </div>
+
+  <div class="colonne">
+    <span class="etiquette apres">À dix joueurs</span>
+    <div class="tel" data-vue="dix">
+      <button class="retour">←</button><button class="fermer">✕</button>
+      <h3>Les équipes</h3>
+      <p class="aide">Tirées au sort. Change qui tu veux.</p>
+      <div class="deux-col">
+        <div class="col-eq a">
+          <div class="tete"><input value="Renards"><span class="n" data-compte="0"></span></div>
+          <div class="col-gens" data-camp="0"></div>
+        </div>
+        <div class="filet"></div>
+        <div class="col-eq b">
+          <div class="tete"><span class="n" data-compte="1"></span><input value="Loutres" style="text-align:left"></div>
+          <div class="col-gens" data-camp="1"></div>
+        </div>
+      </div>
+      <p class="desequilibre" data-ecart></p>
+      <button class="bouton doux" data-melanger style="margin-bottom:var(--e2)">🎲 Mélanger</button>
+      <button class="bouton">Suivant ▶️</button>
+    </div>
+    <p class="note">Déplace quelqu'un jusqu'à <b>7 contre 3</b> : l'écart s'annonce en ambre,
+    sans rien interdire. Certaines tablées le veulent.</p>
+  </div>
+</div>
+
+<h2>Les quatre corrections</h2>
+<div class="legende">
+  <ul>
+    <li><b>1 · Le chevron dans la ligne.</b> <code>Camille ›</code> à gauche,
+    <code>‹ Sacha</code> à droite. Pas un bouton de plus : le prénom entier reste la cible, et
+    la direction est écrite dedans. C'est ce qui remplace la ligne d'aide.</li>
+    <li><b>2 · Le prénom traverse.</b> Il entre par le côté d'où il vient, en un quart de
+    seconde. Sans ce mouvement, on doute d'avoir touché le bon — surtout quand on rend le
+    téléphone à quelqu'un d'autre juste après.</li>
+    <li><b>3 · Le compte remonte contre le nom.</b> <code>RENARDS 5</code> : l'équilibre se lit
+    en même temps que la composition, au lieu d'être un chiffre orphelin en bas de colonne.</li>
+    <li><b>4 · L'écart se signale, sans interdire.</b> Au-delà de deux joueurs de différence, une
+    ligne ambre le dit. Elle n'empêche rien — jouer à 3 contre 5 est parfois exactement ce qu'on
+    veut — mais personne ne lance la partie sans l'avoir vu.</li>
+    <li class="question"><b>À trancher :</b> les noms d'équipe restent « Renards » et
+    « Loutres » dans ce proto, mais l'app propose « Équipe 1 » et « Équipe 2 ». Faut-il
+    <b>tirer au sort deux noms d'animaux</b> au lieu de numéros ? C'est gratuit, et personne ne
+    prend le temps de les renommer.</li>
+  </ul>
+</div>
+
+<script>
+const PETIT = ['Camille', 'Sacha', 'Lou', 'Dan'];
+const GRAND = ['Camille', 'Sacha', 'Lou', 'Dan', 'Inès', 'Malo', 'Ana', 'Bob', 'Cléo', 'Théo'];
+
+// Un état par téléphone : ils vivent leur vie chacun de leur côté.
+const vues = {};
+
+function creer(nom, noms) {
+  vues[nom] = { gens: noms.map(n => ({ nom: n, camp: 0 })), bouge: null };
+  melanger(nom);
+}
+
+function melanger(vue) {
+  const e = vues[vue];
+  const ordre = [...e.gens].sort(() => Math.random() - 0.5);
+  ordre.forEach((g, i) => { g.camp = i < Math.ceil(ordre.length / 2) ? 0 : 1; });
+  e.bouge = null;
+  dessiner(vue);
+}
+
+function basculer(vue, g) {
+  const e = vues[vue];
+  g.camp = 1 - g.camp;
+  e.bouge = g;          // pour l'animer à l'arrivée, et lui seul
+  dessiner(vue);
+}
+
+function dessiner(vue) {
+  const e = vues[vue];
+  const tel = document.querySelector(`[data-vue="${vue}"]`);
+  const ameliore = vue !== 'avant';
+  const parCamp = [e.gens.filter(g => g.camp === 0), e.gens.filter(g => g.camp === 1)];
+
+  [0, 1].forEach(camp => {
+    const boite = tel.querySelector(`.col-gens[data-camp="${camp}"]`);
+    boite.innerHTML = '';
+
+    if (!parCamp[camp].length) {
+      const rien = document.createElement('p');
+      rien.className = 'vide';
+      rien.textContent = 'personne';
+      boite.appendChild(rien);
+    }
+
+    parCamp[camp].forEach(g => {
+      const b = document.createElement('button');
+      if (ameliore) {
+        b.className = 'qui';
+        const nom = document.createElement('span');
+        nom.className = 'nom';
+        nom.textContent = g.nom;
+        const chev = document.createElement('span');
+        chev.className = 'chev';
+        chev.textContent = camp === 0 ? '›' : '‹';
+        b.append(nom, chev);
+        // Il vient de traverser : il entre par le côté qu'il a quitté.
+        if (e.bouge === g) b.classList.add(camp === 0 ? 'de-droite' : 'de-gauche');
+      } else {
+        b.className = 'simple';
+        b.textContent = g.nom;
+      }
+      b.addEventListener('click', () => basculer(vue, g));
+      boite.appendChild(b);
+    });
+
+    const compte = tel.querySelector(`[data-compte="${camp}"]`);
+    if (compte) compte.textContent = parCamp[camp].length;
+  });
+
+  const ecart = tel.querySelector('[data-ecart]');
+  if (ecart) {
+    const d = Math.abs(parCamp[0].length - parCamp[1].length);
+    ecart.textContent = d > 2 ? `Équipes déséquilibrées : ${parCamp[0].length} contre ${parCamp[1].length}` : '';
+  }
+}
+
+document.querySelectorAll('[data-melanger]').forEach(b => {
+  b.addEventListener('click', () => melanger(b.closest('[data-vue]').dataset.vue));
+});
+
+creer('avant', PETIT);
+creer('apres', PETIT);
+creer('dix', GRAND);
+</script>
+</body>
+</html>

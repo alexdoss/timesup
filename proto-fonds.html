@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Rush — quatre fonds</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root {
+  --page: #0B0A14; --page-texte: #FFF6F0; --page-doux: #A79BD6; --page-bord: #2E2660;
+  --ambre-page: #FFB020; --vert-page: #22C55E;
+  --e1: 4px; --e2: 8px; --e3: 16px; --e4: 24px; --e5: 32px; --e6: 48px;
+  --t1: .75rem; --t2: .875rem; --t3: 1rem; --t4: 1.375rem; --t5: 2rem;
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  font-family: 'Outfit', sans-serif; background: var(--page); color: var(--page-texte);
+  padding: var(--e4); line-height: 1.5;
+}
+h1 { font-size: var(--t4); margin-bottom: var(--e1); }
+h2 { font-size: var(--t1); text-transform: uppercase; letter-spacing: .1em;
+     color: var(--ambre-page); margin: var(--e6) 0 var(--e3); font-weight: 700; }
+.intro { color: var(--page-doux); font-size: var(--t2); max-width: 900px; }
+.intro strong { color: var(--page-texte); }
+.intro + .intro { margin-top: var(--e2); }
+.rangee { display: flex; gap: var(--e3); flex-wrap: wrap; align-items: flex-start;
+          margin-top: var(--e3); }
+.colonne { display: flex; flex-direction: column; gap: var(--e2); width: 300px; }
+.chapeau { display: flex; align-items: baseline; gap: var(--e2); }
+.chapeau .nom { font-size: var(--t2); font-weight: 700; }
+.chapeau .hex { font-size: var(--t1); color: var(--page-doux); font-family: ui-monospace, monospace; }
+.badge { font-size: .625rem; font-weight: 800; letter-spacing: .08em; text-transform: uppercase;
+         padding: 2px 7px; border-radius: 100px; }
+.badge.actuel { background: rgba(167,155,214,.18); color: var(--page-doux); }
+.badge.protos { background: rgba(34,197,94,.18); color: #A7F3C0; }
+.note { font-size: var(--t2); color: var(--page-doux); }
+.note b { color: var(--page-texte); font-weight: 600; }
+
+/* ═══════ LES QUATRE FONDS ═══════
+   Chaque telephone porte son theme : ce sont les MEMES ecrans, seuls les jetons
+   changent. C'est exactement ce que couterait le changement dans l'app. */
+.tel {
+  width: 300px; height: 520px; position: relative; overflow: hidden;
+  border-radius: 26px; display: flex; flex-direction: column; padding: var(--e4) 14px 14px;
+  background: radial-gradient(120% 34% at 50% 0%, var(--halo) 0%, var(--fond) 62%);
+  border: 1px solid var(--bord); color: var(--texte);
+  box-shadow: 0 10px 30px rgba(0,0,0,.45);
+}
+
+/* 1 — L'app aujourd'hui : une ardoise bleue, froide */
+.ardoise {
+  --fond: #0F172A; --halo: #1B2942; --surface: #1E293B; --surface-2: #273449;
+  --bord: #334155; --texte: #F8FAFC; --doux: #94A3B8;
+  --violet: #6D28D9; --violet-clair: #7C3AED; --ambre: #F59E0B;
+  --eq1: #d6336c; --eq2: #33c26a;
+  --carte-fond: #FFFFFF; --carte-texte: #0F172A; --carte-bord: transparent;
+  --carte-ombre: 0 12px 28px rgba(0,0,0,.45);
+  --voile: rgba(255,255,255,.04); --creux: rgba(0,0,0,.24);
+}
+/* 2 — Les protos : le meme noir, mais violet et chaud */
+.indigo {
+  --fond: #14102B; --halo: #2A1F5C; --surface: #1E1846; --surface-2: #262055;
+  --bord: #2E2660; --texte: #FFF6F0; --doux: #A79BD6;
+  --violet: #7C3AED; --violet-clair: #B14BFF; --ambre: #FFB020;
+  --eq1: #FF4D8D; --eq2: #22C55E;
+  --carte-fond: linear-gradient(160deg, #FFFFFF 0%, #F2ECFF 100%);
+  --carte-texte: #1A1035; --carte-bord: transparent;
+  --carte-ombre: 0 12px 28px rgba(0,0,0,.4);
+  --voile: rgba(255,255,255,.04); --creux: rgba(0,0,0,.24);
+}
+/* 3 — Une prune de fete : plus sature, assume le jeu */
+.prune {
+  --fond: #220D2E; --halo: #4E1655; --surface: #341646; --surface-2: #3F1C54;
+  --bord: #4E2566; --texte: #FFF0F9; --doux: #CBA6DA;
+  --violet: #A855F7; --violet-clair: #C77DFF; --ambre: #FFC53D;
+  --eq1: #FF4D8D; --eq2: #34D399;
+  --carte-fond: linear-gradient(160deg, #FFFFFF 0%, #FCEEFF 100%);
+  --carte-texte: #240E2F; --carte-bord: transparent;
+  --carte-ombre: 0 12px 28px rgba(0,0,0,.45);
+  --voile: rgba(255,255,255,.05); --creux: rgba(0,0,0,.22);
+}
+/* 4 — Clair : tout s inverse, y compris ce qui etait transparent */
+.clair {
+  --fond: #FBF7F2; --halo: #FFFFFF; --surface: #FFFFFF; --surface-2: #F4EEE6;
+  --bord: #E3D9CC; --texte: #1C1030; --doux: #6E6180;
+  --violet: #6D28D9; --violet-clair: #7C3AED; --ambre: #B26A00;
+  --eq1: #D6336C; --eq2: #1E9E5A;
+  --carte-fond: #FFFFFF; --carte-texte: #1C1030; --carte-bord: #E3D9CC;
+  --carte-ombre: 0 10px 24px rgba(28,16,48,.14);
+  --voile: rgba(28,16,48,.035); --creux: rgba(28,16,48,.05);
+}
+.clair.tel { box-shadow: 0 10px 30px rgba(0,0,0,.35); }
+
+/* ─── Le contenu, identique partout ─── */
+.pause { position: absolute; top: 12px; right: 14px; background: none;
+         border: 1px solid var(--bord); border-radius: 50%; width: 28px; height: 28px;
+         color: var(--doux); font-size: .75rem; cursor: pointer; }
+.chrono { text-align: center; font-size: 3rem; font-weight: 800; line-height: 1;
+          color: var(--ambre); letter-spacing: -.03em; flex: none; }
+.zone { flex: 1; display: flex; align-items: center; justify-content: center; }
+.carte {
+  width: 100%; min-height: 130px; display: flex; align-items: center; justify-content: center;
+  background: var(--carte-fond); border: 1px solid var(--carte-bord);
+  border-radius: 18px; box-shadow: var(--carte-ombre); padding: var(--e4) var(--e3);
+}
+.carte span { color: var(--carte-texte); font-size: 1.7rem; font-weight: 800; text-align: center; }
+.restantes { text-align: center; font-size: var(--t2); color: var(--doux); margin: var(--e2) 0; flex: none; }
+.actions { display: grid; grid-template-columns: 1fr 1fr; gap: var(--e2); flex: none; }
+.actions button { border: none; border-radius: 100px; padding: 13px; font-family: inherit;
+                  font-size: var(--t3); font-weight: 700; cursor: pointer; }
+.passer { background: var(--voile); color: var(--doux); border: 1px solid var(--bord) !important; }
+.trouve { background: var(--eq2); color: #052E16; }
+.clair .trouve { color: #FFFFFF; }
+
+.bandeau { flex: none; background: var(--creux); border: 1px solid var(--bord);
+           border-radius: 18px; padding: 8px 13px 13px; }
+.bandeau-haut { display: flex; align-items: center; justify-content: space-between; }
+.bandeau-manche { font-size: var(--t1); font-weight: 800; letter-spacing: .1em;
+                  text-transform: uppercase; color: var(--ambre); }
+.bandeau-score { display: grid; grid-template-columns: 1fr 1px 1fr; align-items: center; margin-top: 6px; }
+.bandeau-eq { text-align: center; display: flex; flex-direction: column; gap: 1px; }
+.bandeau-nom { font-size: .6875rem; color: var(--doux); font-weight: 600;
+               text-transform: uppercase; letter-spacing: .06em; }
+.bandeau-eq b { font-size: 1.7rem; line-height: 1; font-variant-numeric: tabular-nums; }
+.bandeau-eq.a b { color: var(--eq1); } .bandeau-eq.b b { color: var(--eq2); }
+.bandeau-tiret { width: 1px; height: 30px; background: var(--bord); }
+.bandeau-total { text-align: center; font-size: var(--t1); color: var(--doux); margin-top: 3px; }
+
+.aire { background: var(--surface); border: 1px solid var(--bord); border-radius: 18px;
+        padding: 13px; text-align: center; margin-top: var(--e2); }
+.manche-ico { font-size: 2.2rem; line-height: 1.2; }
+.manche-nom { font-size: var(--t1); font-weight: 700; text-transform: uppercase;
+              letter-spacing: .08em; color: var(--ambre); }
+.manche-regle { font-size: var(--t2); color: var(--doux); }
+.qui-eq { display: inline-flex; align-items: center; gap: 5px; font-size: .6875rem;
+          font-weight: 700; text-transform: uppercase; letter-spacing: .08em;
+          padding: 3px 11px; border-radius: 100px;
+          background: color-mix(in srgb, var(--eq1) 18%, transparent); color: var(--eq1); }
+.clair .qui-eq { background: color-mix(in srgb, var(--eq1) 12%, white); }
+.qui-nom { font-size: 1.7rem; font-weight: 800; letter-spacing: -.02em; display: block; margin-top: 2px; }
+.qui-detail { font-size: var(--t2); color: var(--doux); }
+.lancer { flex: none; width: 100%; border: none; border-radius: 100px; padding: 13px;
+          font-family: inherit; font-size: var(--t3); font-weight: 700; color: #fff;
+          background: linear-gradient(135deg, var(--violet), var(--violet-clair));
+          cursor: pointer; box-shadow: 0 8px 20px color-mix(in srgb, var(--violet) 40%, transparent); }
+.lien { flex: none; background: none; border: none; color: var(--doux);
+        font-size: var(--t2); padding: 6px; cursor: pointer; }
+
+.legende { margin-top: var(--e6); border-top: 1px solid var(--page-bord); padding-top: var(--e4); }
+.legende ul { list-style: none; display: flex; flex-direction: column; gap: var(--e2); max-width: 900px; }
+.legende li { font-size: var(--t2); color: var(--page-doux); padding-left: var(--e3);
+              border-left: 2px solid var(--page-bord); }
+.legende li b { color: var(--page-texte); }
+.question { border-left-color: var(--ambre-page) !important; }
+.question b { color: var(--ambre-page) !important; }
+</style>
+</head>
+<body>
+
+<h1>Quatre fonds, les mêmes écrans</h1>
+<p class="intro">Rien d'autre ne change que les jetons de couleur — c'est exactement ce que
+coûterait le changement dans l'app. Les deux écrans les plus regardés sont montrés deux fois :
+celui où l'on joue, et celui où l'on attend son tour.</p>
+<p class="intro"><strong>Regarde d'abord la carte.</strong> C'est l'objet que les joueurs fixent
+sous pression, et c'est lui qui décide.</p>
+
+<h2>1 · L'écran de jeu</h2>
+<div class="rangee">
+  <div class="colonne">
+    <div class="chapeau"><span class="nom">Ardoise</span><span class="hex">#0F172A</span>
+      <span class="badge actuel">l'app</span></div>
+    <div class="tel ardoise">
+      <button class="pause">⏸</button>
+      <div class="chrono" style="margin-top:var(--e2)">32</div>
+      <div class="zone"><div class="carte"><span>Tire-bouchon</span></div></div>
+      <p class="restantes">Cartes restantes : 14</p>
+      <div class="actions"><button class="passer">Passer ✗</button><button class="trouve">Trouvé ✓</button></div>
+    </div>
+    <p class="note">Bleu-gris froid. C'est la couleur des outils de développement — sobre,
+    sérieuse, un peu <b>professionnelle</b>.</p>
+  </div>
+
+  <div class="colonne">
+    <div class="chapeau"><span class="nom">Indigo chaud</span><span class="hex">#14102B</span>
+      <span class="badge protos">les protos</span></div>
+    <div class="tel indigo">
+      <button class="pause">⏸</button>
+      <div class="chrono" style="margin-top:var(--e2)">32</div>
+      <div class="zone"><div class="carte"><span>Tire-bouchon</span></div></div>
+      <p class="restantes">Cartes restantes : 14</p>
+      <div class="actions"><button class="passer">Passer ✗</button><button class="trouve">Trouvé ✓</button></div>
+    </div>
+    <p class="note">Le même noir, tiré vers le violet. C'est le fond de <b>tous les protos
+    validés depuis un mois</b> — l'app a simplement pris du retard dessus.</p>
+  </div>
+
+  <div class="colonne">
+    <div class="chapeau"><span class="nom">Prune</span><span class="hex">#220D2E</span></div>
+    <div class="tel prune">
+      <button class="pause">⏸</button>
+      <div class="chrono" style="margin-top:var(--e2)">32</div>
+      <div class="zone"><div class="carte"><span>Tire-bouchon</span></div></div>
+      <p class="restantes">Cartes restantes : 14</p>
+      <div class="actions"><button class="passer">Passer ✗</button><button class="trouve">Trouvé ✓</button></div>
+    </div>
+    <p class="note">Plus saturé, plus assumé. On est clairement dans <b>un jeu</b>, plus dans
+    une app. Le risque est la fatigue sur une soirée entière.</p>
+  </div>
+
+  <div class="colonne">
+    <div class="chapeau"><span class="nom">Clair</span><span class="hex">#FBF7F2</span></div>
+    <div class="tel clair">
+      <button class="pause">⏸</button>
+      <div class="chrono" style="margin-top:var(--e2)">32</div>
+      <div class="zone"><div class="carte"><span>Tire-bouchon</span></div></div>
+      <p class="restantes">Cartes restantes : 14</p>
+      <div class="actions"><button class="passer">Passer ✗</button><button class="trouve">Trouvé ✓</button></div>
+    </div>
+    <p class="note"><b>La carte a disparu.</b> Blanche sur crème, il lui faut un cadre et une
+    ombre pour exister — alors qu'ailleurs elle saute aux yeux sans rien demander.</p>
+  </div>
+</div>
+
+<h2>2 · L'écran de lancement de tour</h2>
+<div class="rangee">
+  <div class="colonne">
+    <div class="chapeau"><span class="nom">Ardoise</span><span class="badge actuel">l'app</span></div>
+    <div class="tel ardoise">
+      <div class="bandeau">
+        <div class="bandeau-haut"><span class="bandeau-manche">Manche 2/3 · Mime</span></div>
+        <div class="bandeau-score">
+          <div class="bandeau-eq a"><span class="bandeau-nom">Renards</span><b>4</b></div>
+          <span class="bandeau-tiret"></span>
+          <div class="bandeau-eq b"><span class="bandeau-nom">Loutres</span><b>6</b></div>
+        </div>
+        <p class="bandeau-total">Total de la partie : 12 – 15</p>
+      </div>
+      <div class="aire"><div class="manche-ico">🎭</div><p class="manche-nom">Mime</p>
+        <p class="manche-regle">Sans parler, ni bruit, ni objet.</p></div>
+      <div class="aire"><span class="qui-eq">🦊 Renards</span>
+        <span class="qui-nom">Camille</span>
+        <span class="qui-detail">40 s · 14 cartes restantes</span></div>
+      <div style="flex:1"></div>
+      <button class="lancer">Lancer le tour ▶️</button>
+      <button class="lien">👥 Les équipes</button>
+    </div>
+  </div>
+
+  <div class="colonne">
+    <div class="chapeau"><span class="nom">Indigo chaud</span><span class="badge protos">les protos</span></div>
+    <div class="tel indigo">
+      <div class="bandeau">
+        <div class="bandeau-haut"><span class="bandeau-manche">Manche 2/3 · Mime</span></div>
+        <div class="bandeau-score">
+          <div class="bandeau-eq a"><span class="bandeau-nom">Renards</span><b>4</b></div>
+          <span class="bandeau-tiret"></span>
+          <div class="bandeau-eq b"><span class="bandeau-nom">Loutres</span><b>6</b></div>
+        </div>
+        <p class="bandeau-total">Total de la partie : 12 – 15</p>
+      </div>
+      <div class="aire"><div class="manche-ico">🎭</div><p class="manche-nom">Mime</p>
+        <p class="manche-regle">Sans parler, ni bruit, ni objet.</p></div>
+      <div class="aire"><span class="qui-eq">🦊 Renards</span>
+        <span class="qui-nom">Camille</span>
+        <span class="qui-detail">40 s · 14 cartes restantes</span></div>
+      <div style="flex:1"></div>
+      <button class="lancer">Lancer le tour ▶️</button>
+      <button class="lien">👥 Les équipes</button>
+    </div>
+  </div>
+
+  <div class="colonne">
+    <div class="chapeau"><span class="nom">Prune</span></div>
+    <div class="tel prune">
+      <div class="bandeau">
+        <div class="bandeau-haut"><span class="bandeau-manche">Manche 2/3 · Mime</span></div>
+        <div class="bandeau-score">
+          <div class="bandeau-eq a"><span class="bandeau-nom">Renards</span><b>4</b></div>
+          <span class="bandeau-tiret"></span>
+          <div class="bandeau-eq b"><span class="bandeau-nom">Loutres</span><b>6</b></div>
+        </div>
+        <p class="bandeau-total">Total de la partie : 12 – 15</p>
+      </div>
+      <div class="aire"><div class="manche-ico">🎭</div><p class="manche-nom">Mime</p>
+        <p class="manche-regle">Sans parler, ni bruit, ni objet.</p></div>
+      <div class="aire"><span class="qui-eq">🦊 Renards</span>
+        <span class="qui-nom">Camille</span>
+        <span class="qui-detail">40 s · 14 cartes restantes</span></div>
+      <div style="flex:1"></div>
+      <button class="lancer">Lancer le tour ▶️</button>
+      <button class="lien">👥 Les équipes</button>
+    </div>
+  </div>
+
+  <div class="colonne">
+    <div class="chapeau"><span class="nom">Clair</span></div>
+    <div class="tel clair">
+      <div class="bandeau">
+        <div class="bandeau-haut"><span class="bandeau-manche">Manche 2/3 · Mime</span></div>
+        <div class="bandeau-score">
+          <div class="bandeau-eq a"><span class="bandeau-nom">Renards</span><b>4</b></div>
+          <span class="bandeau-tiret"></span>
+          <div class="bandeau-eq b"><span class="bandeau-nom">Loutres</span><b>6</b></div>
+        </div>
+        <p class="bandeau-total">Total de la partie : 12 – 15</p>
+      </div>
+      <div class="aire"><div class="manche-ico">🎭</div><p class="manche-nom">Mime</p>
+        <p class="manche-regle">Sans parler, ni bruit, ni objet.</p></div>
+      <div class="aire"><span class="qui-eq">🦊 Renards</span>
+        <span class="qui-nom">Camille</span>
+        <span class="qui-detail">40 s · 14 cartes restantes</span></div>
+      <div style="flex:1"></div>
+      <button class="lancer">Lancer le tour ▶️</button>
+      <button class="lien">👥 Les équipes</button>
+    </div>
+  </div>
+</div>
+
+<div class="legende">
+  <ul>
+    <li><b>Ce que coûte chaque colonne.</b> Les trois fonds sombres : <b>huit jetons</b>, une
+    heure. Le clair : les huit jetons, plus les <b>34 transparences</b> de la feuille de style,
+    qui sont toutes écrites comme « un peu de blanc par-dessus du sombre » et s'inversent, plus
+    les 13 blancs en dur, plus la carte à redessiner. Une journée, et un vrai risque de régression.</li>
+    <li><b>Le sablier et les emojis</b> valent pour tous les fonds : ils sont dessinés avec les
+    mêmes jetons. Les couleurs d'équipe, elles, sont écrites en dur dans le moteur de jeu et
+    ne suivraient pas — c'est un défaut connu, à corriger dans la foulée quel que soit le choix.</li>
+    <li class="question"><b>Mon avis :</b> l'indigo chaud. Il règle le vrai problème — le froid,
+    pas le sombre —, il réconcilie l'app avec un mois de protos validés, et il ne touche à rien
+    d'autre. La prune si tu veux assumer davantage le jeu ; je la crains sur trois heures de
+    soirée.</li>
+    <li class="question"><b>Contre le clair,</b> deux arguments que je crois sérieux : la carte
+    blanche perd son pouvoir, et Rush se joue le soir, téléphones posés sur une table basse.
+    Mais c'est la seule colonne qui ne ressemble à aucune app de développeur, et ça compte.</li>
+  </ul>
+</div>
+
+</body>
+</html>
